@@ -1,0 +1,400 @@
+#!/bin/bash
+# bunix-install: install bunix from the live ISO onto a disk, next to what
+# is already on it (Windows, say), into one of
+#
+#   - a stretch of free space (make it first: shrink Windows' C: in Disk
+#     Management -- this tool does not resize file systems)
+#   - an existing partition, which it deletes
+#   - a whole disk, which it erases
+#
+# Nothing outside the chosen space is written, except the disk's EFI system
+# partition (ESP), where it adds the directory EFI/bunix/, and a firmware
+# boot entry "bunix".  When the machine already boots Windows, Windows stays
+# the default; pick bunix from the firmware's boot menu.  systemd-boot lists
+# Windows too when the two share an ESP.
+#
+# The partitions it creates in the chosen space (UAPI Discoverable
+# Partitions; docs/install.md):
+#
+#   ESP         only if the disk has none
+#   XBOOTLDR    the kernel images (UKIs) -- a Windows ESP is too small
+#   /usr slot A this release: data, dm-verity hashes, signature
+#   /usr slot B empty, for the next update
+#   root        ext4, the rest of the space
+#
+# bunix must sit on the same disk as the ESP it boots from: the initrd finds
+# the root partition on that disk.  A disk without an ESP gets its own.
+#
+# Questions are read from standard input, so a test can answer them:
+#   printf '1\n2\nyes\n' | bunix-install
+set -euo pipefail
+# so that a failed $(ask ...) inside a function stops the script too
+shopt -s inherit_errexit
+
+# Partition sizes in MiB.  The /usr slots must match system/disk.bst.
+ESP_SIZE=512
+BOOT_SIZE=1024
+USR_SIZE=1024
+# verity: the hash tree is 1/128 of /usr, 8 MiB at most -- twice that
+USR_VERITY_SIZE=16
+USR_SIGNATURE_SIZE=1
+ROOT_MIN_SIZE=8192
+USR_SLOT_SIZE=$((USR_SIZE + USR_VERITY_SIZE + USR_SIGNATURE_SIZE))
+NEEDED_SIZE=$((BOOT_SIZE + 2 * USR_SLOT_SIZE + ROOT_MIN_SIZE))
+
+# GPT partition types, x86-64
+TYPE_ESP=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+TYPE_XBOOTLDR=bc13c2ff-59e6-4262-a352-b275fd6f7172
+TYPE_USR=8484680c-9521-48c6-9c11-b0720656f69e
+TYPE_USR_VERITY=77ff5f63-e7b6-4633-acf4-1565b864c0e6
+TYPE_USR_VERITY_SIG=e7bb33fb-06cf-4e81-8273-e543b413e2e2
+TYPE_ROOT=4f68bce3-e8cd-4db1-96e7-fbcaf984b709
+
+MiB=$((1024 * 1024))
+WORK=/run/bunix-install
+SECURE_BOOT_VAR=/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
+
+die() { echo "bunix-install: $*" >&2; exit 1; }
+
+ask() {
+  local answer
+  printf '%s ' "$1" >&2
+  read -r answer || die "no answer"
+  echo "$answer"
+}
+
+# Asks for a number from 1 to $2; prints it less one, an array index
+ask_number() {
+  local question=$1 count=$2
+  local answer
+  answer=$(ask "$question [1-$count]")
+  [[ "$answer" =~ ^[0-9]+$ ]] || die "not a number: $answer"
+  [ "$answer" -ge 1 ] && [ "$answer" -le "$count" ] || die "no such choice: $answer"
+  echo $(( answer - 1 ))
+}
+
+new_uuid() { cat /proc/sys/kernel/random/uuid; }
+
+# A partition's device, once udev has created its link
+device_of_partuuid() {
+  local link=/dev/disk/by-partuuid/$1
+  for _ in $(seq 50); do
+    [ -e "$link" ] && { readlink -f "$link"; return; }
+    udevadm settle
+    sleep 0.2
+  done
+  die "partition $1 did not appear"
+}
+
+cleanup() {
+  for dir in "$WORK"/esp "$WORK"/boot "$WORK"/root "$WORK"/medium; do
+    mountpoint -q "$dir" && umount "$dir"
+  done
+  return 0
+}
+trap cleanup EXIT
+
+[ "$(id -u)" = 0 ] || die "run as root"
+[ -d /sys/firmware/efi ] || die "this machine did not boot with UEFI; bunix boots with UEFI only"
+
+# The release to install comes from the boot medium (system/iso.bst puts it
+# in install/), not from the live system in memory.
+mkdir -p "$WORK"/medium "$WORK"/esp "$WORK"/boot "$WORK"/root
+[ -e /dev/disk/by-label/BUNIX ] || die "cannot find the boot medium (label BUNIX)"
+medium_device=$(readlink -f /dev/disk/by-label/BUNIX)
+mountpoint -q "$WORK"/medium || mount -o ro "$medium_device" "$WORK"/medium
+files=$WORK/medium/install
+uki=$(ls "$files"/bunix_*.efi)
+release=$(basename "$uki" .efi)
+release=${release#bunix_}
+usr_image=$(ls "$files"/bunix_"$release".usr-x86-64.*.raw)
+verity_image=$(ls "$files"/bunix_"$release".usr-x86-64-verity.*.raw)
+signature_image=$(ls "$files"/bunix_"$release".usr-x86-64-verity-sig.*.raw)
+# The UKI's usrhash= finds slot A's partitions by these UUIDs
+# (system/usr.bst).  The file names carry them without dashes.
+uuid_in_name() {
+  local hex
+  hex=$(basename "$1" .raw | sed 's/.*\.//')
+  echo "${hex:0:8}-${hex:8:4}-${hex:12:4}-${hex:16:4}-${hex:20:12}"
+}
+
+echo "bunix $release installer"
+echo
+
+# --- the disk -----------------------------------------------------------
+
+# The medium itself, or the disk it is a partition of, is not a choice
+medium_disk=$(lsblk -ndpo PKNAME "$medium_device")
+medium_disk=${medium_disk:-$medium_device}
+disks=()
+while read -r name type; do
+  [ "$type" = disk ] || continue
+  [ "$name" = "$medium_disk" ] && continue
+  disks+=("$name")
+done < <(lsblk -ndpo NAME,TYPE)
+[ ${#disks[@]} -gt 0 ] || die "no disk to install to"
+
+echo "Disks:"
+for i in "${!disks[@]}"; do
+  printf '  %d) %s  %s  %s\n' $((i + 1)) "${disks[$i]}" \
+    "$(lsblk -ndo SIZE "${disks[$i]}")" "$(lsblk -ndo MODEL "${disks[$i]}")"
+done
+# (asked on its own line: a failed answer then stops the script, which it
+# would not inside the array index)
+index=$(ask_number "Install to which disk?" ${#disks[@]})
+disk=${disks[$index]}
+
+# --- the place on it ----------------------------------------------------
+
+# Each place is "kind start end device description": start and end in
+# bytes, device the partition to replace (or "-").
+sector_size=$(blockdev --getss "$disk")
+places=()
+
+esp=""
+# Partitions of the types bunix boots by.  The initrd and systemd-boot take
+# the first of each type they find on the disk, so another one -- an older
+# bunix, say -- has to go first.
+discoverable=()
+while read -r name type; do
+  [ "$type" = part ] || continue
+  part_type=$(lsblk -ndo PARTTYPE "$name")
+  if [ "$part_type" = "$TYPE_ESP" ]; then
+    esp=$name
+    continue
+  fi
+  case $part_type in
+    "$TYPE_ROOT"|"$TYPE_XBOOTLDR"|"$TYPE_USR"|"$TYPE_USR_VERITY"|"$TYPE_USR_VERITY_SIG")
+      discoverable+=("$name") ;;
+  esac
+  sysfs=/sys/class/block/$(basename "$name")
+  start=$(( $(cat "$sysfs"/start) * 512 ))
+  end=$(( start + $(cat "$sysfs"/size) * 512 ))
+  size=$(lsblk -ndo SIZE "$name" | tr -d ' ')
+  what="$size, $(lsblk -ndo PARTTYPENAME "$name"), \"$(lsblk -ndo PARTLABEL "$name")\""
+  places+=("partition $start $end $name replace $name ($what)")
+done < <(lsblk -nrpo NAME,TYPE "$disk")
+
+if sfdisk -d "$disk" >/dev/null 2>&1; then
+  # sfdisk -F lists free stretches as "start end sectors size", in sectors
+  while read -r first last _; do
+    [[ "$first" =~ ^[0-9]+$ && "$last" =~ ^[0-9]+$ ]] || continue
+    start=$(( first * sector_size ))
+    end=$(( (last + 1) * sector_size ))
+    places+=("free $start $end - free space ($(( (end - start) / MiB )) MiB)")
+  done < <(sfdisk -F "$disk")
+fi
+places+=("disk 0 $(blockdev --getsize64 "$disk") - the whole disk -- erases everything on it")
+
+# Whether bunix fits into a place: its whole MiB, and an ESP if the place
+# brings a new one
+fits() {
+  local kind=$1 start=$2 end=$3
+  local first_mib=$(( (start + MiB - 1) / MiB ))
+  local end_mib=$(( end / MiB ))
+  local needed=$NEEDED_SIZE
+  if [ -z "$esp" ] || [ "$kind" = disk ]; then
+    needed=$(( NEEDED_SIZE + ESP_SIZE ))
+  fi
+  [ $(( end_mib - first_mib )) -ge "$needed" ]
+}
+
+echo
+echo "On $disk:"
+lsblk -o NAME,SIZE,FSTYPE,PARTTYPENAME,PARTLABEL "$disk" | sed 's/^/  /'
+echo
+echo "Install bunix into (it needs $NEEDED_SIZE MiB, plus $ESP_SIZE MiB if the disk has no ESP):"
+for i in "${!places[@]}"; do
+  read -r kind start end _ description <<< "${places[$i]}"
+  too_small=""
+  fits "$kind" "$start" "$end" || too_small="  (too small)"
+  printf '  %d) %s%s\n' $((i + 1)) "$description" "$too_small"
+done
+index=$(ask_number "Which?" ${#places[@]})
+read -r kind start end partition description <<< "${places[$index]}"
+fits "$kind" "$start" "$end" || die "not enough space there"
+if [ "$kind" != disk ]; then
+  for name in "${discoverable[@]}"; do
+    [ "$name" = "$partition" ] && continue
+    die "$disk already has a root, XBOOTLDR or /usr partition ($name), from an
+earlier bunix perhaps; delete those first, or install to the whole disk"
+  done
+fi
+
+# A shared ESP needs room for bunix's few MiB of boot files.  Checked now,
+# before anything on the disk changes.
+if [ -n "$esp" ] && [ "$kind" != disk ]; then
+  mount "$esp" "$WORK"/esp
+  esp_free_mib=$(df --output=avail -B1M "$WORK"/esp | tail -1 | tr -d ' ')
+  umount "$WORK"/esp
+  [ "$esp_free_mib" -ge 8 ] || die "the ESP ($esp) has only $esp_free_mib MiB free; bunix needs 8"
+fi
+
+# --- confirm, then clear the place --------------------------------------
+
+case $kind in
+  disk)
+    confirm=$(ask "ERASE all of $disk? Type the disk's name ($disk) to go on:")
+    [ "$confirm" = "$disk" ] || die "cancelled"
+    wipefs -q -a "$disk"
+    echo 'label: gpt' | sfdisk -q "$disk"
+    esp=""
+    # the whole disk is now one free stretch
+    read -r first last _ < <(sfdisk -F "$disk" | grep -E '^ *[0-9]+ +[0-9]+ ' | head -1)
+    start=$(( first * sector_size ))
+    end=$(( (last + 1) * sector_size ))
+    ;;
+  partition)
+    confirm=$(ask "DELETE $partition and everything on it? Type its name ($partition) to go on:")
+    [ "$confirm" = "$partition" ] || die "cancelled"
+    wipefs -q -a "$partition"
+    sfdisk -q --delete "$disk" "$(cat /sys/class/block/"$(basename "$partition")"/partition)"
+    ;;
+  free)
+    confirm=$(ask "Install into this free space? [yes/no]")
+    [ "$confirm" = yes ] || die "cancelled"
+    ;;
+esac
+
+# --- partitions ---------------------------------------------------------
+
+# Laid out one after another from the start of the place, in whole MiB;
+# root takes what is left.  sfdisk gets each partition's exact position,
+# so nothing lands in some other free stretch of the disk.
+position=$(( (start + MiB - 1) / MiB ))
+place_end=$(( end / MiB ))
+script=""
+add_partition() {
+  local size=$1 type=$2 name=$3 uuid=$4 attributes=${5:-}
+  local line="start=${position}MiB, type=$type, name=\"$name\", uuid=$uuid"
+  [ "$size" = rest ] || line="$line, size=${size}MiB"
+  [ -z "$attributes" ] || line="$line, attrs=\"$attributes\""
+  script+="$line"$'\n'
+  [ "$size" = rest ] || position=$(( position + size ))
+}
+
+new_esp=no
+if [ -z "$esp" ]; then
+  new_esp=yes
+  esp_uuid=$(new_uuid)
+  add_partition $ESP_SIZE $TYPE_ESP "ESP" "$esp_uuid"
+fi
+boot_uuid=$(new_uuid)
+root_uuid=$(new_uuid)
+add_partition $BOOT_SIZE $TYPE_XBOOTLDR "XBOOTLDR" "$boot_uuid"
+# Slot A: read-only (GPT attribute 60), as system/disk.bst makes it
+add_partition $USR_SIZE $TYPE_USR "bunix_$release" "$(uuid_in_name "$usr_image")" GUID:60
+add_partition $USR_VERITY_SIZE $TYPE_USR_VERITY "bunix_${release}_verity" "$(uuid_in_name "$verity_image")" GUID:60
+add_partition $USR_SIGNATURE_SIZE $TYPE_USR_VERITY_SIG "bunix_${release}_verity_sig" "$(uuid_in_name "$signature_image")" GUID:60
+# Slot B: "_empty" is where sysupdate writes the next release
+add_partition $USR_SIZE $TYPE_USR "_empty" "$(new_uuid)"
+add_partition $USR_VERITY_SIZE $TYPE_USR_VERITY "_empty" "$(new_uuid)"
+add_partition $USR_SIGNATURE_SIZE $TYPE_USR_VERITY_SIG "_empty" "$(new_uuid)"
+root_size=$(( place_end - position ))
+[ "$root_size" -ge "$ROOT_MIN_SIZE" ] || die "not enough space: root would get $root_size MiB, it needs $ROOT_MIN_SIZE"
+add_partition rest $TYPE_ROOT "root" "$root_uuid"
+
+echo "Creating partitions..."
+printf '%s' "$script" | sfdisk -q --append "$disk"
+udevadm settle
+
+echo "Writing /usr ($release)..."
+dd if="$usr_image" of="$(device_of_partuuid "$(uuid_in_name "$usr_image")")" bs=4M conv=fsync status=none
+dd if="$verity_image" of="$(device_of_partuuid "$(uuid_in_name "$verity_image")")" bs=4M conv=fsync status=none
+dd if="$signature_image" of="$(device_of_partuuid "$(uuid_in_name "$signature_image")")" bs=4M conv=fsync status=none
+
+echo "Writing the boot files..."
+boot=$(device_of_partuuid "$boot_uuid")
+mkfs.vfat -F 32 -n BUNIX_BOOT "$boot" >/dev/null
+mount "$boot" "$WORK"/boot
+mkdir -p "$WORK"/boot/EFI/Linux
+cp "$uki" "$WORK"/boot/EFI/Linux/
+
+esp_files=$files/esp
+if [ "$new_esp" = yes ]; then
+  esp=$(device_of_partuuid "$esp_uuid")
+  mkfs.vfat -F 32 -n ESP "$esp" >/dev/null
+  mount "$esp" "$WORK"/esp
+  # bunix's own ESP: the default loader too, so the disk also boots where
+  # it has no boot entry
+  cp -r "$esp_files"/. "$WORK"/esp/
+else
+  mount "$esp" "$WORK"/esp
+  # A shared ESP: only bunix's directory.  EFI/BOOT/ is Windows' fallback,
+  # and an existing loader.conf belongs to another systemd-boot.
+  rm -rf "$WORK"/esp/EFI/bunix
+  mkdir -p "$WORK"/esp/EFI "$WORK"/esp/loader
+  cp -r "$esp_files"/EFI/bunix "$WORK"/esp/EFI/
+  [ -e "$WORK"/esp/loader/loader.conf ] || cp "$esp_files"/loader/loader.conf "$WORK"/esp/loader/
+fi
+
+echo "Creating the root file system..."
+mkfs.ext4 -q -F "$(device_of_partuuid "$root_uuid")"
+mount "$(device_of_partuuid "$root_uuid")" "$WORK"/root
+# What systemd-repart would make of a new root (usr/lib/repart.d/50-root.conf):
+# the mount points, and the merged-/usr links at the top (UAPI.9)
+mkdir -p "$WORK"/root/usr "$WORK"/root/etc "$WORK"/root/var "$WORK"/root/home \
+         "$WORK"/root/root "$WORK"/root/srv "$WORK"/root/tmp
+ln -s usr/bin "$WORK"/root/bin
+ln -s usr/bin "$WORK"/root/sbin
+ln -s usr/lib "$WORK"/root/lib
+ln -s usr/lib/x86_64-linux-gnu "$WORK"/root/lib64
+sync
+
+# --- the firmware boot entry --------------------------------------------
+
+echo "Adding the firmware boot entry..."
+esp_disk=/dev/$(lsblk -ndo PKNAME "$esp")
+esp_number=$(cat /sys/class/block/"$(basename "$esp")"/partition)
+esp_partuuid=$(lsblk -ndo PARTUUID "$esp")
+# The numbers of the "bunix" entries on this ESP.  efibootmgr -v lines look
+# like "Boot0004* bunix<tab>HD(1,GPT,<partuuid>,...)/\EFI\bunix\shimx64.efi..."
+bunix_entries_on_esp() {
+  local entries
+  entries=$(efibootmgr -v)
+  grep -i "$esp_partuuid" <<< "$entries" | grep -E $'^Boot[0-9A-F]{4}\\* bunix\t' | cut -c5-8 || true
+}
+
+# A reinstall replaces the entry for this ESP; entries for other disks stay
+for entry in $(bunix_entries_on_esp); do
+  efibootmgr -q -b "$entry" -B
+done
+boot_order=$(efibootmgr | sed -n 's/^BootOrder: //p')
+# shim, told which loader to start: its load options name systemd-boot
+efibootmgr -q --create --disk "$esp_disk" --part "$esp_number" --label bunix \
+  --loader '\EFI\bunix\shimx64.efi' --unicode '\EFI\bunix\systemd-bootx64.efi'
+bunix_entry=$(bunix_entries_on_esp | head -1)
+[ -n "$bunix_entry" ] || die "efibootmgr did not create the boot entry"
+
+# efibootmgr puts the new entry first.  Windows stays the default when it
+# is there: bunix goes last.
+has_windows=no
+if efibootmgr | grep -q 'Windows Boot Manager'; then
+  has_windows=yes
+fi
+if [ "$has_windows" = yes ]; then
+  efibootmgr -q --bootorder "${boot_order:+$boot_order,}$bunix_entry"
+fi
+
+# --- done ---------------------------------------------------------------
+
+echo
+echo "bunix $release is installed on $disk (boot entry Boot$bunix_entry)."
+if [ "$has_windows" = yes ]; then
+  echo "Windows stays the default: to start bunix, choose \"bunix\" in the"
+  echo "firmware's boot menu (a key like F12, F11 or Esc at power-on)."
+  echo "Windows keeps the hardware clock in local time, bunix in UTC; to"
+  echo "make them agree, run 'timedatectl set-local-rtc 1' in bunix."
+fi
+# The variable: 4 bytes of attributes, then 1 when Secure Boot is on.
+# Firmware without Secure Boot has no such variable.
+# Read through a pipe: efivarfs files report a size of 0, and od cannot
+# skip into a file it thinks is empty.
+secure_boot=0
+if [ -e "$SECURE_BOOT_VAR" ]; then
+  secure_boot=$(head -c 5 "$SECURE_BOOT_VAR" | tail -c 1 | od -An -tu1 | tr -d ' ')
+fi
+if [ "$secure_boot" = 1 ]; then
+  echo "Secure Boot is on: the first boot stops in MokManager.  Choose"
+  echo "\"Enroll key from disk\", then EFI/bunix/bunix.cer on the ESP."
+fi

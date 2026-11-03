@@ -1,0 +1,42 @@
+#!/bin/sh
+# bunix has no GnuPG.  systemd's image downloader (systemd-pull, which
+# systemd-sysupdate runs) checks the update manifest's signature with
+#
+#   gpg [options] --keyring=FILE --verify SIGNATURE -
+#
+# and the signed data on standard input.  This program does exactly that
+# check, with Sequoia's sqv, and nothing else.
+
+keyring=
+signature=
+data=
+verifying=no
+
+for arg in "$@"; do
+  case $arg in
+    --keyring=*) keyring=${arg#--keyring=} ;;
+    --verify)    verifying=yes ;;
+    # "-" is the data (standard input), not an option
+    -)           data=- ;;
+    # gpg's own settings (--homedir, --batch, --trust-model, ...): sqv
+    # keeps no state and trusts exactly the keyring it is given
+    -*) ;;
+    *)
+      if [ -z "$signature" ]; then signature=$arg; else data=$arg; fi ;;
+  esac
+done
+
+is_manifest_check=yes
+[ $verifying = yes ] || is_manifest_check=no
+[ -n "$keyring" ] || is_manifest_check=no
+[ -n "$signature" ] || is_manifest_check=no
+[ "$data" = - ] || is_manifest_check=no
+
+if [ $is_manifest_check = no ]; then
+  echo "gpg: bunix has no GnuPG; this gpg only verifies detached signatures" >&2
+  echo "     the way systemd-sysupdate asks: gpg --keyring=FILE --verify SIG -" >&2
+  echo "     (it runs Sequoia's sqv; see sqv --help)" >&2
+  exit 2
+fi
+
+exec sqv --keyring "$keyring" --signature-file "$signature" -

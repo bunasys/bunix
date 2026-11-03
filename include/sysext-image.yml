@@ -1,0 +1,30 @@
+# Packs a system extension image, <extension>_<release>.raw (UAPI
+# Discoverable Disk Image): an erofs /usr, its dm-verity hash tree, and the
+# root hash signed with the bunix image signing key.  systemd-sysext merges
+# it over /usr only if the kernel accepts that signature.  Published for
+# systemd-sysupdate by tools/publish.sh; see docs/updates.md.
+#
+# An element including this sets `extension` and stages its tree at
+# /extension, the signing key at keys/ and files/sysext/repart.d at
+# repart.d/ (sysext/devel.bst shows how).
+
+config:
+  build-commands:
+  - |
+    # --offline: no loop devices in the sandbox; the file systems are made
+    # from the directory tree.  --seed: fixed partition UUIDs instead of
+    # ones derived from a machine ID the sandbox does not have.  TMPDIR: the
+    # sandbox's /var/tmp is read-only.
+    mkdir -p tmp
+    export TMPDIR=$PWD/tmp
+    # a private copy of the key: sources are staged readable by all
+    install -m 0600 keys/verity.key tmp/verity.key
+    /usr/bin/systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
+      --definitions=repart.d --copy-source=/extension \
+      --private-key=tmp/verity.key --certificate=keys/verity.crt \
+      --seed=%{seed} --json=pretty \
+      %{extension}_%{release-version}.raw
+    ls -l %{extension}_%{release-version}.raw
+
+  install-commands:
+  - install -D -m 0644 %{extension}_%{release-version}.raw %{install-root}/%{extension}_%{release-version}.raw

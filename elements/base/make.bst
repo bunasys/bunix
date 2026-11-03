@@ -1,0 +1,13 @@
+kind: autotools
+description: GNU make -- for the toolchain extension (sysext/devel.bst)
+
+build-depends:
+- bootstrap/build-env.bst
+
+sources:
+- kind: tar
+  url: gnu:make/make-4.4.1.tar.gz
+  ref: dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3
+
+variables:
+  conf-local: --disable-nls --without-guile

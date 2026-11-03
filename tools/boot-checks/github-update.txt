@@ -1,0 +1,3 @@
+grep IMAGE_VERSION /etc/os-release; /usr/lib/systemd/systemd-sysupdate list 2>&1 | head -20
+/usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -v -E 'Downloading|Acquired|Download of|^Pulling|^Got '; echo "update exit $status"
+ls -l /boot/EFI/Linux; lsblk -o NAME,PARTLABEL /dev/vda | tail -8; sync

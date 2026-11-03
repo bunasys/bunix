@@ -1,0 +1,25 @@
+# Build settings for the system -- every element outside bootstrap/.
+# project.conf applies this file to the autotools, make, meson, cmake and
+# cargo element kinds; elements of kind `manual` include it themselves:
+#
+#   (@): include/system.yml
+
+variables:
+  # UAPI.9: libraries in the multiarch $libdir, /usr/sbin is a symlink to
+  # /usr/bin, no /usr/libexec (helpers go to /usr/lib, or /usr/lib/<package>),
+  # no /usr/com.
+  lib: "lib/%{triplet}"
+  libdir: "%{prefix}/%{lib}"
+  sbindir: "%{bindir}"
+  libexecdir: "%{prefix}/lib"
+  sharedstatedir: /var/lib
+
+  # gcc already defaults to PIE and the stack protector
+  # (bootstrap/stage3/gcc.bst)
+  cflags: -O2 -pipe -fno-plt
+  ldflags: -Wl,-O1,--as-needed
+
+environment:
+  CFLAGS: "%{cflags}"
+  CXXFLAGS: "%{cflags}"
+  LDFLAGS: "%{ldflags}"

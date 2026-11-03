@@ -1,0 +1,4 @@
+# What runs is decided by the image: units are enabled in /usr
+# (system/rootfs.bst), and updated with it.  On an installed system's first
+# boot /etc is empty and systemd applies presets; nothing more is enabled.
+disable *

@@ -1,0 +1,8 @@
+# DHCP on every wired port.  Virtual links (bridges, veth, ...) have a Kind,
+# physical ones do not.
+[Match]
+Type=ether
+Kind=!*
+
+[Network]
+DHCP=yes

@@ -1,0 +1,2 @@
+findmnt /usr; echo "findmnt exit $status"; findmnt -T /usr; grep -E " /usr | / " /proc/self/mountinfo
+cat /sys/class/tty/ttyS0/type /sys/class/tty/ttyS1/type; systemctl status console-shell@ttyS0 --no-pager | head -5

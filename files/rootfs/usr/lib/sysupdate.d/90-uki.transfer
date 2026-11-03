@@ -1,0 +1,24 @@
+# The unified kernel image -- kernel, initrd and the command line with
+# usrhash= -- Secure Boot signed.  Written last, so the new version only
+# becomes bootable once its /usr is complete.  It starts with three tries
+# (+3): systemd-boot counts them down, and boots the previous version once
+# they run out, unless the new one reaches boot-complete.target first
+# (systemd-bless-boot).
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.efi
+
+[Target]
+Type=regular-file
+Path=/EFI/Linux
+PathRelativeTo=boot
+MatchPattern=bunix_@v+@l-@d.efi bunix_@v+@l.efi bunix_@v.efi
+# writable: systemd-boot skips boot counting for read-only entry files
+Mode=0644
+TriesLeft=3
+TriesDone=0
+InstancesMax=2

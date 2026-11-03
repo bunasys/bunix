@@ -1,0 +1,19 @@
+# Checks for tools/boot-test.py (BOOT_CHECKS=...): fetch the devel extension
+# with systemd-sysupdate and build a program with it, on the booted ISO.
+#
+# Expects update directories on the QEMU host, served on port 8000 by
+# tools/serve-updates.py (QEMU's user network reaches the host as 10.0.2.2):
+#   good/<release>/      what tools/publish.sh made
+#   tampered/<release>/  the same, with a line added to SHA256SUMS after
+#                        signing -- the signature no longer matches
+#
+# The root shell is fish.
+
+systemctl is-system-running; grep -E 'IMAGE_VERSION|SYSEXT_LEVEL' /etc/os-release; grep -c 'bunix image signing key' /proc/keys
+mkdir -p /etc/sysupdate.d/devel.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devel.feature.d/enable.conf; /usr/lib/systemd/systemd-sysupdate features devel | head -8
+sed 's#^Path=https.*#Path=http://10.0.2.2:8000/tampered/%A/#' /usr/lib/sysupdate.d/50-devel.transfer > /etc/sysupdate.d/50-devel.transfer; /usr/lib/systemd/systemd-sysupdate update; echo "tampered manifest: exit $status"; ls -R /var/lib/extensions
+sed 's#^Path=https.*#Path=http://10.0.2.2:8000/good/%A/#' /usr/lib/sysupdate.d/50-devel.transfer > /etc/sysupdate.d/50-devel.transfer; /usr/lib/systemd/systemd-sysupdate update; echo "good manifest: exit $status"; ls -lR /var/lib/extensions
+systemd-sysext refresh; systemd-sysext status; dmsetup ls
+cc --version | head -1; printf '#include <stdio.h>\nint main(void) { puts("compiled on bunix"); return 0; }\n' > /tmp/t.c; cc -O2 -o /tmp/t /tmp/t.c; and /tmp/t
+make --version | head -1; cmake --version | head -1; pkg-config --modversion openssl
+systemd-sysext unmerge; command -v cc; or echo "cc gone after unmerge"

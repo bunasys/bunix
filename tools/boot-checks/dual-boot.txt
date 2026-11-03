@@ -1,0 +1,14 @@
+# Checks for tools/boot-test.py on the disk bunix-install wrote next to
+# "Windows" (tools/boot-checks/install-windows.txt): bunix boots from its
+# own boot entry, mounts its XBOOTLDR on /boot and the shared ESP on /efi,
+# and systemd-boot lists only bunix (no Windows entry: auto-entries no).
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep IMAGE_VERSION /etc/os-release
+findmnt -n -o TARGET,SOURCE,FSTYPE / /usr /efi /boot 2>&1 | cut -c1-100
+lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE,MOUNTPOINTS /dev/vda
+efibootmgr | grep -E 'BootCurrent|BootOrder|^Boot0'
+bootctl status --no-pager 2>&1 | grep -E 'Current Entry|Default Entry|Stub:|Partition:' | head -8
+bootctl list --no-pager 2>&1 | grep -E 'title:|source:'
+# the boot splash ran, in the initrd and after it
+systemctl show -p Id,ActiveState,Result plymouth-start.service plymouth-quit.service; journalctl -b --no-pager -o cat | grep -i plymouth | head -8
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' https://example.com; systemd-analyze --no-pager

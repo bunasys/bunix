@@ -1,0 +1,3 @@
+echo start; systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep IMAGE_VERSION /etc/os-release
+bootctl status --no-pager 2>&1 | grep -E 'Current Entry|Stub:'; cat /proc/cmdline; findmnt -n -o SOURCE /usr; dmsetup table usr | cut -c1-120
+ls -l /boot/EFI/Linux; systemctl status systemd-bless-boot.service --no-pager 2>&1 | head -8

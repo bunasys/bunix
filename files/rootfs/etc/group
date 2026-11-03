@@ -1,0 +1,6 @@
+root:x:0:
+tty:x:5:
+disk:x:6:
+kmem:x:15:
+systemd-journal:x:101:
+nogroup:x:65534:

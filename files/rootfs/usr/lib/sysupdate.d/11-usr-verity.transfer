@@ -1,0 +1,15 @@
+# /usr's dm-verity hash tree (see 10-usr.transfer)
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.usr-x86-64-verity.@u.raw
+
+[Target]
+Type=partition
+Path=auto
+MatchPattern=bunix_@v_verity
+MatchPartitionType=usr-verity
+ReadOnly=1

@@ -1,0 +1,16 @@
+# /usr's root hash, signed with the bunix image signing key (see
+# 10-usr.transfer)
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.usr-x86-64-verity-sig.@u.raw
+
+[Target]
+Type=partition
+Path=auto
+MatchPattern=bunix_@v_verity_sig
+MatchPartitionType=usr-verity-sig
+ReadOnly=1

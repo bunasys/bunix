@@ -1,0 +1,11 @@
+# Checks for tools/boot-test.py: the boot splash ran (base/plymouth.bst) --
+# started on the firmware's framebuffer, quit when boot finished -- and the
+# boot was quiet.  The screenshots 1-boot-*.png show it.
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager
+cat /proc/cmdline
+systemctl show -p Id,ActiveState,Result plymouth-start.service plymouth-quit.service
+journalctl -b --no-pager -o cat | grep -i plymouth | head -8
+ls /dev/dri; cat /sys/class/drm/card*/device/driver/module/drivers 2>/dev/null; readlink /sys/class/drm/card0/device/driver
+# the other consoles: switching to tty2 starts a shell there (autovt@)
+busybox chvt 2; sleep 2; systemctl is-active autovt@tty2.service; busybox chvt 1

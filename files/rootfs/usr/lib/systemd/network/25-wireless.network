@@ -1,0 +1,8 @@
+# Wi-Fi: iwd associates (`iwctl station wlan0 connect <ssid>`), then the link
+# gets DHCP from networkd like a wired one.
+[Match]
+Type=wlan
+
+[Network]
+DHCP=yes
+IgnoreCarrierLoss=3s

@@ -1,0 +1,22 @@
+# The OS itself, on an installed system (docs/updates.md, step 2): /usr in
+# three partitions -- erofs data, its dm-verity hash tree, the signed root
+# hash -- written into the inactive slot, then the UKI that boots it
+# (90-uki.transfer).  The source file names carry the partition UUIDs
+# (@u), which systemd-repart derived from the root hash: the UKI's
+# usrhash= finds its /usr by them, so after a rollback an older UKI still
+# mounts its own /usr.  The live ISO has no slots; system/iso.bst leaves
+# these files out.
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.usr-x86-64.@u.raw
+
+[Target]
+Type=partition
+Path=auto
+MatchPattern=bunix_@v
+MatchPartitionType=usr
+ReadOnly=1

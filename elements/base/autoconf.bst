@@ -1,0 +1,14 @@
+kind: autotools
+description: GNU autoconf -- generates configure scripts (erofs-utils ships none)
+
+build-depends:
+- bootstrap/build-env.bst
+
+depends:
+- base/m4.bst
+- base/perl.bst
+
+sources:
+- kind: tar
+  url: gnu:autoconf/autoconf-2.73.tar.xz
+  ref: 9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e

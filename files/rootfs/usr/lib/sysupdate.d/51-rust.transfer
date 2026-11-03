@@ -1,0 +1,18 @@
+# The rust extension (rust.feature), built with each release and updated
+# in lock-step with /usr, like the devel extension (50-devel.transfer, which
+# explains the details).  It needs the devel extension merged too.
+[Transfer]
+Features=rust
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=rust_@v.raw
+
+[Target]
+Type=regular-file
+Path=/var/lib/extensions/rust.raw.v
+MatchPattern=rust_@v.raw
+Mode=0444
+InstancesMax=2

@@ -1,0 +1,7 @@
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep -E 'IMAGE_VERSION' /etc/os-release
+findmnt -n -o TARGET,SOURCE,FSTYPE,OPTIONS / /usr /efi /boot 2>&1 | cut -c1-120
+lsblk -o NAME,SIZE,TYPE,PARTLABEL,FSTYPE,MOUNTPOINTS /dev/vda /dev/mapper/usr 2>&1
+bootctl status --no-pager 2>&1 | grep -E 'Product|Secure Boot|Current Boot|Current Entry|Default Entry|Stub|source' | head -12
+cat /proc/cmdline; ls -la /etc | head -20; getent passwd root
+networkctl --no-pager | tail -3; curl -sS -o /dev/null -w 'HTTP %{http_code}\n' https://example.com; nawa --version
+systemd-analyze --no-pager; free -m | head -2

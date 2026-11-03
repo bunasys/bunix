@@ -1,0 +1,4 @@
+.stage*.log
+# the Secure Boot signing key: private
+keys/
+out/

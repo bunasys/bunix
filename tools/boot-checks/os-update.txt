@@ -1,0 +1,5 @@
+echo start; systemctl is-system-running; grep IMAGE_VERSION /etc/os-release; ls /boot/EFI/Linux
+mkdir -p /etc/sysupdate.d; for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/latest/#' $f > /etc/sysupdate.d/(basename $f); end; grep -h ^Path /etc/sysupdate.d/*.transfer | sort -u
+/usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -v -E '^Got |Downloading|Acquired|Download of|^Pulling'; echo "update exit $status"
+lsblk -o NAME,SIZE,PARTLABEL,PARTUUID /dev/vda; ls -l /boot/EFI/Linux
+sync; echo synced

@@ -1,0 +1,74 @@
+kind: manual
+description: |
+  bunix_<release>.efi: the installed system's unified kernel image -- the
+  kernel, system/initrd.bst, os-release and the kernel command line in one
+  EFI program, signed with the bunix Secure Boot key.  The command line
+  holds usrhash=, the root hash of this release's /usr (system/usr.bst), so
+  the signature covers which /usr the kernel accepts.
+
+(@): include/release.yml
+
+build-depends:
+- bootstrap/build-env.bst
+# ukify, the EFI stub, systemd-sbsign
+- base/systemd.bst
+- base/python-pefile.bst
+- system/linux.bst
+- filename: system/initrd.bst
+  config:
+    location: /initrd
+- filename: system/usr.bst
+  config:
+    location: /usr-partitions
+- filename: system/rootfs.bst
+  config:
+    location: /rootfs
+
+sources:
+- kind: local
+  path: files/branding/splash.bmp
+  directory: branding
+- kind: local
+  path: keys/secureboot.key
+  directory: keys
+- kind: local
+  path: keys/secureboot.crt
+  directory: keys
+
+variables:
+  # rw: the root partition is writable.  Both consoles; the last is the
+  # one /dev/console (and the boot messages' main output) goes to.
+  # dm_verity.require_signatures is not set here: /usr's root hash is
+  # trusted because the signed UKI names it, without a signature of its own.
+  # quiet splash: no kernel or systemd messages on the screen, only the
+  # boot splash (Plymouth, base/plymouth.bst), unless something fails.
+  # plymouth.use-simpledrm: Plymouth draws on the firmware's framebuffer,
+  # which it otherwise ignores, waiting for a GPU driver bunix lacks yet.
+  # plymouth.ignore-serial-consoles: with a serial console on the command
+  # line Plymouth would show only its text mode, everywhere.
+  cmdline: rw console=ttyS0,115200 console=tty0 quiet splash plymouth.use-simpledrm
+    plymouth.ignore-serial-consoles
+
+config:
+  build-commands:
+  # --no-sign-kernel: the kernel inside needs no signature of its own, the
+  # UKI's covers it (and ukify cannot check one with systemd-sbsign)
+  - |
+    mkdir -p tmp
+    install -m 0600 keys/secureboot.key tmp/secureboot.key
+    release=$(basename /usr/lib/modules/*)
+    ukify build \
+      --linux=/usr/lib/modules/$release/vmlinuz --uname=$release \
+      --initrd=/initrd/initrd.img \
+      --os-release=@/rootfs/usr/lib/os-release \
+      --cmdline="usrhash=$(cat /usr-partitions/usrhash) %{cmdline}" \
+      --splash=branding/splash.bmp \
+      --stub=/usr/lib/systemd/boot/efi/linuxx64.efi.stub \
+      --signtool=systemd-sbsign --no-sign-kernel \
+      --secureboot-private-key=tmp/secureboot.key \
+      --secureboot-certificate=keys/secureboot.crt \
+      --output=bunix_%{release-version}.efi
+    ukify inspect bunix_%{release-version}.efi | head -30
+
+  install-commands:
+  - install -D -m 0644 bunix_%{release-version}.efi %{install-root}/bunix_%{release-version}.efi

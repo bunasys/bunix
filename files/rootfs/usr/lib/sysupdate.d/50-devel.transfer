@@ -1,0 +1,30 @@
+# The devel extension (devel.feature), built with each release: an
+# extension built for another release would not match this system's C
+# library.  Being part of the same update target, it moves in lock-step
+# with /usr (10-usr.transfer): sysupdate installs the same version of both.
+# The live ISO, which has no /usr to update, fetches the one for its own
+# release instead (system/iso.bst points Path= at that release).
+#
+# The file is named devel_<version>.raw: sysext takes the extension's name
+# from the file name up to the first "_" (and then reads
+# extension-release.devel inside).  It lands in a versioned directory,
+# devel.raw.v/, from which sysext merges only the newest.
+#
+# SHA256SUMS there must be signed (SHA256SUMS.gpg) by the bunix release key,
+# /usr/lib/systemd/import-pubring.pgp; the image itself is checked again by
+# the kernel (dm-verity signature) before it is merged.
+[Transfer]
+Features=devel
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=devel_@v.raw
+
+[Target]
+Type=regular-file
+Path=/var/lib/extensions/devel.raw.v
+MatchPattern=devel_@v.raw
+Mode=0444
+InstancesMax=2

@@ -1,0 +1,25 @@
+# No login prompt: this is a live system without passwords, so the console
+# simply is root's fish.  The pattern is systemd's own debug-shell.service.
+[Unit]
+Description=root shell on %I
+# start once boot has finished, so systemd's status lines do not land on the prompt
+After=multi-user.target
+ConditionPathExists=/dev/%I
+
+[Service]
+ExecStart=-/usr/bin/fish --login
+WorkingDirectory=~
+User=root
+StandardInput=tty
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=always
+RestartSec=0
+KillMode=process
+IgnoreSIGPIPE=no
+SendSIGHUP=yes
+
+[Install]
+WantedBy=multi-user.target

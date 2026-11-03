@@ -1,0 +1,32 @@
+# The boot splash: the Buna logo in the middle of a black screen -- where
+# the boot stub drew it (files/branding/splash.bmp) -- and a spinner below.  Plymouth's two-step plugin, with the spinner theme's
+# pictures (copied next to this file when plymouth is built).
+[Plymouth Theme]
+Name=bunix
+Description=The Buna logo
+ModuleName=two-step
+
+[two-step]
+ImageDir=/usr/share/plymouth/themes/bunix
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.5
+HorizontalAlignment=.5
+VerticalAlignment=.78
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.78
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x000000
+BackgroundEndColor=0x000000
+ProgressBarBackgroundColor=0x1a2a40
+ProgressBarForegroundColor=0xc9a24a
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+
+[shutdown]
+UseEndAnimation=false
+
+[reboot]
+UseEndAnimation=false

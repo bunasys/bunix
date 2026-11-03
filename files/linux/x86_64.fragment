@@ -1,0 +1,223 @@
+# bunix x86_64: additions to the kernel's own x86_64_defconfig for booting
+# real PCs (and QEMU) from the ISO.  elements/system/linux.bst fails if any
+# line here does not survive `make olddefconfig`.
+#
+# No loadable modules: there is no kmod in the system, so every driver is
+# built in and nothing has to be found or loaded at boot.
+# CONFIG_MODULES is not set
+
+# the whole rootfs is the initramfs, zstd-compressed
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_RD_ZSTD=y
+CONFIG_TMPFS=y
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+
+# what systemd expects of a kernel
+CONFIG_CGROUPS=y
+CONFIG_MEMCG=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FHANDLE=y
+CONFIG_AUTOFS_FS=y
+CONFIG_EPOLL=y
+CONFIG_SIGNALFD=y
+CONFIG_TIMERFD=y
+CONFIG_INOTIFY_USER=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_CGROUP_BPF=y
+
+# UEFI
+CONFIG_EFI=y
+CONFIG_EFI_STUB=y
+CONFIG_EFIVAR_FS=y
+
+# console: VGA text, the firmware framebuffer, and serial
+CONFIG_VGA_CONSOLE=y
+CONFIG_DRM=y
+CONFIG_DRM_SIMPLEDRM=y
+CONFIG_SYSFB_SIMPLEFB=y
+# fbcon sits on DRM's fbdev emulation
+CONFIG_DRM_FBDEV_EMULATION=y
+CONFIG_DRM_CLIENT_DEFAULT_FBDEV=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+# The boot splash: fbcon leaves the screen alone (and the boot stub's logo on
+# it) until text is actually written to the console -- with "quiet", only
+# when something goes wrong; Plymouth draws over the same picture.  No
+# penguin either.
+# (it needs the fbdev layer itself, without its firmware framebuffer
+# drivers: simpledrm has the screen)
+CONFIG_FB=y
+# CONFIG_FB_EFI is not set
+# CONFIG_FB_VESA is not set
+# (it needs the fbdev layer itself, without its firmware framebuffer
+# drivers: simpledrm has the screen)
+CONFIG_FB=y
+# CONFIG_FB_EFI is not set
+# CONFIG_FB_VESA is not set
+CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER=y
+# CONFIG_LOGO is not set
+# GPU drivers want firmware blobs this image does not carry; the firmware's
+# framebuffer is enough for a text console
+# CONFIG_DRM_I915 is not set
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+
+# keyboards: PS/2 and USB
+CONFIG_KEYBOARD_ATKBD=y
+CONFIG_USB_SUPPORT=y
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB_EHCI_HCD=y
+CONFIG_USB_OHCI_HCD=y
+CONFIG_USB_UHCI_HCD=y
+CONFIG_HID_GENERIC=y
+CONFIG_USB_HID=y
+
+# networking: AF_PACKET is what DHCP clients use
+CONFIG_PACKET=y
+CONFIG_UNIX=y
+CONFIG_INET=y
+CONFIG_IPV6=y
+
+# wired NICs found in common PCs, laptops and USB dongles
+CONFIG_ETHERNET=y
+CONFIG_NET_VENDOR_INTEL=y
+CONFIG_E1000=y
+CONFIG_E1000E=y
+CONFIG_IGB=y
+CONFIG_IGC=y
+CONFIG_IXGBE=y
+CONFIG_NET_VENDOR_REALTEK=y
+CONFIG_R8169=y
+CONFIG_8139CP=y
+CONFIG_8139TOO=y
+CONFIG_NET_VENDOR_BROADCOM=y
+CONFIG_TIGON3=y
+CONFIG_BNX2=y
+CONFIG_NET_VENDOR_ATHEROS=y
+CONFIG_ALX=y
+CONFIG_ATL1C=y
+CONFIG_NET_VENDOR_MARVELL=y
+CONFIG_SKGE=y
+CONFIG_SKY2=y
+CONFIG_NET_VENDOR_AQUANTIA=y
+CONFIG_AQTION=y
+CONFIG_USB_NET_DRIVERS=y
+CONFIG_USB_USBNET=y
+CONFIG_USB_RTL8152=y
+CONFIG_USB_NET_AX8817X=y
+CONFIG_USB_NET_AX88179_178A=y
+CONFIG_USB_NET_CDCETHER=y
+CONFIG_USB_NET_CDC_NCM=y
+
+# QEMU / KVM guests, for testing the ISO before writing it to a USB stick
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_NET=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_CONSOLE=y
+CONFIG_HW_RANDOM_VIRTIO=y
+
+# local disks, so they can be mounted from the live system
+CONFIG_BLK_DEV_NVME=y
+CONFIG_SATA_AHCI=y
+CONFIG_USB_STORAGE=y
+CONFIG_EXT4_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_ISO9660_FS=y
+CONFIG_JOLIET=y
+
+# set the system clock from the RTC, so TLS certificates validate before
+# timesyncd has synchronised
+CONFIG_RTC_CLASS=y
+CONFIG_RTC_HCTOSYS=y
+CONFIG_RTC_DRV_CMOS=y
+
+# Wi-Fi: the 802.11 stack and drivers for the chips in most laptops.  Their
+# firmware is not shipped: it is added per machine, as a second initramfs
+# (plain or zstd-compressed files under /usr/lib/firmware).  The loader waits
+# for the initramfs before looking for it.
+CONFIG_WIRELESS=y
+CONFIG_CFG80211=y
+CONFIG_MAC80211=y
+CONFIG_RFKILL=y
+CONFIG_FW_LOADER=y
+CONFIG_FW_LOADER_COMPRESS=y
+CONFIG_FW_LOADER_COMPRESS_ZSTD=y
+CONFIG_WLAN=y
+# Intel: dvm = older chips, mvm = 7000..AX2xx, mld = BE2xx (Wi-Fi 7)
+CONFIG_WLAN_VENDOR_INTEL=y
+CONFIG_IWLWIFI=y
+CONFIG_IWLDVM=y
+CONFIG_IWLMVM=y
+CONFIG_IWLMLD=y
+# Qualcomm / Atheros
+CONFIG_WLAN_VENDOR_ATH=y
+CONFIG_ATH9K=y
+CONFIG_ATH9K_PCI=y
+CONFIG_ATH10K=y
+CONFIG_ATH10K_PCI=y
+CONFIG_ATH11K=y
+CONFIG_ATH11K_PCI=y
+CONFIG_ATH12K=y
+# Realtek
+CONFIG_WLAN_VENDOR_REALTEK=y
+CONFIG_RTW88=y
+CONFIG_RTW88_8822BE=y
+CONFIG_RTW88_8822CE=y
+CONFIG_RTW88_8821CE=y
+CONFIG_RTW88_8723DE=y
+CONFIG_RTW89=y
+CONFIG_RTW89_8852AE=y
+CONFIG_RTW89_8852BE=y
+CONFIG_RTW89_8852CE=y
+CONFIG_RTW89_8922AE=y
+# MediaTek (mt7921e also drives the MT7922)
+CONFIG_WLAN_VENDOR_MEDIATEK=y
+CONFIG_MT7921E=y
+CONFIG_MT7925E=y
+# Broadcom
+CONFIG_WLAN_VENDOR_BROADCOM=y
+CONFIG_BRCMFMAC=y
+CONFIG_BRCMFMAC_PCIE=y
+
+# what iwd needs from the kernel: hashes and ciphers through AF_ALG, and the
+# keyring's DH and certificate parsers (for WPA3/SAE and WPA-Enterprise)
+CONFIG_CRYPTO_USER_API_HASH=y
+CONFIG_CRYPTO_USER_API_SKCIPHER=y
+CONFIG_CRYPTO_HMAC=y
+CONFIG_CRYPTO_CMAC=y
+CONFIG_CRYPTO_MD4=y
+CONFIG_CRYPTO_MD5=y
+CONFIG_CRYPTO_SHA1=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_ECB=y
+CONFIG_CRYPTO_CBC=y
+CONFIG_CRYPTO_DES=y
+CONFIG_KEYS=y
+CONFIG_KEY_DH_OPERATIONS=y
+CONFIG_ASYMMETRIC_KEY_TYPE=y
+CONFIG_ASYMMETRIC_PUBLIC_KEY_SUBTYPE=y
+CONFIG_X509_CERTIFICATE_PARSER=y
+CONFIG_PKCS7_MESSAGE_PARSER=y
+CONFIG_PKCS8_PRIVATE_KEY_PARSER=y
+
+# System extension images (docs/updates.md): overlayfs lays them over /usr,
+# erofs is their file system, dm-verity checks every block as it is read.
+# The kernel accepts an image only if its root hash is signed by a key in
+# the system keyring -- the bunix image signing certificate, built in.
+CONFIG_OVERLAY_FS=y
+CONFIG_EROFS_FS=y
+CONFIG_EROFS_FS_ZIP=y
+CONFIG_EROFS_FS_ZIP_LZMA=y
+CONFIG_MD=y
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_VERITY=y
+CONFIG_DM_VERITY_VERIFY_ROOTHASH_SIG=y
+CONFIG_SYSTEM_TRUSTED_KEYRING=y
+CONFIG_SYSTEM_TRUSTED_KEYS="bunix/verity.crt"
+
+# USB disks over UAS (an installed system may live on one)
+CONFIG_USB_UAS=y
