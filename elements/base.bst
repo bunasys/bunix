@@ -1,6 +1,6 @@
 kind: stack
 description: |
-  The base system's packages -- what minisys ships, built here.  Build tools
+  The base system's packages.  Build tools
   (cmake, meson, perl, ...) are not in it; they reach the system only if
   something here depends on them.  glibc and gcc's runtime libraries come
   from the bootstrap and are added when the image is put together.

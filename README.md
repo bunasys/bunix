@@ -12,9 +12,6 @@ dependencies, and caches the result under a key derived from the element and
 everything it depends on — so a change rebuilds exactly what it affects, and
 nothing from the build machine can leak in.
 
-`../minisys` is the earlier shell-script build this replaces; its scripts are
-the reference for package-specific quirks.
-
 ## Using a release
 
 Releases are on this repository's [releases page](https://github.com/bunasys/bunix/releases):
@@ -122,7 +119,7 @@ trade-off seed.bst makes for gcc.
 
 ## The base system
 
-`elements/base/` holds the packages minisys ships, plus the tools needed to
+`elements/base/` holds the system's packages, plus the tools needed to
 build them (perl, pkgconf, cmake, meson, ninja, gperf, Jinja2). `base.bst`
 lists the packages; `tests/base.bst` runs each of their programs once.
 
