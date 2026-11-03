@@ -98,6 +98,14 @@ Pass the files on the same line as the command: without them `gh` creates
 an empty release, and installed systems would find no update.  The release
 becomes "latest" on creation, so machines see it at once.
 
+Then delete the release before the previous one, so only the current and
+the previous release are kept (an installed system needs only the latest;
+the previous is there to go back to):
+
+```
+gh release delete v<older> -R bunasys/bunix --yes --cleanup-tag
+```
+
 **7. On a real machine:** `/usr/lib/systemd/systemd-sysupdate update`,
 then `reboot`; `grep IMAGE_VERSION /etc/os-release` shows the new version.
 
