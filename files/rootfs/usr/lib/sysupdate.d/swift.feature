@@ -1,7 +1,7 @@
-# Swift (swiftc, the package manager, Foundation, lldb, sourcekit-lsp) as a system extension.  It builds through the devel extension's
+# Swift (swiftc, the package manager, Foundation, lldb, sourcekit-lsp) as a system extension.  It builds through the gcc extension's
 # compiler and linker, so enable both:
 #
-#   for f in devel swift
+#   for f in gcc swift
 #     mkdir -p /etc/sysupdate.d/$f.feature.d
 #     printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/$f.feature.d/enable.conf
 #   end

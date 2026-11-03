@@ -1,11 +1,11 @@
 # Checks for tools/boot-test.py on the live ISO (BOOT_MEMORY=4G: the
-# extensions land in RAM): fetch the devel, rust and swift extensions with
+# extensions land in RAM): fetch the gcc, rust and swift extensions with
 # systemd-sysupdate from tools/serve-updates.py (serving the directory that
 # holds <release>/), merge them, and build a program in each language.
 # The root shell is fish.
 
 systemctl is-system-running; grep IMAGE_VERSION /etc/os-release
-for f in devel rust swift; mkdir -p /etc/sysupdate.d/$f.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/$f.feature.d/enable.conf; end; for t in /usr/lib/sysupdate.d/5*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/%A/#' $t > /etc/sysupdate.d/(basename $t); end
+for f in gcc rust swift; mkdir -p /etc/sysupdate.d/$f.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/$f.feature.d/enable.conf; end; for t in /usr/lib/sysupdate.d/5*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/%A/#' $t > /etc/sysupdate.d/(basename $t); end
 /usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -E 'Selected|Successfully installed|rror'; echo "update exit $status"; ls -l /var/lib/extensions/*
 systemd-sysext refresh; systemd-sysext status
 printf 'fn main() { println!("hello from Rust"); }\n' > /tmp/h.rs; rustc -O -o /tmp/hr /tmp/h.rs; and /tmp/hr

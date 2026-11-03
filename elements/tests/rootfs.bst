@@ -123,7 +123,7 @@ config:
     test -L /init
 
   - |
-    # Updates (docs/updates.md): the release version, the devel feature,
+    # Updates (docs/updates.md): the release version, the gcc feature,
     # and gpg being only sqv's manifest check
     . /usr/lib/os-release
     test -n "$IMAGE_VERSION" && test "$SYSEXT_LEVEL" = "$IMAGE_VERSION"

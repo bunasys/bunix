@@ -1,0 +1,10 @@
+# Checks for tools/boot-test.py after tools/boot-checks/rename-update.txt and
+# a reboot: the new release runs; then the steps the release notes give --
+# devel off and removed, gcc on.
+
+echo start; systemctl is-system-running; grep IMAGE_VERSION /etc/os-release; systemd-sysext status --no-pager 2>&1 | head -6
+rm -rf /etc/sysupdate.d/devel.feature.d /var/lib/extensions/devel.raw.v; mkdir -p /etc/sysupdate.d/gcc.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/gcc.feature.d/enable.conf
+for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/latest/#' $f > /etc/sysupdate.d/(basename $f); end; /usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -E 'Successfully|Failed|rror'; echo "gcc exit $status"
+systemd-sysext refresh; systemd-sysext status --no-pager 2>&1 | head -6; gcc --version | head -1; echo 'int main(){return 0;}' > /tmp/t.c; and gcc /tmp/t.c -o /tmp/t; and /tmp/t; echo "built $status"
+lsmod | grep -E '^(bochs|cfg80211)' | cut -c1-40; cat /proc/sys/kernel/tainted; modinfo -F signer bochs
+systemctl show -p ActiveState,Result plymouth-start.service | tr '\n' ' '; echo; journalctl -b -p err --no-pager -o cat | head -8

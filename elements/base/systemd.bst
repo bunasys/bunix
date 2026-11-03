@@ -28,6 +28,8 @@ depends:
 - base/zlib.bst
 # dm-verity for extension images (loaded with dlopen)
 - base/cryptsetup.bst
+# udev loads each device's driver module through libkmod
+- base/kmod.bst
 
 sources:
 - kind: tar
@@ -46,7 +48,7 @@ variables:
   # hibernation.
   meson-local: >-
     -Dauto_features=disabled -Dmode=release
-    -Dblkid=enabled -Dlibmount=enabled -Dopenssl=enabled
+    -Dblkid=enabled -Dlibmount=enabled -Dopenssl=enabled -Dkmod=enabled
     -Dlibcryptsetup=enabled -Dlibcurl=enabled -Dxz=enabled -Dzlib=enabled -Dfdisk=enabled
     -Dsysupdate=enabled -Dsysupdated=enabled -Dimportd=enabled -Drepart=enabled -Dsysext=true
     -Defi=true -Dbootloader=enabled -Dukify=enabled -Dinitrd=true

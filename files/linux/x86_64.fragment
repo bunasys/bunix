@@ -2,9 +2,23 @@
 # real PCs (and QEMU) from the ISO.  elements/system/linux.bst fails if any
 # line here does not survive `make olddefconfig`.
 #
-# No loadable modules: there is no kmod in the system, so every driver is
-# built in and nothing has to be found or loaded at boot.
-# CONFIG_MODULES is not set
+# What every machine needs to boot (disks, file systems, the console, wired
+# network) is built in, so the initrd needs no modules.  Drivers for
+# hardware only some machines have -- GPUs, Wi-Fi, Bluetooth, touch -- and
+# every driver that needs firmware are modules: udev loads the ones the
+# machine has, from /usr, where the firmware is too.
+
+# Loadable modules, zstd-compressed.  Each is signed at build time with a
+# key the build generates and throws away (certs/signing_key.pem), so
+# nothing but this build's modules ever loads, Secure Boot or not.
+CONFIG_MODULES=y
+CONFIG_MODULE_UNLOAD=y
+CONFIG_MODULE_SIG=y
+CONFIG_MODULE_SIG_FORCE=y
+CONFIG_MODULE_SIG_ALL=y
+CONFIG_MODULE_SIG_SHA256=y
+CONFIG_MODULE_COMPRESS=y
+CONFIG_MODULE_COMPRESS_ZSTD=y
 
 # the whole rootfs is the initramfs, zstd-compressed
 CONFIG_BLK_DEV_INITRD=y
@@ -51,17 +65,25 @@ CONFIG_FRAMEBUFFER_CONSOLE=y
 CONFIG_FB=y
 # CONFIG_FB_EFI is not set
 # CONFIG_FB_VESA is not set
-# (it needs the fbdev layer itself, without its firmware framebuffer
-# drivers: simpledrm has the screen)
-CONFIG_FB=y
-# CONFIG_FB_EFI is not set
-# CONFIG_FB_VESA is not set
 CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER=y
 # CONFIG_LOGO is not set
-# GPU drivers want firmware blobs this image does not carry; the firmware's
-# framebuffer is enough for a text console
-# CONFIG_DRM_I915 is not set
 CONFIG_SERIAL_8250=y
+
+# GPUs: Intel (i915 up to Alder Lake, xe after), AMD (amdgpu; radeon for
+# GPUs older than GCN).  When one loads it takes the screen over from
+# simpledrm and sets the panel's own resolution.  NVIDIA's open driver
+# (nouveau) needs NVIDIA's large firmware for recent cards: not yet.
+CONFIG_DRM_I915=m
+CONFIG_DRM_XE=m
+CONFIG_DRM_AMDGPU=m
+CONFIG_DRM_AMDGPU_SI=y
+CONFIG_DRM_AMDGPU_CIK=y
+CONFIG_DRM_AMD_DC=y
+CONFIG_DRM_RADEON=m
+# virtual machines' GPUs (QEMU's standard VGA and virtio-gpu): the same
+# hand-over from simpledrm, testable without the hardware
+CONFIG_DRM_BOCHS=m
+CONFIG_DRM_VIRTIO_GPU=m
 CONFIG_SERIAL_8250_CONSOLE=y
 
 # keyboards: PS/2 and USB
@@ -74,13 +96,45 @@ CONFIG_USB_UHCI_HCD=y
 CONFIG_HID_GENERIC=y
 CONFIG_USB_HID=y
 
+# Touch screens, touchpads and pens.  libinput reads them through evdev.
+# Laptops wire them over I2C, which on Intel needs the LPSS I2C controllers
+# and the GPIO controller of the platform (pinctrl) for their interrupt
+# lines; those are built in, the devices' drivers are modules.
+CONFIG_INPUT_EVDEV=y
+CONFIG_HID_MULTITOUCH=m
+CONFIG_HID_WACOM=m
+CONFIG_I2C_HID_ACPI=m
+CONFIG_INTEL_ISH_HID=m
+CONFIG_INPUT_TOUCHSCREEN=y
+CONFIG_TOUCHSCREEN_GOODIX=m
+CONFIG_TOUCHSCREEN_ELAN=m
+CONFIG_MOUSE_PS2=y
+CONFIG_I2C=y
+CONFIG_GPIOLIB=y
+CONFIG_PINCTRL=y
+CONFIG_COMMON_CLK=y
+CONFIG_I2C_DESIGNWARE_CORE=y
+CONFIG_I2C_DESIGNWARE_PLATFORM=y
+CONFIG_I2C_DESIGNWARE_PCI=y
+CONFIG_MFD_INTEL_LPSS_ACPI=y
+CONFIG_MFD_INTEL_LPSS_PCI=y
+CONFIG_PINCTRL_INTEL_PLATFORM=y
+CONFIG_PINCTRL_SUNRISEPOINT=y
+CONFIG_PINCTRL_CANNONLAKE=y
+CONFIG_PINCTRL_ICELAKE=y
+CONFIG_PINCTRL_JASPERLAKE=y
+CONFIG_PINCTRL_TIGERLAKE=y
+CONFIG_PINCTRL_ALDERLAKE=y
+CONFIG_PINCTRL_METEORLAKE=y
+
 # networking: AF_PACKET is what DHCP clients use
 CONFIG_PACKET=y
 CONFIG_UNIX=y
 CONFIG_INET=y
 CONFIG_IPV6=y
 
-# wired NICs found in common PCs, laptops and USB dongles
+# wired NICs found in common PCs, laptops and USB dongles (as modules the
+# ones that load firmware: Realtek's r8169, Broadcom's tg3 and bnx2)
 CONFIG_ETHERNET=y
 CONFIG_NET_VENDOR_INTEL=y
 CONFIG_E1000=y
@@ -89,12 +143,12 @@ CONFIG_IGB=y
 CONFIG_IGC=y
 CONFIG_IXGBE=y
 CONFIG_NET_VENDOR_REALTEK=y
-CONFIG_R8169=y
+CONFIG_R8169=m
 CONFIG_8139CP=y
 CONFIG_8139TOO=y
 CONFIG_NET_VENDOR_BROADCOM=y
-CONFIG_TIGON3=y
-CONFIG_BNX2=y
+CONFIG_TIGON3=m
+CONFIG_BNX2=m
 CONFIG_NET_VENDOR_ATHEROS=y
 CONFIG_ALX=y
 CONFIG_ATL1C=y
@@ -133,13 +187,13 @@ CONFIG_RTC_CLASS=y
 CONFIG_RTC_HCTOSYS=y
 CONFIG_RTC_DRV_CMOS=y
 
-# Wi-Fi: the 802.11 stack and drivers for the chips in most laptops.  Their
-# firmware is not shipped: it is added per machine, as a second initramfs
-# (plain or zstd-compressed files under /usr/lib/firmware).  The loader waits
-# for the initramfs before looking for it.
+# Wi-Fi: the 802.11 stack and drivers for the chips in most laptops, all
+# modules, next to their firmware in /usr/lib/firmware (system/firmware.bst,
+# zstd-compressed).  cfg80211 is a module too: it loads the regulatory
+# database (base/wireless-regdb.bst) the same way.
 CONFIG_WIRELESS=y
-CONFIG_CFG80211=y
-CONFIG_MAC80211=y
+CONFIG_CFG80211=m
+CONFIG_MAC80211=m
 CONFIG_RFKILL=y
 CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_COMPRESS=y
@@ -147,39 +201,57 @@ CONFIG_FW_LOADER_COMPRESS_ZSTD=y
 CONFIG_WLAN=y
 # Intel: dvm = older chips, mvm = 7000..AX2xx, mld = BE2xx (Wi-Fi 7)
 CONFIG_WLAN_VENDOR_INTEL=y
-CONFIG_IWLWIFI=y
-CONFIG_IWLDVM=y
-CONFIG_IWLMVM=y
-CONFIG_IWLMLD=y
+CONFIG_IWLWIFI=m
+CONFIG_IWLDVM=m
+CONFIG_IWLMVM=m
+CONFIG_IWLMLD=m
 # Qualcomm / Atheros
 CONFIG_WLAN_VENDOR_ATH=y
-CONFIG_ATH9K=y
+CONFIG_ATH9K=m
 CONFIG_ATH9K_PCI=y
-CONFIG_ATH10K=y
-CONFIG_ATH10K_PCI=y
-CONFIG_ATH11K=y
-CONFIG_ATH11K_PCI=y
-CONFIG_ATH12K=y
-# Realtek
+CONFIG_ATH10K=m
+CONFIG_ATH10K_PCI=m
+CONFIG_ATH11K=m
+CONFIG_ATH11K_PCI=m
+CONFIG_ATH12K=m
+# Realtek, PCIe and USB
 CONFIG_WLAN_VENDOR_REALTEK=y
-CONFIG_RTW88=y
-CONFIG_RTW88_8822BE=y
-CONFIG_RTW88_8822CE=y
-CONFIG_RTW88_8821CE=y
-CONFIG_RTW88_8723DE=y
-CONFIG_RTW89=y
-CONFIG_RTW89_8852AE=y
-CONFIG_RTW89_8852BE=y
-CONFIG_RTW89_8852CE=y
-CONFIG_RTW89_8922AE=y
-# MediaTek (mt7921e also drives the MT7922)
+CONFIG_RTW88=m
+CONFIG_RTW88_8822BE=m
+CONFIG_RTW88_8822CE=m
+CONFIG_RTW88_8821CE=m
+CONFIG_RTW88_8723DE=m
+CONFIG_RTW88_8822BU=m
+CONFIG_RTW88_8822CU=m
+CONFIG_RTW88_8821CU=m
+CONFIG_RTW89=m
+CONFIG_RTW89_8852AE=m
+CONFIG_RTW89_8852BE=m
+CONFIG_RTW89_8852CE=m
+CONFIG_RTW89_8922AE=m
+# MediaTek (mt7921e also drives the MT7922), PCIe and USB
 CONFIG_WLAN_VENDOR_MEDIATEK=y
-CONFIG_MT7921E=y
-CONFIG_MT7925E=y
+CONFIG_MT7921E=m
+CONFIG_MT7921U=m
+CONFIG_MT7925E=m
 # Broadcom
 CONFIG_WLAN_VENDOR_BROADCOM=y
-CONFIG_BRCMFMAC=y
+CONFIG_BRCMFMAC=m
 CONFIG_BRCMFMAC_PCIE=y
+
+# Bluetooth: the stack and the USB and PCIe adapters built into laptops
+# (Intel, Realtek, MediaTek, Broadcom, Qualcomm); the userspace (BlueZ)
+# comes later
+CONFIG_BT=m
+CONFIG_BT_BREDR=y
+CONFIG_BT_LE=y
+CONFIG_BT_RFCOMM=m
+CONFIG_BT_HIDP=m
+CONFIG_BT_HCIBTUSB=m
+CONFIG_BT_HCIBTUSB_BCM=y
+CONFIG_BT_HCIBTUSB_RTL=y
+CONFIG_BT_HCIBTUSB_MTK=y
+CONFIG_BT_INTEL_PCIE=m
 
 # what iwd needs from the kernel: hashes and ciphers through AF_ALG, and the
 # keyring's DH and certificate parsers (for WPA3/SAE and WPA-Enterprise)

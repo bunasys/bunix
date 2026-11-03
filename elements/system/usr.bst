@@ -55,7 +55,7 @@ config:
       > usr.d/30-usr-verity-sig.conf
 
   - |
-    # as sysext/devel.bst: no loop devices, a writable TMPDIR, a private key
+    # as sysext/gcc.bst: no loop devices, a writable TMPDIR, a private key
     # copy.  The seed, from which repart derives the UUIDs not taken from
     # the root hash (the signature partition's), differs per release: two
     # releases' partitions sit on the same disk.

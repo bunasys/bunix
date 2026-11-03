@@ -1,0 +1,17 @@
+# Checks for tools/boot-test.py on an installed 0.1.3 disk: the update to the
+# release that renamed the devel extension to gcc, on a machine that has
+# devel enabled (as the first real install had).  Expects
+# tools/serve-updates.py on the QEMU host serving <dir>/latest/ (the release
+# being checked) and <dir>/v0.1.3/ (the release installed).
+#
+# First the machine as it was: devel enabled and merged, from 0.1.3.
+
+echo start; grep IMAGE_VERSION /etc/os-release
+mkdir -p /etc/sysupdate.d; for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/v0.1.3/#' $f > /etc/sysupdate.d/(basename $f); end; mkdir -p /etc/sysupdate.d/devel.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devel.feature.d/enable.conf
+/usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -E 'Successfully|Failed|rror'; echo "devel exit $status"; systemd-sysext refresh; gcc --version | head -1
+# With devel still enabled the new release looks incomplete (it has no
+# devel_ file), so sysupdate stays: "No update needed".
+for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/latest/#' $f > /etc/sysupdate.d/(basename $f); end; /usr/lib/systemd/systemd-sysupdate update 2>&1 | tail -1
+# The release notes' steps: devel off and removed, then the update
+rm -rf /etc/sysupdate.d/devel.feature.d /var/lib/extensions/devel.raw.v; systemd-sysext refresh; /usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -v -E '^Got |Downloading|Acquired|Download of|^Pulling|best before' | tail -4; echo "update exit $status"
+ls /boot/EFI/Linux; sync; echo synced

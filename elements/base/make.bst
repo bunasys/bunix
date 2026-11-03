@@ -1,5 +1,5 @@
 kind: autotools
-description: GNU make -- for the toolchain extension (sysext/devel.bst)
+description: GNU make -- for the toolchain extension (sysext/gcc.bst)
 
 build-depends:
 - bootstrap/build-env.bst

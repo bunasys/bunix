@@ -1,9 +1,10 @@
 kind: manual
 description: |
   Linux 6.18 (LTS) for x86_64 PCs: x86_64_defconfig plus the options in
-  files/linux/x86_64.fragment.  Every driver is built in; there are no
-  loadable modules.  Installed as /usr/lib/modules/<release>/vmlinuz, the
-  place UAPI.9 gives the kernel image.
+  files/linux/x86_64.fragment.  What every machine needs to boot is built
+  in; drivers for GPUs, Wi-Fi, Bluetooth and touch are signed,
+  zstd-compressed modules.  Installed in /usr/lib/modules/<release>/: the
+  modules, and vmlinuz, the place UAPI.9 gives the kernel image.
 
 build-depends:
 - bootstrap/build-env.bst
@@ -14,6 +15,9 @@ build-depends:
 - base/pkgconf.bst
 # scripts/build_OID_registry generates the certificate parser's OID table
 - base/perl.bst
+# compresses the modules; depmod indexes them
+- base/zstd.bst
+- base/kmod.bst
 
 sources:
 - kind: tar
@@ -51,10 +55,18 @@ config:
     exit $dropped
 
   build-commands:
-  - make LOCALVERSION=%{localversion} bzImage
+  - make LOCALVERSION=%{localversion} bzImage modules
 
   install-commands:
   - |
     release=$(make -s LOCALVERSION=%{localversion} kernelrelease)
     install -D -m 0644 arch/x86/boot/bzImage %{install-root}/usr/lib/modules/$release/vmlinuz
     install -m 0644 .config %{install-root}/usr/lib/modules/$release/config
+  - |
+    # Signs and compresses each module on the way.  depmod runs separately:
+    # the kernel's own call would look for the modules under <root>/lib.
+    release=$(make -s LOCALVERSION=%{localversion} kernelrelease)
+    make LOCALVERSION=%{localversion} INSTALL_MOD_PATH=%{install-root}/usr \
+      INSTALL_MOD_STRIP=1 DEPMOD=true modules_install
+    rm -f %{install-root}/usr/lib/modules/$release/build
+    depmod -b %{install-root} $release

@@ -1,6 +1,6 @@
 # The rust extension (rust.feature), built with each release and updated
-# in lock-step with /usr, like the devel extension (50-devel.transfer, which
-# explains the details).  It needs the devel extension merged too.
+# in lock-step with /usr, like the gcc extension (50-gcc.transfer, which
+# explains the details).  It needs the gcc extension merged too.
 [Transfer]
 Features=rust
 ProtectVersion=%A

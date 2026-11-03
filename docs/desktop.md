@@ -1,6 +1,6 @@
 # A graphical bunix: from boot to install
 
-Status: plan (2026-11-03).  Phase 1 built and tested in QEMU.
+Status: plan (2026-11-03).  Phases 1 and 2 built and tested in QEMU.
 
 ## The goal
 
@@ -20,7 +20,7 @@ install:
 buna install                    install from the live ISO (refused on an installed system)
 buna update                     update the system, with clear progress
 buna doctor                     check the system's health
-buna ext list                   the extensions (devel, rust, swift, ...) and their state
+buna ext list                   the extensions (gcc, rust, swift, ...) and their state
 buna ext enable|disable <name>
 ```
 
@@ -90,6 +90,36 @@ installed system.
    i2c-hid, Wacom, Goodix, Elan) and Wi-Fi drivers as modules.
    linux-firmware, cut down to GPUs, Wi-Fi and Bluetooth and compressed, on
    the ISO and in /usr.
+
+   Built (2026-11-03, release 0.1.4): kmod 34.3; the kernel's boot
+   drivers (disks, file systems, console, wired NICs that need no
+   firmware) stay built in, so the initrd needs no modules; GPU (i915, xe,
+   amdgpu, radeon, and QEMU's bochs and virtio-gpu), Wi-Fi, Bluetooth,
+   touch (hid-multitouch, i2c-hid, Wacom, Goodix, Elan, Intel ISH) and the
+   NICs that load firmware are modules: 113 of them, 15 MB.  Signed with a
+   key each kernel build generates and discards, `MODULE_SIG_FORCE`: no
+   other module loads, Secure Boot or not.  system/firmware.bst: 245 MB
+   of linux-firmware 20261019's 2 GB, zstd-compressed.  NVIDIA is left
+   out (nouveau needs NVIDIA's large GSP firmware; nova, the Rust
+   successor, is not ready).  Every machine gets the same signed /usr, so
+   the installed system has all the modules; only the ones for its own
+   hardware load.  What it took:
+   - Intel's I2C touch devices need pin control and GPIO, the DesignWare
+     I2C core and the common clock framework built in.
+   - The live UKI no longer fits in 1 GB of RAM (the ISO is 777 MB): the
+     boot tests use 2 GB, and the next step mounts /usr from the ISO.
+   - The `devel` extension became `gcc`.  A machine with `devel` enabled
+     sees no newer release ("No update needed": sysupdate takes a release
+     as complete only if it has every enabled feature's file), so
+     `devel` is turned off before the update.
+
+   **Then, before phase 3: the live ISO mounts /usr from the ISO.**  Today
+   the whole root file system is the ISO's initramfs, in RAM, and the ISO
+   carries /usr twice (the live system, and the image bunix-install
+   writes): with firmware that is a 777 MB ISO that needs 2 GB of RAM.
+   The live system will instead boot the same signed, dm-verity /usr image
+   the installer copies, mounted from the boot medium, with only /etc and
+   /var in RAM.
 
 3. **Graphics stack.**  Mesa (iris, radeonsi, llvmpipe; LLVM), Wayland,
    libinput (mtdev, libevdev, libwacom), pixman, cairo, pango, fonts (Noto,

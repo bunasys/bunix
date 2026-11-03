@@ -63,14 +63,17 @@ config:
   - |
     # Libraries: what systemd loads at run time with dlopen() --
     # libcryptsetup for dm-verity, libfdisk for repart, OpenSSL for verity
-    # signatures, NSS for users -- and everything all the programs and
+    # signatures, NSS for users, libkmod (systemd and udev fail to start
+    # their module loader without it, though the initrd has no modules to
+    # load) -- and everything all the programs and
     # libraries here link, resolved by the image's own loader.
     loader=/rootfs%{libdir}/ld-linux-x86-64.so.2
     libs=/rootfs%{libdir}
     cd initrd
     mkdir -p .%{libdir}
     for lib in $(cd $libs && ls ld-linux-x86-64.so.2 libcryptsetup.so.* libdevmapper.so.* \
-                               libjson-c.so.* libfdisk.so.* libcrypto.so.* libnss_files.so.*); do
+                               libjson-c.so.* libfdisk.so.* libcrypto.so.* libnss_files.so.* \
+                               libkmod.so.*); do
       cp -a $libs/$lib .%{libdir}/
     done
     find . -type f | while read -r f; do

@@ -1,8 +1,9 @@
 kind: manual
 description: |
-  The root file system: the packages of base.bst and bunix's own
-  configuration (files/rootfs), plus glibc and gcc's runtime libraries from
-  the toolchain, made into a bootable system.  Build-only files are removed,
+  The root file system: the packages of base.bst, the kernel's modules and
+  the firmware they load, and bunix's own configuration (files/rootfs),
+  plus glibc and gcc's runtime libraries from the toolchain, made into a
+  bootable system.  Build-only files are removed,
   commands get their names, units are enabled, system users created and
   binaries stripped.  tests/rootfs.bst checks the result.
 
@@ -12,6 +13,12 @@ build-depends:
 - bootstrap/build-env.bst
 # staged off to the side: the tools building this image are at /
 - filename: base.bst
+  config:
+    location: "%{sysroot}"
+- filename: system/linux.bst
+  config:
+    location: "%{sysroot}"
+- filename: system/firmware.bst
   config:
     location: "%{sysroot}"
 
@@ -35,6 +42,8 @@ config:
     # must have been built for (include/release.yml)
     printf 'IMAGE_VERSION=%s\nSYSEXT_LEVEL=%s\n' %{release-version} %{release-version} \
       >> %{install-root}/usr/lib/os-release
+    # the kernel image itself boots from the UKI, not from here
+    rm %{install-root}/usr/lib/modules/*/vmlinuz
 
   - |
     # glibc and gcc's runtime libraries, from the toolchain everything was
@@ -93,7 +102,7 @@ config:
     # Python, which the system does not have
     rm -f usr/bin/ukify usr/lib/systemd/ukify
     rm -rf usr/share/systemd usr/lib/environment.d usr/lib/binfmt.d \
-           usr/lib/modprobe.d usr/lib/modules-load.d usr/lib/sysctl.d/50-coredump.conf \
+           usr/lib/sysctl.d/50-coredump.conf \
            usr/share/polkit-1 usr/lib/dbus-1.0/dbus-daemon-launch-helper
     # ...and their unit files, so `systemctl list-unit-files` shows only what exists
     cd usr/lib/systemd/system
@@ -108,13 +117,13 @@ config:
                    'systemd-hwdb*' 'systemd-random-seed*' 'systemd-backlight*' \
                    'systemd-rfkill*' 'systemd-oomd*' 'systemd-userdbd*' 'systemd-homed*' \
                    'systemd-machined*' 'systemd-importd*' 'systemd-portabled*' \
-                   'systemd-nspawn*' 'systemd-coredump*' 'systemd-modules-load*' \
+                   'systemd-nspawn*' 'systemd-coredump*' \
                    'systemd-tpm2*' 'systemd-pcr*' 'systemd-creds*' 'systemd-bsod*' \
                    'systemd-storagetm*' 'systemd-time-wait-sync*' \
                    'systemd-localed*' 'systemd-hostnamed*' \
                    'systemd-ask-password*' 'getty*' 'serial-getty*' 'console-getty*' \
                    'autovt*' 'systemd-mute-console*' \
-                   'systemd-sysinstall*' 'modprobe@*'; do
+                   'systemd-sysinstall*'; do
       find . -maxdepth 1 -name "$pattern" -exec rm -rf {} +
     done
     # aliases of the units just removed (dbus-org.freedesktop.import1.service, ...)
@@ -188,6 +197,10 @@ config:
     wants sysinit.target systemd-sysctl.service
     wants sysinit.target systemd-udevd.service
     wants sysinit.target systemd-udev-trigger.service
+    # modules named in /usr/lib/modules-load.d; device nodes (/dev/fuse,
+    # /dev/uinput, ...) of modules not loaded yet
+    wants sysinit.target systemd-modules-load.service
+    wants sysinit.target kmod-static-nodes.service
     wants sockets.target systemd-journald.socket
     wants sockets.target systemd-journald-dev-log.socket
     wants sockets.target systemd-udevd-control.socket

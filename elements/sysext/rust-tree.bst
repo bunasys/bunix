@@ -2,7 +2,7 @@ kind: manual
 description: |
   The rust extension's /usr: rustc, the standard library and cargo, as the
   bootstrap built them from source (bootstrap/rust.bst).  rustc links
-  through cc, so the devel extension has to be merged as well.
+  through cc, so the gcc extension has to be merged as well.
   tests/rust-extension.bst builds programs with it; sysext/rust.bst packs it.
 
 (@): include/release.yml

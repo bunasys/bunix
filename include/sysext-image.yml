@@ -6,7 +6,7 @@
 #
 # An element including this sets `extension` and stages its tree at
 # /extension, the signing key at keys/ and files/sysext/repart.d at
-# repart.d/ (sysext/devel.bst shows how).
+# repart.d/ (sysext/gcc.bst shows how).
 
 config:
   build-commands:

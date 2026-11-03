@@ -30,7 +30,7 @@ reboot
 The toolchain and languages are system extensions, enabled one by one:
 
 ```
-for f in devel rust swift
+for f in gcc rust swift
   mkdir -p /etc/sysupdate.d/$f.feature.d
   printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/$f.feature.d/enable.conf
 end
@@ -143,7 +143,8 @@ instead: cargo crates through the `cargo2` source (generated from
 
 ```
 system/linux.bst     Linux 6.18 LTS: x86_64_defconfig + files/linux/x86_64.fragment,
-                     every driver built in (no modules)
+                     boot drivers built in, the rest signed modules
+system/firmware.bst  linux-firmware's files for GPUs, Wi-Fi, Bluetooth, touch
 system/rootfs.bst    base.bst + files/rootfs (bunix's /etc and vendor config) +
                      glibc and gcc's runtime libraries, made into a system:
                      build-only files removed, merged /usr, uutils and BusyBox
@@ -190,7 +191,7 @@ per job, so a leak of one does not give away the others:
 | Key | Signs | Trusted by |
 | --- | --- | --- |
 | `secureboot.key/.crt` ("bunix Secure Boot signing key") | systemd-boot and the kernel images (`system/esp.bst`, `system/uki.bst`, `system/iso.bst`) | shim, once enrolled with MokManager |
-| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/devel.bst`, `rust.bst`, `swift.bst`) | the kernel: `files/linux/verity.crt` is built in |
+| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`) | the kernel: `files/linux/verity.crt` is built in |
 | `release.key` (OpenPGP) | update manifests (`tools/publish.sh`) | sysupdate: `files/rootfs/usr/lib/systemd/import-pubring.pgp` |
 
 **Secure Boot.** shim, signed by Microsoft, trusts the keys enrolled with
@@ -205,12 +206,15 @@ openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
 ```
 
 **Software on a running system.** The toolchain is not in the image; it is
-the `devel` system extension, fetched and verified by systemd-sysupdate and
+the `gcc` system extension, fetched and verified by systemd-sysupdate and
 merged over /usr (`sysext/`, `tools/publish.sh`). How, and how it becomes
 the update mechanism for the whole system: `docs/updates.md`.
 
-**Firmware.** None is shipped; see `firmware/README.md` for adding a
-machine's Wi-Fi firmware to the ISO.
+**Drivers and firmware.** What every machine needs to boot is built into
+the kernel; GPU, Wi-Fi, Bluetooth and touch drivers are modules, signed at
+build time with a key the build throws away, and loaded by udev for the
+hardware a machine has. Their firmware, cut down from linux-firmware to
+what PCs and laptops use, is in `/usr/lib/firmware` (`system/firmware.bst`).
 
 ## Things the bootstrap had to learn
 

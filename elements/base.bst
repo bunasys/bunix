@@ -20,6 +20,7 @@ depends:
 - base/fonts-arabic.bst
 - base/htop.bst
 - base/iwd.bst
+- base/kmod.bst
 - base/less.bst
 - base/nawa.bst
 - base/plymouth.bst

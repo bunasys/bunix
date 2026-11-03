@@ -58,7 +58,7 @@ bunix_<v>.usr-verity.raw     tree and a signature over its root hash
 bunix_<v>.usr-verity-sig.raw
 bunix_<v>.efi              Unified Kernel Image: kernel + initrd + command line
                            (which carries the /usr root hash), Secure Boot signed
-devel_<v>.raw              extension: the toolchain (sysext DDI, signed verity)
+gcc_<v>.raw              extension: the toolchain (sysext DDI, signed verity)
 rust_<v>.raw               extension: Rust, separate because it is large
 SHA256SUMS                 hashes of all of the above, with BEST-BEFORE-<date>
 SHA256SUMS.gpg             OpenPGP signature over SHA256SUMS (Ed25519,
@@ -98,7 +98,7 @@ SHA256SUMS                              -> verifies each download
 ### Step 1: the toolchain as a system extension (built)
 
 A sysext is a disk image with a `usr/` tree and
-`usr/lib/extension-release.d/extension-release.devel`.  `systemd-sysext merge`
+`usr/lib/extension-release.d/extension-release.gcc`.  `systemd-sysext merge`
 overlays it on /usr read-only; `unmerge` removes it without a trace.  On the
 RAM-only live ISO the image goes to `/var/lib/extensions` and lasts until
 reboot; on an installed system it persists.
@@ -106,32 +106,32 @@ reboot; on an installed system it persists.
 On a running bunix:
 
 ```
-mkdir -p /etc/sysupdate.d/devel.feature.d
-printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devel.feature.d/enable.conf
+mkdir -p /etc/sysupdate.d/gcc.feature.d
+printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/gcc.feature.d/enable.conf
 /usr/lib/systemd/systemd-sysupdate update     # fetch, verify, install
 systemd-sysext refresh                         # merge: cc, make, ... appear
 ```
 
-(`updatectl enable devel` would write the same drop-in, but systemd 261's
+(`updatectl enable gcc` would write the same drop-in, but systemd 261's
 update service sees no update target while all of a system's transfers
 belong to disabled features, as on the live ISO.)
 
 Build side:
 
-* `sysext/devel-content.bst`: what goes in -- the bootstrap toolchain, kernel
+* `sysext/gcc-content.bst`: what goes in -- the bootstrap toolchain, kernel
   headers, make, pkgconf, m4/autoconf/automake/libtool, cmake, meson, ninja,
   and `base.bst` for the libraries' headers, pkg-config files and static
   libraries.
-* `sysext/devel-tree.bst`: that, minus every path the root file system has,
+* `sysext/gcc-tree.bst`: that, minus every path the root file system has,
   minus documentation, what the rootfs prunes on purpose and the largest
-  unused pieces; stripped.  624 MB.  `tests/devel.bst` builds C, C++, a
+  unused pieces; stripped.  624 MB.  `tests/gcc.bst` builds C, C++, a
   pkg-config (OpenSSL) program and a meson project with the rootfs plus this
   tree.
-* `sysext/devel.bst`: `systemd-repart --offline` packs it as a DDI
+* `sysext/gcc.bst`: `systemd-repart --offline` packs it as a DDI
   (`files/sysext/repart.d`): erofs with LZMA (mkfs.erofs still calls zstd
   experimental), dm-verity hash tree, root hash signed with
   `keys/verity.key`.  234 MB.
-* The image is `devel_<release>.raw` -- sysext takes the extension's name from
+* The image is `gcc_<release>.raw` -- sysext takes the extension's name from
   the file name up to the first `_` -- and its extension-release has
   `ID=bunix`, `SYSEXT_LEVEL=<release>`.  The rootfs's os-release has the same
   `SYSEXT_LEVEL` and `IMAGE_VERSION`, from `include/release.yml`, so an
@@ -142,9 +142,9 @@ Build side:
 
 System side:
 
-* `/usr/lib/sysupdate.d/devel.feature` (disabled) and `50-devel.transfer`:
+* `/usr/lib/sysupdate.d/gcc.feature` (disabled) and `50-gcc.transfer`:
   `url-file` from `<base URL>/%A/` (one directory per release) into
-  `/var/lib/extensions/devel.raw.v/`, of which sysext merges the newest.
+  `/var/lib/extensions/gcc.raw.v/`, of which sysext merges the newest.
 * `/usr/lib/systemd/import-pubring.pgp`: the release certificate (v6,
   Ed25519).  `/usr/bin/gpg` hands systemd-pull's check to `sqv`.
 * `/usr/lib/systemd/sysext.conf.d/bunix.conf`:
@@ -159,7 +159,7 @@ System side:
   make, kernel headers, sqv; Botan (static, for Sequoia) and, for the
   publishing machine only, sqop and SQLite.
 
-Tested (`tools/boot-test.py` with `BOOT_CHECKS=tools/boot-checks/devel-update.txt`,
+Tested (`tools/boot-test.py` with `BOOT_CHECKS=tools/boot-checks/gcc-update.txt`,
 QEMU/KVM, 1 GB RAM): a manifest changed after signing is refused before
 anything is downloaded; the signed one installs, merges through a dm-verity
 device, `cc` builds and runs a program, and `unmerge` removes it all.
@@ -167,12 +167,12 @@ device, `cc` builds and runs a program, and `unmerge` removes it all.
 ### Language extensions: rust and swift (built)
 
 Two more extensions, each its own sysupdate feature, so a machine downloads
-only the languages it uses. Both build through the devel extension's
+only the languages it uses. Both build through the gcc extension's
 compiler and linker, so they are enabled together with it.
 
 | Extension | Contents | Source |
 | --- | --- | --- |
-| `devel` | gcc, binutils, headers, make, cmake, meson, ninja, autotools | built here |
+| `gcc` | gcc, binutils, headers, make, cmake, meson, ninja, autotools | built here |
 | `rust` | rustc, cargo, the standard library (Rust 1.99.1) | built here (`bootstrap/rust.bst`) |
 | `swift` | swiftc, the package manager, Foundation, lldb, sourcekit-lsp, docc (Swift 6.4.2) | swift.org's Ubuntu 24.04 toolchain, a binary seed |
 
@@ -226,10 +226,10 @@ preset that enables nothing else), so what runs is part of the image.
 Updates: `/usr/lib/sysupdate.d/10-usr`, `11-usr-verity`, `12-usr-verity-sig`
 (partitions; source names carry the partition UUIDs, `@u`) and `90-uki`
 (the UKI, written last, with `TriesLeft=3`), from
-`https://github.com/bunasys/bunix/releases/latest/download/`.  The devel
-extension (`50-devel`) is in the same target, so it moves in lock-step.
+`https://github.com/bunasys/bunix/releases/latest/download/`.  The gcc
+extension (`50-gcc`) is in the same target, so it moves in lock-step.
 `tools/publish.sh` publishes all of it per release.  The live ISO has no
-slots: `system/iso.bst` drops the OS transfers and points devel at its own
+slots: `system/iso.bst` drops the OS transfers and points gcc at its own
 release.
 
 Tested in QEMU/KVM (UEFI, Secure Boot off; `tools/boot-test.py` boots a

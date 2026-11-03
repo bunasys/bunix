@@ -1,13 +1,13 @@
 kind: manual
 description: |
   The swift extension as it is on a running system: the root file system
-  with sysext/devel-tree.bst and sysext/swift-tree.bst over it, nothing
+  with sysext/gcc-tree.bst and sysext/swift-tree.bst over it, nothing
   else.  Compiles a program with swiftc, and builds and runs a package with
   the Swift package manager -- with the image's own shell and tools.
 
 build-depends:
 - system/rootfs.bst
-- sysext/devel-tree.bst
+- sysext/gcc-tree.bst
 - sysext/swift-tree.bst
 
 environment:

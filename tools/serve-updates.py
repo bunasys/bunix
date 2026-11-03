@@ -1,5 +1,5 @@
 # Serves update directories to a QEMU guest for tools/boot-checks/
-# devel-update.txt:  python3 tools/serve-updates.py <dir>  (127.0.0.1:8000,
+# gcc-update.txt:  python3 tools/serve-updates.py <dir>  (127.0.0.1:8000,
 # which the guest reaches as 10.0.2.2:8000).
 #
 # A test server only, on loopback only.  QEMU's user-mode

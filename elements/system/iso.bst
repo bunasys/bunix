@@ -52,9 +52,6 @@ sources:
   path: keys/secureboot.crt
   directory: keys
 - kind: local
-  path: firmware
-  directory: firmware
-- kind: local
   path: files/branding/splash.bmp
   directory: branding
 
@@ -67,7 +64,7 @@ variables:
   # quiet splash: no kernel or systemd messages on the screen, only the
   # boot splash (Plymouth, base/plymouth.bst), unless something fails.
   # plymouth.use-simpledrm: Plymouth draws on the firmware's framebuffer,
-  # which it otherwise ignores, waiting for a GPU driver bunix lacks yet.
+  # which it otherwise ignores, until the GPU's driver module loads.
   # plymouth.ignore-serial-consoles: with a serial console on the command
   # line Plymouth would show only its text mode, everywhere.
   cmdline: >-
@@ -82,7 +79,7 @@ config:
     cp -a /rootfs rootfs
     cd rootfs
     # The live system has no /usr slots to update: no OS transfers, and the
-    # extensions (devel, rust, swift) come from its own release's directory
+    # extensions (gcc, rust, swift) come from its own release's directory
     # (an installed system takes the latest release's, together with the
     # new /usr).
     rm usr/lib/sysupdate.d/10-usr.transfer usr/lib/sysupdate.d/11-usr-verity.transfer \
@@ -105,32 +102,14 @@ config:
     find . -print0 | cpio --null -o -H newc --owner=0:0 --quiet | zstd -19 -T0 -q > %{build-root}/initramfs.img
 
   - |
-    # this machine's firmware, if there is any (firmware/README.md)
-    set -o pipefail
-    mkdir -p firmware-root/usr/lib/firmware
-    cp -a firmware/. firmware-root/usr/lib/firmware/
-    rm firmware-root/usr/lib/firmware/README.md
-    if [ -n "$(ls -A firmware-root/usr/lib/firmware)" ]; then
-      cd firmware-root
-      find usr/lib/firmware -type f
-      find . -print0 | cpio --null -o -H newc --owner=0:0 --quiet | zstd -19 -T0 -q > %{build-root}/firmware.img
-    fi
-
-  - |
-    # The live UKI.  Wi-Fi firmware, when the ISO was built with some
-    # (firmware/README.md), is a second initramfs; the kernel unpacks both
-    # into the same root.  --no-sign-kernel: the UKI's signature covers the
+    # The live UKI.  --no-sign-kernel: the UKI's signature covers the
     # kernel inside (as system/uki.bst).
     mkdir -p tmp
     install -m 0600 keys/secureboot.key tmp/secureboot.key
     release=$(basename /usr/lib/modules/*)
-    firmware=""
-    if [ -f firmware.img ]; then
-      firmware=--initrd=firmware.img
-    fi
     ukify build \
       --linux=/usr/lib/modules/$release/vmlinuz --uname=$release \
-      --initrd=initramfs.img $firmware \
+      --initrd=initramfs.img \
       --os-release=@/rootfs/usr/lib/os-release \
       --cmdline="%{cmdline}" \
       --splash=branding/splash.bmp \

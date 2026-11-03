@@ -13,7 +13,7 @@ description: |
   itself is not touched, and nothing leaks into programs built with Swift.
 
   Swift compiles and links through its own clang, which uses gcc's start
-  files and libraries: the devel extension has to be merged as well.
+  files and libraries: the gcc extension has to be merged as well.
   tests/swift.bst builds programs with it; sysext/swift.bst packs it.
 
 (@): include/release.yml

@@ -4,10 +4,10 @@
 #   (@): include/release.yml
 #
 # It becomes IMAGE_VERSION and SYSEXT_LEVEL in os-release, the version in
-# update file names (devel_<version>.raw), and the directory updates
+# update file names (gcc_<version>.raw), and the directory updates
 # for this release are published in.  An extension built for one release is
 # refused by every other, because the toolchain's C library must be the
 # system's own.  (Not a project variable: those are in every cache key.)
 
 variables:
-  release-version: 0.1.3
+  release-version: 0.1.4

@@ -2,7 +2,7 @@
 
 Status: tested in QEMU (2026-11-03), on a disk laid out like a Windows PC,
 and on real hardware next to Windows with Secure Boot on: install, updates
-from GitHub (0.1.0 -> 0.1.1 -> 0.1.2), the devel, rust and swift
+from GitHub (0.1.0 -> 0.1.1 -> 0.1.2), the gcc, rust and swift
 extensions.
 
 ## Two ways onto a disk

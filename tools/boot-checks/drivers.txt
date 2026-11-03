@@ -1,0 +1,16 @@
+# Checks for tools/boot-test.py: kernel modules and firmware (docs/desktop.md,
+# phase 2).  QEMU's standard VGA is driven by the bochs module, which takes
+# the screen over from simpledrm; Wi-Fi modules load without their hardware.
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager
+uname -r; cat /proc/sys/kernel/tainted; lsmod | wc -l; lsmod | grep -E '^(bochs|e1000e|virtio)' | cut -c1-40
+# the screen: bochs now, not simpledrm
+readlink /sys/class/drm/card*/device/driver | sort -u; cat /sys/class/drm/card*-*/modes | head -2
+# every module signed by this build's key, and nothing unsigned loads
+modinfo -F signer bochs; modinfo -F sig_hashalgo bochs; find /usr/lib/modules -name '*.ko.zst' | wc -l
+du -sh /usr/lib/modules /usr/lib/firmware; find /usr/lib/firmware -type f | wc -l
+# a Wi-Fi driver and the 802.11 stack load, with the regulatory database
+modprobe iwlwifi; modprobe mt7921e; lsmod | grep -E '^(iwlwifi|mt7921e|cfg80211|mac80211)' | cut -c1-40; dmesg | grep -i -E 'regulatory|cfg80211' | tail -3
+# the splash ran, and nothing logged errors
+systemctl show -p ActiveState,Result plymouth-start.service plymouth-quit.service | tr '\n' ' '; echo; journalctl -b -p err --no-pager -o cat | head -10
+free -m | head -2; systemd-analyze --no-pager

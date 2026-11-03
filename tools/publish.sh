@@ -1,7 +1,7 @@
 #!/bin/bash
 # Put together one release's update files, ready to upload:
 #
-#   tools/bst-remote.sh build system/uki.bst sysext/devel.bst sysext/rust.bst sysext/swift.bst
+#   tools/bst-remote.sh build system/uki.bst sysext/gcc.bst sysext/rust.bst sysext/swift.bst
 #   tools/publish.sh out/updates            # -> out/updates/<release>/
 #
 # <release> is release-version in include/release.yml; the directory holds
@@ -9,7 +9,7 @@
 #   bunix_<release>.usr-x86-64*.<uuid>.raw  the three partitions of a /usr
 #                         slot (system/usr.bst)
 #   bunix_<release>.efi   the UKI that boots it (system/uki.bst)
-#   devel_<release>.raw   the devel extension (sysext/devel.bst), and rust_ and
+#   gcc_<release>.raw   the gcc extension (sysext/gcc.bst), and rust_ and
 #                         swift_<release>.raw likewise
 #   SHA256SUMS            their hashes, and a BEST-BEFORE-<date> entry: systemd-
 #                         sysupdate refuses the manifest after that date, so
@@ -33,7 +33,7 @@ release=$(sed -n 's/^  release-version: *//p' include/release.yml)
 remote=bunix-publish/$release
 
 ssh "$HOST" "rm -rf ~/$remote ~/$remote.parts && mkdir -p ~/$remote.parts && cd src/bunix &&
-  for element in system/usr.bst system/uki.bst sysext/devel.bst sysext/rust.bst sysext/swift.bst; do
+  for element in system/usr.bst system/uki.bst sysext/gcc.bst sysext/rust.bst sysext/swift.bst; do
     $BST artifact checkout \$element --directory ~/$remote.parts/\$(basename \$element .bst)
   done &&
   mkdir ~/$remote && mv ~/$remote.parts/*/*.raw ~/$remote.parts/*/*.efi ~/$remote/ &&

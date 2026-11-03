@@ -2,7 +2,7 @@ kind: autotools
 description: |
   iwd -- the wireless daemon: scans, authenticates (WPA2/WPA3/Enterprise) and
   keeps the link up, leaving IP configuration to networkd.  iwctl is its
-  client.  No chip firmware is shipped; that is added per machine.
+  client.  The chips' firmware is system/firmware.bst.
 
 build-depends:
 - bootstrap/build-env.bst
