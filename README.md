@@ -27,10 +27,13 @@ checked against the signed manifest and its dm-verity signature):
 reboot
 ```
 
-The toolchain and languages are system extensions, enabled one by one:
+The toolchain, languages and developer tools are system extensions,
+enabled one by one: `gcc` (compilers and build tools), `rust` and `swift`
+(each on top of gcc), and `devtools` (git, gdb, strace, file, unzip; on its
+own):
 
 ```
-for f in gcc rust swift
+for f in gcc rust swift devtools
   mkdir -p /etc/sysupdate.d/$f.feature.d
   printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/$f.feature.d/enable.conf
 end
@@ -192,7 +195,7 @@ per job, so a leak of one does not give away the others:
 | Key | Signs | Trusted by |
 | --- | --- | --- |
 | `secureboot.key/.crt` ("bunix Secure Boot signing key") | systemd-boot and the kernel images (`system/esp.bst`, `system/uki.bst`, `system/iso.bst`) | shim, once enrolled with MokManager |
-| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`) | the kernel: `files/linux/verity.crt` is built in |
+| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`, `devtools.bst`) | the kernel: `files/linux/verity.crt` is built in |
 | `release.key` (OpenPGP) | update manifests (`tools/publish.sh`) | sysupdate: `files/rootfs/usr/lib/systemd/import-pubring.pgp` |
 
 **Secure Boot.** shim, signed by Microsoft, trusts the keys enrolled with
@@ -208,7 +211,11 @@ openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
 
 **Software on a running system.** The toolchain is not in the image; it is
 the `gcc` system extension, fetched and verified by systemd-sysupdate and
-merged over /usr (`sysext/`, `tools/publish.sh`). How, and how it becomes
+merged over /usr (`sysext/`, `tools/publish.sh`); git, gdb and strace are
+the `devtools` extension.  The image has what administering a machine
+takes: iproute2, nftables, OpenSSH (sshd off until enabled), rsync, GNU
+tar and grep, cryptsetup, pciutils, usbutils, nvme-cli, smartctl, mokutil,
+the time zone database, hostnamectl and timedatectl. How, and how it becomes
 the update mechanism for the whole system: `docs/updates.md`.
 
 **Drivers and firmware.** What every machine needs to boot is built into

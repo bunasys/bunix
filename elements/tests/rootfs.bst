@@ -75,7 +75,11 @@ config:
       "dbus-daemon --version" "iwctl --help" \
       "sqv --version" "nawa --version" "updatectl --version" "systemd-sysext --version" \
       "/usr/lib/systemd/systemd-sysupdate --version" "/usr/lib/systemd/systemd-pull --version" \
-      "efibootmgr --version" "mkfs.vfat --help" "sfdisk --version"
+      "efibootmgr --version" "mkfs.vfat --help" "sfdisk --version" \
+      "ip -V" "ss -V" "bridge -V" "rsync --version" "tar --version" \
+      "lspci --version" "lsusb --version" "nvme version" "smartctl --version" \
+      "mokutil --version" "cryptsetup --version" "veritysetup --version" \
+      "hostnamectl --version" "timedatectl --version" "zdump --version"
     do
       echo "== $cmd"
       # some print their version and exit non-zero; what counts is that the
@@ -91,6 +95,14 @@ config:
       esac
     done
     exit ${failed:-0}
+
+  - |
+    # GNU tar and iproute2 replace BusyBox's, and the time zones are there
+    tar --version | grep -q 'GNU tar'
+    test "$(readlink /usr/bin/ip)" != busybox
+    test -f /usr/share/zoneinfo/Europe/Berlin
+    test -f /usr/share/zoneinfo/tzdata.zi
+    TZ=Asia/Tokyo date +%Z | grep -qx JST
 
   - |
     # neovim finds its tree-sitter parsers in the multiarch $libdir

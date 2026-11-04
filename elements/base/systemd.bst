@@ -5,8 +5,9 @@ description: |
   client tools -- plus what delivers software to a running system
   (docs/updates.md): sysupdate and its downloader, sysext, and repart, which
   also builds the extension images; and for installed systems systemd-boot,
-  the UKI stub and ukify, and the initrd's units; and logind, for seats and
-  sessions (docs/desktop.md)
+  the UKI stub and ukify, and the initrd's units; logind, for seats and
+  sessions (docs/desktop.md); and hostnamed and timedated, which set the
+  host name and time zone
 
 build-depends:
 - bootstrap/build-env.bst
@@ -45,7 +46,8 @@ variables:
   # components on the third, the boot components after it (SBAT: the
   # revocation metadata shim checks in systemd-boot).  logind tracks seats
   # and sessions: its udev rule tags graphics and input devices "seat",
-  # which is how Plymouth, and later the compositor, find the screen.  The
+  # which is how Plymouth, and later the compositor, find the screen.
+  # hostnamed and timedated are behind hostnamectl and timedatectl.  The
   # rest are on by default and have no use here: no containers or VMs, no
   # hibernation.
   meson-local: >-
@@ -58,7 +60,7 @@ variables:
     -Dsbat-distro-version=261.3 -Dsbat-distro-url=https://github.com/bunasys/bunix
     -Dsysusers=true -Dtmpfiles=true -Danalyze=true
     -Dnetworkd=true -Dresolve=true -Dtimesyncd=true
-    -Dlogind=true -Dhostnamed=false -Dlocaled=false -Dtimedated=false
+    -Dlogind=true -Dhostnamed=true -Dtimedated=true -Dlocaled=false
     -Dmachined=false -Dportabled=false -Duserdb=false
     -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled
     -Dutmp=false -Dbinfmt=false -Dfirstboot=false -Drandomseed=false

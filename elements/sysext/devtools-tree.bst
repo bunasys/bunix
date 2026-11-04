@@ -1,9 +1,9 @@
 kind: manual
 description: |
-  The devel extension's /usr: sysext/devel-content.bst minus every file the
-  root file system already has, so merging it over /usr only adds --
-  compilers, headers, build tools -- and changes nothing that is there.
-  tests/devel.bst builds software with it; sysext/devel.bst packs it.
+  The devtools extension's /usr: sysext/devtools-content.bst minus every
+  file the root file system already has, and without headers and static
+  libraries -- the gcc extension is for building.  It needs no other
+  extension.  tests/devtools.bst uses it; sysext/devtools.bst packs it.
 
 (@): include/release.yml
 
@@ -12,7 +12,7 @@ build-depends:
 - filename: system/rootfs.bst
   config:
     location: /rootfs
-- filename: sysext/devel-content.bst
+- filename: sysext/devtools-content.bst
   config:
     location: "%{sysroot}"
 
@@ -32,24 +32,24 @@ config:
     done
 
   - |
-    # Not needed to build anything: documentation and translations; what
-    # system/rootfs.bst removes on purpose (systemd's unused helpers and
-    # units, terminfo beyond the common terminals, ...) and must not come
-    # back with the extension; and the largest pieces nobody builds with --
-    # Python's static library and IDE, gcc's LTO dump tool, glibc's locale
-    # sources.
+    # What is for building software (the gcc extension has that), and
+    # documentation and translations.  The programs are the dependencies'
+    # own (ncurses, curl, expat, openssl, bzip2), not tools this extension
+    # is for.
     cd %{install-root}/usr
-    rm -rf share/man share/info share/doc share/locale share/gtk-doc \
-           lib/systemd lib/environment.d lib/modprobe.d lib/modules-load.d \
-           lib/binfmt.d lib/dbus-1.0 share/systemd share/factory share/polkit-1 \
-           share/terminfo share/i18n share/bash-completion share/zsh \
-           bin/fish_key_reader bin/lto-dump \
-           lib/python3.*/idlelib lib/python3.*/test lib/python3.*/config-*/*.a
+    rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
+           share/man share/info share/doc share/locale share/bash-completion share/zsh
+    cd bin
+    rm -f tic infocmp toe tabs captoinfo infotocap ncurses6-config curl-config \
+          xmlwf c_rehash bzip2 bunzip2 bzcat bzip2recover bzdiff bzgrep bzmore \
+          bzless bzcmp bzegrep bzfgrep
+    cd ..
+    find lib -maxdepth 2 \( -name '*.a' -o -name '*.la' \) -delete
     find . -type d -empty -delete
 
   - |
     # Programs and shared libraries without debug information, as in the
-    # root file system.  Object files and static libraries are kept whole.
+    # root file system
     cd %{install-root}/usr
     find . -type f | while read -r f; do
       case $(file -b "$f") in
@@ -62,5 +62,5 @@ config:
     # (SYSEXT_LEVEL in os-release, written by system/rootfs.bst)
     mkdir -p %{install-root}/usr/lib/extension-release.d
     printf 'ID=bunix\nSYSEXT_LEVEL=%s\nARCHITECTURE=x86-64\n' %{release-version} \
-      > %{install-root}/usr/lib/extension-release.d/extension-release.devel
+      > %{install-root}/usr/lib/extension-release.d/extension-release.devtools
     du -sh %{install-root}/usr

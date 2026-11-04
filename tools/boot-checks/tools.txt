@@ -1,0 +1,13 @@
+# Checks for tools/boot-test.py (BOOT_CHECKS=...): the admin tools of the
+# base system, time zones and host name, and the devtools extension fetched
+# from the local update server (tools/serve-updates.py, latest/), on an
+# installed system.  The root shell is fish.
+
+echo start; systemctl is-system-running; grep IMAGE_VERSION /etc/os-release
+for c in "ip -br addr" "ss -tln" "lspci -k" "lsusb" "nvme version" "smartctl --version" "tar --version" "rsync --version" "cryptsetup --version" "mokutil --sb-state"; echo "== $c"; eval $c 2>&1 | head -3; end
+timedatectl set-timezone Asia/Tokyo; timedatectl | grep -E 'Time zone|Local time'; readlink /etc/localtime; timedatectl set-timezone UTC
+hostnamectl hostname bunix-test; hostnamectl | grep -E 'Static hostname|Operating System'; hostnamectl hostname bunix
+mkdir -p /etc/sysupdate.d/devtools.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf; for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/latest/#' $f > /etc/sysupdate.d/(basename $f); end
+/usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -v -E '^Got |Downloading|Acquired|Download of|^Pulling'; echo "devtools update exit $status"; systemd-sysext refresh; systemd-sysext status
+git --version; gdb --version | head -1; strace -V | head -1; file -b /usr/bin/bash | cut -c1-40; command -v cc; or echo "no cc: devtools needs no gcc"
+cd /tmp; git init -q r; cd r; echo hi > a; git add a; git -c user.name=t -c user.email=t@b commit -q -m one; git log --oneline; strace -c -o /tmp/st true; and echo "strace ok"

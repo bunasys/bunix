@@ -59,3 +59,4 @@ config:
                "ld --version" "as --version"; do
       $cmd | head -1
     done
+

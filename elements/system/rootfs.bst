@@ -48,11 +48,13 @@ config:
   - |
     # glibc and gcc's runtime libraries, from the toolchain everything was
     # built with (staged at / here): only what programs load at run time.
-    # Rust programs link libgcc_s for unwinding.
+    # Rust programs link libgcc_s for unwinding; C++ programs (smartctl)
+    # libstdc++.
     cd %{libdir}
     cp -a ld-linux-x86-64.so.2 libc.so.6 libm.so.6 libmvec.so.1 libresolv.so.2 \
           libanl.so.1 libnss_files.so.2 libnss_dns.so.2 libnss_compat.so.2 \
           libpthread.so.0 libdl.so.2 librt.so.1 libutil.so.1 libgcc_s.so.1 \
+          libstdc++.so.6 $(readlink libstdc++.so.6) \
           %{install-root}%{libdir}/
     cp -a /usr/bin/ldconfig /usr/bin/getent %{install-root}%{bindir}/
 
@@ -120,7 +122,7 @@ config:
                    'systemd-nspawn*' 'systemd-coredump*' \
                    'systemd-tpm2-swtpm*' 'systemd-creds*' 'systemd-bsod*' \
                    'systemd-storagetm*' 'systemd-time-wait-sync*' \
-                   'systemd-localed*' 'systemd-hostnamed*' \
+                   'systemd-localed*' \
                    'systemd-ask-password*' 'getty*' 'serial-getty*' 'console-getty*' \
                    'autovt*' 'systemd-mute-console*' \
                    'systemd-sysinstall*'; do
@@ -173,7 +175,8 @@ config:
     # Command names.  uutils first, then BusyBox for what nothing else
     # provides: find/xargs are uutils findutils, ps/top/free procps-ng,
     # killall psmisc, mount/dmesg/kill/more util-linux, netstat net-tools,
-    # nslookup BIND, grep GNU grep, less and vi (neovim) their own packages.
+    # nslookup BIND, ip iproute2, grep and tar GNU's, less and vi (neovim)
+    # their own packages.
     cd %{install-root}%{bindir}
     for name in $(%{in-image} ./coreutils --list); do
       [ -e "$name" ] || ln -s coreutils "$name"

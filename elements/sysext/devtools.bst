@@ -1,6 +1,6 @@
 kind: manual
 description: |
-  devel_<release>.raw: the C/C++ toolchain (sysext/devel-tree.bst) as a system extension image, made by
+  devtools_<release>.raw: git, gdb, strace and the rest (sysext/devtools-tree.bst) as a system extension image, made by
   include/sysext-image.yml.
 
 (@):
@@ -12,7 +12,7 @@ build-depends:
 # systemd-repart builds the image; mkfs.erofs and libcryptsetup do the work
 - base/systemd.bst
 - base/erofs-utils.bst
-- filename: sysext/devel-tree.bst
+- filename: sysext/devtools-tree.bst
   config:
     location: /extension
 
@@ -30,5 +30,5 @@ sources:
   directory: keys
 
 variables:
-  extension: devel
-  seed: f2c5d5a8-2b9e-4a63-9a43-6a3b8f1e0d7c
+  extension: devtools
+  seed: 7a58e871-9c99-464b-9668-472a3c6e3ea6

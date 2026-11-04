@@ -1,6 +1,7 @@
 # A graphical bunix: from boot to install
 
-Status: plan (2026-11-03).  Phases 1 and 2 built and tested in QEMU.
+Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
+real hardware (an Intel Coffee Lake desktop).
 
 ## The goal
 
@@ -113,7 +114,18 @@ installed system.
      as complete only if it has every enabled feature's file), so
      `devel` is turned off before the update.
 
-   **Then, before phase 3: the live ISO mounts /usr from the ISO.**  Today
+   **Then, before phase 3: the live ISO mounts /usr from the ISO.**
+   Built (2026-11-04, release 0.1.7): the live UKI's initrd finds the
+   medium by its label, attaches the signed dm-verity /usr image on it and
+   boots with root on tmpfs; the ISO is 640 MB and the live system uses
+   about 80 MB of RAM.  Release 0.1.7 also brought early KMS (i915, xe in
+   the initrd), CPU microcode, TPM2 measurements, zram swap, nftables and
+   OpenSSH, and kernel hardening (lockdown, Landlock, Yama); 0.1.8 the
+   admin tools (iproute2, rsync, GNU tar, pciutils, usbutils, nvme-cli,
+   smartctl, mokutil, cryptsetup, tzdata, hostnamed, timedated) and the
+   `devtools` extension (git, gdb, strace, file, unzip).  lsusb shows no
+   vendor names, and warns, until hwdb comes with phase 3.
+  Today
    the whole root file system is the ISO's initramfs, in RAM, and the ISO
    carries /usr twice (the live system, and the image bunix-install
    writes): with firmware that is a 777 MB ISO that needs 2 GB of RAM.

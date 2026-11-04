@@ -1,15 +1,17 @@
 kind: autotools
 description: |
-  libcryptsetup -- systemd uses it to set up dm-verity for system extension
-  images.  Only the library: the cryptsetup, veritysetup and integritysetup
-  programs are not built.
+  cryptsetup -- libcryptsetup, which systemd uses to set up dm-verity for
+  /usr and the system extension images, and the cryptsetup and veritysetup
+  programs, to open, inspect and check encrypted and verity volumes by
+  hand.  Without integritysetup.
 
 build-depends:
 - bootstrap/build-env.bst
 - base/pkgconf.bst
-- base/popt.bst
 
 depends:
+# the programs' option parsing
+- base/popt.bst
 - base/device-mapper.bst
 - base/json-c.bst
 - base/openssl.bst
@@ -24,6 +26,6 @@ variables:
   # No udev: libudev is part of systemd, which is built after this.
   conf-local: >-
     --disable-static --disable-nls --disable-asciidoc
-    --disable-cryptsetup --disable-veritysetup --disable-integritysetup
+    --disable-integritysetup
     --disable-ssh-token --disable-external-tokens --disable-udev
     --disable-selinux --with-crypto_backend=openssl

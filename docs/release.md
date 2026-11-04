@@ -10,7 +10,7 @@ Installed systems fetch it with systemd-sysupdate from
 | `bunix-x86_64.iso` | the live system and installer (`system/iso.bst`) |
 | `bunix_<version>.usr-x86-64*.raw` | the three partitions of a `/usr` slot: erofs, dm-verity hash tree, signed root hash (`system/usr.bst`) |
 | `bunix_<version>.efi` | the signed kernel image that boots it (`system/uki.bst`) |
-| `gcc_`, `rust_`, `swift_<version>.raw` | the system extensions (`sysext/*.bst`) |
+| `gcc_`, `rust_`, `swift_`, `devtools_<version>.raw` | the system extensions (`sysext/*.bst`) |
 | `SHA256SUMS`, `SHA256SUMS.gpg` | the manifest and its OpenPGP signature by the release key |
 
 ## What you need
@@ -35,7 +35,7 @@ sysupdate installs only a version newer than the running one.
 
 ```
 tools/bst-remote.sh build system/uki.bst system/usr.bst system/iso.bst \
-  sysext/gcc.bst sysext/rust.bst sysext/swift.bst
+  sysext/gcc.bst sysext/rust.bst sysext/swift.bst sysext/devtools.bst
 ```
 
 A version change rebuilds only the images, not the packages (the version
