@@ -153,8 +153,8 @@ tests/rootfs.bst     stages the root file system alone at / and checks it with
                      its own shell and loader: libraries, UAPI.9 layout, programs
 system/esp.bst       the ESP's boot files: shim, signed systemd-boot, bunix.cer
 system/shim.bst      Debian's Microsoft-signed shim and MokManager
-system/iso.bst       packs the root file system as the initramfs of a signed
-                     live UKI and writes bunix-x86_64.iso (UEFI only)
+system/iso.bst       bunix-x86_64.iso (UEFI only): a signed live UKI whose
+                     initrd mounts /usr from the medium (files/live)
 system/initrd.bst    the installed system's initrd, from the rootfs's own files
 system/usr.bst       the rootfs's /usr as a /usr slot: erofs, dm-verity, signature
 system/uki.bst       kernel + initrd + usrhash= command line, signed (ukify)
@@ -172,8 +172,9 @@ system updates itself with systemd-sysupdate, A/B, with automatic rollback
   partition on first boot.
 
 The ISO boots on UEFI machines, with Secure Boot on (no BIOS boot), from a CD or written
-raw to a USB stick. The whole root file system is the initramfs, so it runs
-from RAM. Build it and fetch it:
+raw to a USB stick. It boots the same signed /usr image that `bunix-install`
+writes to disk, read from the medium, with the root file system in memory.
+Build it and fetch it:
 
 ```
 tools/bst-remote.sh build system/iso.bst

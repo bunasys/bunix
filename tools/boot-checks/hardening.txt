@@ -1,0 +1,6 @@
+# Checks for tools/boot-test.py: the security modules, lockdown, kernel
+# settings (files/rootfs, 60-bunix.conf), and what listens on the network.
+cat /sys/kernel/security/lsm; echo; cat /sys/kernel/security/lockdown
+sysctl kernel.kptr_restrict kernel.dmesg_restrict kernel.yama.ptrace_scope vm.swappiness net.ipv4.conf.all.accept_redirects; cat /sys/devices/system/cpu/cpuidle/current_driver
+netstat -tulpn 2>/dev/null | tail -n +3 | awk '{print $1, $4}'
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; journalctl -b -p err --no-pager -o cat | head -8

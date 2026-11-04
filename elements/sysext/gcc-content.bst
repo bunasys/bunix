@@ -9,6 +9,7 @@ depends:
 - bootstrap/toolchain.bst
 - base/linux-headers.bst
 - base/make.bst
+- base/diffutils.bst
 - base/pkgconf.bst
 - base/m4.bst
 - base/autoconf.bst

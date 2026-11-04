@@ -30,6 +30,8 @@ depends:
 - base/cryptsetup.bst
 # udev loads each device's driver module through libkmod
 - base/kmod.bst
+# measurements into the TPM (loaded with dlopen)
+- base/tpm2-tss.bst
 
 sources:
 - kind: tar
@@ -58,7 +60,7 @@ variables:
     -Dnetworkd=true -Dresolve=true -Dtimesyncd=true
     -Dlogind=true -Dhostnamed=false -Dlocaled=false -Dtimedated=false
     -Dmachined=false -Dportabled=false -Duserdb=false
-    -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=false
+    -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled
     -Dutmp=false -Dbinfmt=false -Dfirstboot=false -Drandomseed=false
     -Dbacklight=false -Drfkill=false -Dvconsole=false -Dquotacheck=false
     -Dstoragetm=false -Dhwdb=false -Dkernel-install=false

@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenSSH server
+Documentation=man:sshd(8) file:/etc/ssh/sshd_config
+After=network.target nftables.service
+
+[Service]
+Type=notify
+# this machine's host keys, made the first time
+ExecStartPre=/usr/bin/ssh-keygen -A
+ExecStartPre=/usr/bin/sshd -t
+ExecStart=/usr/bin/sshd -D
+ExecStartPost=/usr/lib/bunix/sshd-firewall open
+ExecStopPost=/usr/lib/bunix/sshd-firewall close
+ExecReload=/usr/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

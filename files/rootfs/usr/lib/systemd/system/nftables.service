@@ -1,0 +1,18 @@
+[Unit]
+Description=Firewall (nftables)
+Documentation=file:/usr/lib/bunix/firewall.nft
+# up before any network interface is
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft -f /usr/lib/bunix/firewall.nft
+ExecReload=/usr/bin/nft -f /usr/lib/bunix/firewall.nft
+ExecStop=/usr/bin/nft destroy table inet bunix
+
+[Install]
+WantedBy=sysinit.target

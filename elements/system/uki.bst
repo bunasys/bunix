@@ -1,7 +1,8 @@
 kind: manual
 description: |
   bunix_<release>.efi: the installed system's unified kernel image -- the
-  kernel, system/initrd.bst, os-release and the kernel command line in one
+  kernel, CPU microcode, system/initrd.bst, os-release and the kernel
+  command line in one
   EFI program, signed with the bunix Secure Boot key.  The command line
   holds usrhash=, the root hash of this release's /usr (system/usr.bst), so
   the signature covers which /usr the kernel accepts.
@@ -17,6 +18,10 @@ build-depends:
 - filename: system/initrd.bst
   config:
     location: /initrd
+# CPU microcode, which the stub hands to the kernel before the initrd
+- filename: system/microcode.bst
+  config:
+    location: /microcode
 - filename: system/usr.bst
   config:
     location: /usr-partitions
@@ -59,7 +64,7 @@ config:
     release=$(basename /usr/lib/modules/*)
     ukify build \
       --linux=/usr/lib/modules/$release/vmlinuz --uname=$release \
-      --initrd=/initrd/initrd.img \
+      --microcode=/microcode/microcode.cpio --initrd=/initrd/initrd.img \
       --os-release=@/rootfs/usr/lib/os-release \
       --cmdline="usrhash=$(cat /usr-partitions/usrhash) %{cmdline}" \
       --splash=branding/splash.bmp \

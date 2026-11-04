@@ -1,0 +1,19 @@
+# Checks for tools/boot-test.py: the firewall, sshd, and the tools added for
+# building software (GNU grep, /usr/local, the gcc extension's diff).
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager
+# the firewall: loaded, input dropped by default, nothing opened yet
+systemctl is-active nftables.service; nft list chain inet bunix input | grep -E 'policy|dport' | head -6
+# sshd: off until enabled; then its port opens in the firewall
+systemctl is-enabled sshd.service; systemctl is-active sshd.service
+systemctl enable --now sshd.service; sleep 2; systemctl is-active sshd.service; cat /run/nftables.d/sshd.nft; nft list chain inet bunix input | grep 'dport 22'
+# A key login to root, as an admin would set it up.  sysusers leaves root
+# "!unprovisioned" until a password is set (the installer's job, phase 5),
+# and sshd refuses such an account: first, root as if provisioned.
+grep '^root:' /etc/shadow | cut -d: -f2; sed -i 's/^root:!unprovisioned:/root:*:/' /etc/shadow
+mkdir -p /root/.ssh; ssh-keygen -q -t ed25519 -N '' -f /root/.ssh/test_key; cat /root/.ssh/test_key.pub >> /root/.ssh/authorized_keys; ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -i /root/.ssh/test_key root@127.0.0.1 'echo ssh-login-ok'; grep '^root:' /etc/shadow | cut -d: -f2 | cut -c1-14
+# password logins refused
+ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o PubkeyAuthentication=no root@127.0.0.1 true 2>&1 | tail -1
+systemctl disable --now sshd.service; sleep 1; ls /run/nftables.d/; nft list chain inet bunix input | grep -c 'dport 22'
+# GNU grep, /usr/local
+grep --version | head -1; echo 'a1b2' | grep -oP '\d+' | tr '\n' ' '; echo; readlink /usr/local; ls /usr/local/

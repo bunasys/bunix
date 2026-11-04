@@ -45,8 +45,9 @@ config:
     expect_link /etc/os-release ../usr/lib/os-release
     expect_link /usr/bin/sh bash
     expect_link /usr/bin/vi nvim
+    expect_link /usr/local ../var/usrlocal
     # places packages put files by default that the hierarchy rules out
-    for dir in /usr/libexec /usr/etc /usr/local /usr/lib64 /opt; do
+    for dir in /usr/libexec /usr/etc /usr/lib64 /opt; do
       if [ -e $dir ]; then
         echo "$dir should not exist: $(find $dir -mindepth 1 | head -3 | tr '\n' ' ')"
         deviations=$((deviations + 1))
@@ -111,7 +112,8 @@ config:
     cd /usr/lib/systemd/system
     for unit in systemd-networkd.service systemd-resolved.service \
                 systemd-timesyncd.service iwd.service console-shell@tty1.service \
-                systemd-sysext.service systemd-boot-check-no-failures.service; do
+                systemd-sysext.service systemd-boot-check-no-failures.service \
+                zram-swap.service nftables.service; do
       linked=$(ls -d *.wants/$unit *.requires/$unit 2>/dev/null || true)
       [ -n "$linked" ] || { echo "$unit is not enabled"; exit 1; }
     done
@@ -120,7 +122,8 @@ config:
     # no link to a unit that is not there
     dangling=$(find /usr/lib/systemd/system -xtype l)
     [ -z "$dangling" ] || { echo "dangling unit links: $dangling"; exit 1; }
-    test -L /init
+    # the installer, which runs only on the live ISO
+    test -x /usr/bin/bunix-install
 
   - |
     # Updates (docs/updates.md): the release version, the gcc feature,

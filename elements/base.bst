@@ -18,6 +18,7 @@ depends:
 - base/efibootmgr.bst
 - base/fish.bst
 - base/fonts-arabic.bst
+- base/grep.bst
 - base/htop.bst
 - base/iwd.bst
 - base/kmod.bst
@@ -25,6 +26,8 @@ depends:
 - base/nawa.bst
 - base/plymouth.bst
 - base/neovim.bst
+- base/nftables.bst
+- base/openssh.bst
 - base/net-tools.bst
 - base/procps-ng.bst
 - base/psmisc.bst

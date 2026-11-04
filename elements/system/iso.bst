@@ -1,15 +1,18 @@
 kind: manual
 description: |
   bunix-x86_64.iso: the live system, for UEFI machines -- with Secure Boot
-  on -- from a CD or written raw to a USB stick.  The whole root file system
-  is the initramfs, so once the kernel image is loaded nothing needs to find
-  the boot medium again (bunix-install mounts it, for the files it installs).
+  on -- from a CD or written raw to a USB stick.  It boots the installed
+  system's initrd, which mounts the release's signed /usr from the medium
+  (the files bunix-install writes to disk, in install/) and an empty root
+  file system in memory, filled from /usr as an installed system's first
+  boot is (files/live).
 
   The same boot chain as an installed system, each stage verifying the next:
     firmware --(Microsoft UEFI CA)--> shim          (system/shim.bst)
     shim     --(MOK: bunix's key)---> systemd-boot  (system/esp.bst)
     systemd-boot --(via shim)-------> bunix-live.efi, a UKI: kernel,
-                                      initramfs, command line (signed here)
+                                      initrd, command line (signed here)
+    initrd --(kernel: verity key)---> /usr, from the medium
   On each machine's first boot shim finds systemd-boot signed by a key it
   does not know yet and opens MokManager, where bunix.cer (on the EFI
   partition) is enrolled once.  No BIOS boot: the installed system is UEFI
@@ -26,9 +29,17 @@ build-depends:
 - base/systemd.bst
 - base/python-pefile.bst
 - system/linux.bst
+# the extensions' transfer files, rewritten for the live system
 - filename: system/rootfs.bst
   config:
     location: /rootfs
+- filename: system/initrd.bst
+  config:
+    location: /initrd
+# CPU microcode, as system/uki.bst
+- filename: system/microcode.bst
+  config:
+    location: /microcode
 # the signed boot files, and what bunix-install installs: this release's
 # /usr, UKI and ESP files
 - system/esp.bst
@@ -41,8 +52,8 @@ build-depends:
 
 sources:
 - kind: local
-  path: files/install
-  directory: install
+  path: files/live
+  directory: live
 # The Secure Boot signing key, kept out of version control -- only it, not
 # keys/'s other keys.
 - kind: local
@@ -67,51 +78,47 @@ variables:
   # which it otherwise ignores, until the GPU's driver module loads.
   # plymouth.ignore-serial-consoles: with a serial console on the command
   # line Plymouth would show only its text mode, everywhere.
+  # bunix.live, bunix.usrhash=: the initrd's live /usr (files/live); root
+  # in memory, /usr the dm-verity device it sets up.
   cmdline: >-
+    bunix.live root=tmpfs mount.usr=/dev/mapper/usr mount.usrfstype=erofs mount.usrflags=ro
     console=ttyS0,115200 console=tty0 quiet splash plymouth.use-simpledrm
     plymouth.ignore-serial-consoles dm_verity.require_signatures=1
 
 config:
   build-commands:
   - |
-    # BuildStream's artifacts keep no file modes but the executable bit;
-    # these are the ones that matter, set on a copy of the root file system
-    cp -a /rootfs rootfs
-    cd rootfs
-    # The live system has no /usr slots to update: no OS transfers, and the
-    # extensions (gcc, rust, swift) come from its own release's directory
-    # (an installed system takes the latest release's, together with the
-    # new /usr).
-    rm usr/lib/sysupdate.d/10-usr.transfer usr/lib/sysupdate.d/11-usr-verity.transfer \
-       usr/lib/sysupdate.d/12-usr-verity-sig.transfer usr/lib/sysupdate.d/90-uki.transfer
-    sed -i 's|^Path=https.*|Path=https://github.com/bunasys/bunix/releases/download/v%A/|' \
-      usr/lib/sysupdate.d/5*-*.transfer
-    # the installer, for the live system only (it reads the release from
-    # the boot medium's install/)
-    install -m 0755 %{build-root}/install/bunix-install usr/bin/bunix-install
-    chmod 1777 tmp var/tmp
-    chmod 0700 root
-    chmod 0640 etc/shadow etc/gshadow
-
-  - |
-    # The root file system as the initramfs: a newc cpio archive, compressed
-    # with zstd -19 (the kernel's decoder cannot take the larger windows of
-    # the --ultra levels).
+    # The live additions to the installed initrd (files/live), with the
+    # live system's /etc settings: the /usr transfers masked (there are no
+    # /usr slots), the extensions taken from this release's directory (an
+    # installed system takes the latest release's, together with the new
+    # /usr)
     set -o pipefail
-    cd rootfs
-    find . -print0 | cpio --null -o -H newc --owner=0:0 --quiet | zstd -19 -T0 -q > %{build-root}/initramfs.img
+    settings=live/usr/lib/bunix/live-etc/sysupdate.d
+    mkdir -p $settings
+    for transfer in 10-usr 11-usr-verity 12-usr-verity-sig 90-uki; do
+      ln -s /dev/null $settings/$transfer.transfer
+    done
+    for transfer in /rootfs/usr/lib/sysupdate.d/5*-*.transfer; do
+      sed 's|^Path=https.*|Path=https://github.com/bunasys/bunix/releases/download/v%A/|' \
+        $transfer > $settings/$(basename $transfer)
+    done
+    cd live
+    find . -print0 | cpio --null -o -H newc --owner=0:0 --quiet | zstd -19 -q > %{build-root}/live.img
 
   - |
-    # The live UKI.  --no-sign-kernel: the UKI's signature covers the
-    # kernel inside (as system/uki.bst).
+    # The live UKI: the installed system's kernel and initrd, the live
+    # additions, and a command line naming this release's /usr.
+    # --no-sign-kernel: the UKI's signature covers the kernel inside (as
+    # system/uki.bst).
     mkdir -p tmp
     install -m 0600 keys/secureboot.key tmp/secureboot.key
     release=$(basename /usr/lib/modules/*)
     ukify build \
       --linux=/usr/lib/modules/$release/vmlinuz --uname=$release \
-      --initrd=initramfs.img \
+      --microcode=/microcode/microcode.cpio --initrd=/initrd/initrd.img --initrd=live.img \
       --os-release=@/rootfs/usr/lib/os-release \
-      --cmdline="%{cmdline}" \
+      --cmdline="bunix.usrhash=$(cat /usr-partitions/usrhash) %{cmdline}" \
       --splash=branding/splash.bmp \
       --stub=/usr/lib/systemd/boot/efi/linuxx64.efi.stub \
       --signtool=systemd-sbsign --no-sign-kernel \
@@ -135,8 +142,8 @@ config:
     mdir -/ -i efi.img ::
 
   - |
-    # The ISO 9660 file system: bunix-install's files, kept on the medium,
-    # not in the initramfs, so they take no memory in the live system
+    # The ISO 9660 file system: this release's /usr, UKI and ESP files,
+    # which the live system mounts /usr from and bunix-install installs
     mkdir -p iso/install
     cp /usr-partitions/*.raw /uki/*.efi iso/install/
     cp -a /usr/lib/bunix/esp iso/install/esp

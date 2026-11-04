@@ -93,7 +93,7 @@ config:
     for generator in *; do
       case $generator in
         systemd-gpt-auto-generator|systemd-veritysetup-generator|systemd-fstab-generator|\
-        systemd-bless-boot-generator) ;;
+        systemd-bless-boot-generator|systemd-tpm2-generator) ;;
         *) rm -f "$generator" ;;
       esac
     done
@@ -106,7 +106,7 @@ config:
            usr/share/polkit-1 usr/lib/dbus-1.0/dbus-daemon-launch-helper
     # ...and their unit files, so `systemctl list-unit-files` shows only what exists
     cd usr/lib/systemd/system
-    for pattern in '*ssh*' 'systemd-sleep*' 'systemd-hibernate*' 'systemd-suspend*' \
+    for pattern in 'ssh-access.target' 'systemd-sleep*' 'systemd-hibernate*' 'systemd-suspend*' \
                    'systemd-storage*' 'systemd-mountfsd*' 'systemd-nsresourced*' \
                    'systemd-pstore*' 'systemd-journal-remote*' 'systemd-battery*' \
                    'systemd-factory-reset*' \
@@ -118,7 +118,7 @@ config:
                    'systemd-rfkill*' 'systemd-oomd*' 'systemd-userdbd*' 'systemd-homed*' \
                    'systemd-machined*' 'systemd-importd*' 'systemd-portabled*' \
                    'systemd-nspawn*' 'systemd-coredump*' \
-                   'systemd-tpm2*' 'systemd-pcr*' 'systemd-creds*' 'systemd-bsod*' \
+                   'systemd-tpm2-swtpm*' 'systemd-creds*' 'systemd-bsod*' \
                    'systemd-storagetm*' 'systemd-time-wait-sync*' \
                    'systemd-localed*' 'systemd-hostnamed*' \
                    'systemd-ask-password*' 'getty*' 'serial-getty*' 'console-getty*' \
@@ -154,6 +154,9 @@ config:
     ln -s usr/bin sbin
     ln -s usr/lib lib
     ln -s bin usr/sbin
+    # /usr is a read-only image: software built here installs to /usr/local by
+    # default, which is /var/usrlocal (files/rootfs, usrlocal.conf)
+    ln -s ../var/usrlocal usr/local
     # x86_64 programs ask for their loader as /lib64/ld-linux-x86-64.so.2
     ln -s usr/lib/%{triplet} lib64
     mkdir -p proc sys dev run tmp mnt home root srv var/log var/lib var/tmp var/cache etc/systemd/system
@@ -161,18 +164,16 @@ config:
     ln -s ../run/lock var/lock
     # where an installed system mounts its EFI system partition
     mkdir -p efi boot
-    # (BuildStream's artifacts keep no file modes but the executable bit, so
-    # /tmp's 1777 and the like are set when system/iso.bst packs the image)
-    # The kernel unpacks the initramfs and runs /init: systemd itself.  The
-    # initramfs is the root file system, so nothing is mounted or switched to.
-    ln -s usr/lib/systemd/systemd init
+    # (BuildStream's artifacts keep no file modes but the executable bit;
+    # only /usr leaves this element, and a system's root -- a new partition,
+    # or memory on the live ISO -- is made at boot, with its modes)
     [ -e usr/bin/init ] || ln -s ../lib/systemd/systemd usr/bin/init
 
   - |
     # Command names.  uutils first, then BusyBox for what nothing else
     # provides: find/xargs are uutils findutils, ps/top/free procps-ng,
     # killall psmisc, mount/dmesg/kill/more util-linux, netstat net-tools,
-    # nslookup BIND, less and vi (neovim) their own packages.
+    # nslookup BIND, grep GNU grep, less and vi (neovim) their own packages.
     cd %{install-root}%{bindir}
     for name in $(%{in-image} ./coreutils --list); do
       [ -e "$name" ] || ln -s coreutils "$name"
@@ -201,6 +202,16 @@ config:
     # /dev/uinput, ...) of modules not loaded yet
     wants sysinit.target systemd-modules-load.service
     wants sysinit.target kmod-static-nodes.service
+    # TPM measurements, wired as systemd's own build does: the boot phases,
+    # the machine ID and product, and the extension images' verity root
+    # hashes (through systemd-pcrextend).  Each runs only when the machine
+    # has a TPM and booted a measured UKI.
+    wants sockets.target systemd-pcrextend.socket
+    for unit in systemd-pcrmachine systemd-pcrproduct systemd-pcrphase-sysinit \
+                systemd-pcrphase systemd-pcrnvdone systemd-tpm2-setup-early systemd-tpm2-setup; do
+      wants sysinit.target $unit.service
+    done
+    wants initrd.target systemd-pcrphase-initrd.service
     wants sockets.target systemd-journald.socket
     wants sockets.target systemd-journald-dev-log.socket
     wants sockets.target systemd-udevd-control.socket
@@ -249,7 +260,8 @@ config:
     %{in-image} %{install-root}%{bindir}/systemctl --root=%{install-root} enable \
       systemd-networkd.service systemd-resolved.service systemd-timesyncd.service \
       iwd.service console-shell@tty1.service console-shell@ttyS0.service \
-      systemd-sysext.service systemd-boot-check-no-failures.service
+      systemd-sysext.service systemd-boot-check-no-failures.service zram-swap.service \
+      nftables.service
     cd %{install-root}/etc/systemd/system
     for entry in *; do
       if [ -d "$entry" ] && [ ! -L "$entry" ]; then

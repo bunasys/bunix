@@ -3,7 +3,8 @@
 # line here does not survive `make olddefconfig`.
 #
 # What every machine needs to boot (disks, file systems, the console, wired
-# network) is built in, so the initrd needs no modules.  Drivers for
+# network) is built in; the initrd carries only the GPU modules (early
+# KMS, system/initrd.bst).  Drivers for
 # hardware only some machines have -- GPUs, Wi-Fi, Bluetooth, touch -- and
 # every driver that needs firmware are modules: udev loads the ones the
 # machine has, from /usr, where the firmware is too.
@@ -239,6 +240,53 @@ CONFIG_WLAN_VENDOR_BROADCOM=y
 CONFIG_BRCMFMAC=m
 CONFIG_BRCMFMAC_PCIE=y
 
+# Sound: the HD Audio controller as a module (built in, it would start
+# before the GPU's driver, whose HDMI codec it shares), and the drivers for
+# the codecs on it: without them the controller finds nothing to drive
+# ("Cannot probe codecs, giving up").  The defconfig has none.  Each family
+# selects all its chips (ALC2xx..ALC8xx; Intel, AMD, NVIDIA HDMI).
+CONFIG_SND_HDA_INTEL=m
+CONFIG_SND_HDA_CODEC_REALTEK=m
+CONFIG_SND_HDA_CODEC_HDMI=m
+CONFIG_SND_HDA_CODEC_CONEXANT=m
+CONFIG_SND_HDA_CODEC_CIRRUS=m
+CONFIG_SND_HDA_CODEC_ANALOG=m
+CONFIG_SND_HDA_CODEC_SIGMATEL=m
+CONFIG_SND_HDA_CODEC_VIA=m
+CONFIG_SND_HDA_CODEC_CA0132=m
+
+# Sandboxes: user namespaces (bubblewrap -- BuildStream's builds, Flatpak,
+# browsers' sandboxes) and FUSE (BuildStream's buildbox-fuse)
+CONFIG_USER_NS=y
+CONFIG_FUSE_FS=y
+
+# The firewall (files/rootfs/usr/lib/bunix/firewall.nft): nftables, with
+# connection tracking for "replies to this machine's own connections"
+CONFIG_NF_TABLES=y
+CONFIG_NF_TABLES_INET=y
+CONFIG_NF_TABLES_IPV4=y
+CONFIG_NF_TABLES_IPV6=y
+CONFIG_NFT_CT=y
+CONFIG_NFT_REJECT=y
+CONFIG_NFT_LIMIT=y
+
+# Swap in memory, compressed with zstd: zram (files/rootfs, zram-swap)
+CONFIG_SWAP=y
+CONFIG_ZRAM=y
+CONFIG_ZRAM_BACKEND_ZSTD=y
+CONFIG_ZRAM_DEF_COMP_ZSTD=y
+
+# The TPM (discrete chips and the firmware TPMs of Intel PTT and AMD fTPM,
+# through TIS and CRB): systemd measures the extension images' verity root
+# hashes into it.  Built in, so the initrd has it without modules.
+CONFIG_TCG_TPM=y
+CONFIG_TCG_TIS=y
+CONFIG_TCG_CRB=y
+# the firmware's TPM event log is read through securityfs
+# (/sys/kernel/security/tpm0/binary_bios_measurements); without it systemd
+# reports the TPM as "firmware unavailable" and measures nothing
+CONFIG_SECURITYFS=y
+
 # Bluetooth: the stack and the USB and PCIe adapters built into laptops
 # (Intel, Realtek, MediaTek, Broadcom, Qualcomm); the userspace (BlueZ)
 # comes later
@@ -293,3 +341,41 @@ CONFIG_SYSTEM_TRUSTED_KEYS="bunix/verity.crt"
 
 # USB disks over UAS (an installed system may live on one)
 CONFIG_USB_UAS=y
+
+# Hardening, at little cost:
+# - lockdown, "integrity" mode, always (mainline cannot tie it to Secure
+#   Boot; that is a distribution patch): the kernel refuses what would let
+#   root change the running kernel -- unsigned kexec, /dev/mem, raw I/O
+#   ports, hibernation images, unsigned modules
+# - Yama: a process can only ptrace its own descendants
+# - Landlock: unprivileged sandboxing, for programs that use it
+# - no SELinux: nothing on bunix uses it, and a security module that does
+#   nothing is only attack surface
+CONFIG_SECURITY_LOCKDOWN_LSM=y
+CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y
+CONFIG_LOCK_DOWN_KERNEL_FORCE_INTEGRITY=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_LANDLOCK=y
+# CONFIG_SECURITY_SELINUX is not set
+CONFIG_LSM="landlock,lockdown,yama"
+# - memory: copies to and from user space checked against object bounds,
+#   string functions checked at compile time, the slab freelist and page
+#   allocator randomised and hardened, new allocations zeroed, a random
+#   kernel stack offset per system call
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_FORTIFY_SOURCE=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SHUFFLE_PAGE_ALLOCATOR=y
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
+CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT=y
+CONFIG_LIST_HARDENED=y
+CONFIG_IO_STRICT_DEVMEM=y
+# - BPF (systemd's per-service firewalls and device rules) compiled, not
+#   interpreted: faster, and the interpreter, a known gadget, is left out
+CONFIG_BPF_JIT=y
+CONFIG_BPF_JIT_ALWAYS_ON=y
+
+# Power: Intel's own idle driver, which knows each CPU's deeper C-states
+# (acpi_idle only knows what the firmware lists)
+CONFIG_INTEL_IDLE=y

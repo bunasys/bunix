@@ -96,9 +96,11 @@ trap cleanup EXIT
 
 [ "$(id -u)" = 0 ] || die "run as root"
 [ -d /sys/firmware/efi ] || die "this machine did not boot with UEFI; bunix boots with UEFI only"
+# It is in every /usr, but installs only from the live ISO it booted
+grep -qw bunix.live /proc/cmdline || die "bunix is installed already: bunix-install runs on the live ISO"
 
 # The release to install comes from the boot medium (system/iso.bst puts it
-# in install/), not from the live system in memory.
+# in install/), the files the live system's own /usr is mounted from.
 mkdir -p "$WORK"/medium "$WORK"/esp "$WORK"/boot "$WORK"/root
 [ -e /dev/disk/by-label/BUNIX ] || die "cannot find the boot medium (label BUNIX)"
 medium_device=$(readlink -f /dev/disk/by-label/BUNIX)
@@ -130,6 +132,8 @@ disks=()
 while read -r name type; do
   [ "$type" = disk ] || continue
   [ "$name" = "$medium_disk" ] && continue
+  # compressed swap in memory (zram-swap), not a disk to install to
+  case $name in /dev/zram*) continue ;; esac
   disks+=("$name")
 done < <(lsblk -ndpo NAME,TYPE)
 [ ${#disks[@]} -gt 0 ] || die "no disk to install to"

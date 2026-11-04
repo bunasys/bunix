@@ -1,0 +1,19 @@
+#!/bin/bash
+# Swap in memory, compressed (zram-swap.service): half of RAM, at most
+# 8 GiB, zstd -- the sizes Fedora uses.  Memory the kernel would otherwise
+# reclaim by killing a process is kept compressed (about 3:1) instead.
+# Nothing is written to disk, so it suits the live system and the SSDs of
+# installed ones alike.
+set -euo pipefail
+
+memory_kib=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+size_kib=$(( memory_kib / 2 ))
+max_kib=$(( 8 * 1024 * 1024 ))
+if [ "$size_kib" -gt "$max_kib" ]; then
+  size_kib=$max_kib
+fi
+
+device=$(zramctl --find --size "${size_kib}KiB" --algorithm zstd)
+mkswap "$device" > /dev/null
+# above any swap on disk, so the compressed pages are used first
+swapon --priority 100 "$device"

@@ -1,0 +1,17 @@
+# Checks for tools/boot-test.py on the live ISO: /usr comes from the medium
+# (files/live), the root is memory, the GPU's driver loads in the initrd
+# (early KMS), and the TPM pieces stay quiet on a machine without a TPM.
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep IMAGE_VERSION /etc/os-release
+findmnt -n -o TARGET,SOURCE,FSTYPE / /usr /run/bunix/medium; losetup -l -O NAME,BACK-FILE | cut -c1-100; dmsetup table usr | cut -c1-80
+# the live settings: /usr transfers masked, extensions from this release
+ls -l /etc/sysupdate.d | cut -c40-; grep -h ^Path /etc/sysupdate.d/5*.transfer
+# the GPU's driver from the initrd: bochs takes the screen before the switch to /usr
+journalctl -b -o short-monotonic --no-pager | grep -E 'bochs-drm|Switching root' | head -3; readlink /sys/class/drm/card*/device/driver | sort -u
+# no TPM here: its units are skipped, nothing logs an error
+systemctl show -p ActiveState,ConditionResult systemd-tpm2-setup.service systemd-pcrphase.service | tr '\n' ' '; echo; journalctl -b -p err --no-pager -o cat | head -8
+free -m | head -2; du -sh /usr/lib/firmware; systemd-analyze --no-pager
+# CPU microcode (a VM keeps the host's: here only that the kernel saw the early archive)
+dmesg | grep -i microcode | head -3; grep -m1 microcode /proc/cpuinfo
+# compressed swap in memory
+swapon --show; zramctl

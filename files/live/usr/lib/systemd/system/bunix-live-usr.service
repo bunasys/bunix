@@ -1,0 +1,16 @@
+[Unit]
+Description=Live system /usr from the boot medium
+Documentation=file:/usr/lib/bunix/live-usr
+DefaultDependencies=no
+# /sysroot (root=tmpfs) is where the live /etc settings go; /dev/mapper/usr,
+# which this sets up, is what sysroot-usr.mount waits for
+Wants=dev-disk-by\x2dlabel-BUNIX.device
+After=dev-disk-by\x2dlabel-BUNIX.device sysroot.mount systemd-udevd.service
+Before=sysroot-usr.mount initrd-usr-fs.target
+OnFailure=emergency.target
+OnFailureJobMode=replace-irreversibly
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/bunix/live-usr

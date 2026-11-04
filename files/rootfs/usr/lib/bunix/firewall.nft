@@ -1,0 +1,41 @@
+#!/usr/bin/nft -f
+# bunix's firewall (nftables.service): nothing reaches this machine unless it
+# answers a connection the machine made, or is one of the few things a
+# client needs (ICMP, DHCP, IPv6 autoconfiguration).  Outgoing traffic is
+# not filtered.  Nothing is routed through it.
+#
+# Opening a port: a file in /etc/nftables.d/ ending in .nft, with rules for
+# the input chain, e.g.
+#
+#   tcp dport 8080 accept
+#
+# then `systemctl reload nftables`.  /run/nftables.d/ is the same for
+# services: sshd puts its ports there while it runs (sshd-firewall).
+
+destroy table inet bunix
+
+table inet bunix {
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		ct state vmap { established : accept, related : accept, invalid : drop }
+		iif lo accept
+
+		# ping, errors, path MTU; IPv6's neighbour discovery and router
+		# advertisements are ICMPv6 too.  (nft's own keywords: protocol
+		# names would need /etc/protocols)
+		ip protocol icmp accept
+		ip6 nexthdr icmpv6 accept
+		# DHCP answers (sent to an address the client does not have yet,
+		# so connection tracking cannot match them)
+		udp dport 68 accept
+		ip6 saddr fe80::/10 udp dport 546 accept
+
+		include "/etc/nftables.d/*.nft"
+		include "/run/nftables.d/*.nft"
+	}
+
+	chain forward {
+		type filter hook forward priority filter; policy drop;
+	}
+}

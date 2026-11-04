@@ -1,0 +1,18 @@
+# bunix's sshd configuration.  sshd is off until enabled:
+#
+#   systemctl enable --now sshd
+#
+# which also opens its port in the firewall.  Keys only: put public keys in
+# ~/.ssh/authorized_keys.  The first value of each setting wins, so files in
+# sshd_config.d/ override the ones below.  sshd_config(5) has the rest.
+
+Include /etc/ssh/sshd_config.d/*.conf
+
+PermitRootLogin prohibit-password
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+AuthorizedKeysFile .ssh/authorized_keys
+
+# sftp in sshd itself: no separate program to keep in step
+Subsystem sftp internal-sftp

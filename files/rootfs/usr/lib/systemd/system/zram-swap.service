@@ -1,0 +1,14 @@
+[Unit]
+Description=Compressed swap in memory (zram)
+Documentation=file:/usr/lib/bunix/zram-swap
+DefaultDependencies=no
+Before=swap.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/bunix/zram-swap
+
+[Install]
+WantedBy=swap.target

@@ -20,7 +20,7 @@ Writes serial.log (the checks' output) and screenshots as PNG to <outdir>:
 every 3 s for the first 15 s (the boot splash), after boot, at the end.
 Exits non-zero if a check did not finish.
 
-BOOT_MEMORY sets the VM's memory (default 2G: the live ISO runs from RAM), BOOT_NIC its network card
+BOOT_MEMORY sets the VM's memory (default 1G), BOOT_NIC its network card
 (default e1000e).  BOOT_SHELL=bash types the checks for bash (an
 initrd's emergency shell) instead of root's fish.  BOOT_CHECKS=<file> replaces the checks below with the file's lines (one
 command line each; empty lines and lines starting with # are skipped).
@@ -63,7 +63,7 @@ sockdir = tempfile.mkdtemp(prefix="bt", dir="/tmp")
 monitor_path = os.path.join(sockdir, "monitor")
 serial_path = os.path.join(sockdir, "serial")
 
-qemu_args = ["qemu-system-x86_64", "-machine", "q35", "-smp", "2", "-m", os.environ.get("BOOT_MEMORY", "2G"),
+qemu_args = ["qemu-system-x86_64", "-machine", "q35", "-smp", "2", "-m", os.environ.get("BOOT_MEMORY", "1G"),
              "-nic", "user,model=" + os.environ.get("BOOT_NIC", "e1000e"),
              "-display", "none", "-vga", "std",
              "-monitor", f"unix:{monitor_path},server,nowait",

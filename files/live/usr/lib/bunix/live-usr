@@ -1,0 +1,50 @@
+#!/bin/bash
+# The live system's /usr, set up in its initrd (bunix-live-usr.service): the
+# same signed /usr image bunix-install writes to disk, read from the boot
+# medium instead of copied into memory.
+#
+#   1. mount the boot medium (the ISO 9660 file system, label BUNIX)
+#   2. attach install/'s three /usr files -- erofs data, dm-verity hash tree,
+#      signature -- as /dev/mapper/usr; the kernel checks the root hash's
+#      signature (dm_verity.require_signatures=1) and every block as it is
+#      read
+#   3. put the live system's own settings into the (empty, in-memory) /etc
+#
+# The root hash comes from the kernel command line (bunix.usrhash=), which
+# the live UKI's signature covers, so only this release's /usr is accepted.
+# sysroot-usr.mount (mount.usr=/dev/mapper/usr) mounts it afterwards.
+set -euo pipefail
+
+medium=/run/bunix/medium
+usrhash=$(sed -n 's/.*bunix\.usrhash=\([0-9a-f]*\).*/\1/p' /proc/cmdline)
+[ -n "$usrhash" ] || { echo "no bunix.usrhash= on the kernel command line" >&2; exit 1; }
+
+mkdir -p "$medium"
+mountpoint -q "$medium" || mount -o ro /dev/disk/by-label/BUNIX "$medium"
+
+data=$(ls "$medium"/install/bunix_*.usr-x86-64.*.raw)
+hash_tree=$(ls "$medium"/install/bunix_*.usr-x86-64-verity.*.raw)
+signature_file=$(ls "$medium"/install/bunix_*.usr-x86-64-verity-sig.*.raw)
+
+# The signature partition is JSON padded with zero bytes:
+# {"rootHash":"...","certificateFingerprint":"...","signature":"<base64>"}
+signature=$(tr -d '\000' < "$signature_file" | sed -n 's/.*"signature" *: *"\([^"]*\)".*/\1/p')
+[ -n "$signature" ] || { echo "no signature in $signature_file" >&2; exit 1; }
+
+data_device=$(losetup --find --show --read-only "$data")
+hash_device=$(losetup --find --show --read-only "$hash_tree")
+/usr/lib/systemd/systemd-veritysetup attach usr "$data_device" "$hash_device" "$usrhash" \
+  "root-hash-signature=base64:$signature"
+
+# The root's skeleton, which an installed system's root partition gets from
+# systemd-repart (/usr/lib/repart.d/50-root.conf): the merged-/usr links --
+# /sbin/init among them -- and the top-level directories
+ln -s usr/bin /sysroot/bin
+ln -s usr/bin /sysroot/sbin
+ln -s usr/lib /sysroot/lib
+ln -s usr/lib/x86_64-linux-gnu /sysroot/lib64
+mkdir -p /sysroot/usr /sysroot/etc /sysroot/var /sysroot/home /sysroot/root /sysroot/srv /sysroot/tmp
+
+# What makes the live system differ from an installed one, in /etc: no
+# /usr slots to update, extensions from this release's directory
+cp -a /usr/lib/bunix/live-etc/. /sysroot/etc/
