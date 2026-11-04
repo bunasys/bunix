@@ -182,7 +182,7 @@ config:
       [ -e "$name" ] || ln -s coreutils "$name"
     done
     for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip ping ping6 \
-                traceroute which strings lsof login passwd; do
+                traceroute which strings lsof login passwd chpasswd; do
       [ -e "$name" ] || ln -s busybox "$name"
     done
     ln -s nvim vi

@@ -74,15 +74,17 @@ variables:
   # included (docs/updates.md), whatever userspace is configured to accept.
   # quiet splash: no kernel or systemd messages on the screen, only the
   # boot splash (Plymouth, base/plymouth.bst), unless something fails.
-  # plymouth.use-simpledrm: Plymouth draws on the firmware's framebuffer,
-  # which it otherwise ignores, until the GPU's driver module loads.
+  # No plymouth.use-simpledrm: Plymouth waits for the GPU's driver, which
+  # for Intel and QEMU's GPUs loads in the initrd (early KMS).  Drawing on
+  # the firmware's framebuffer first made it switch devices when the
+  # driver took over, between the firmware's logo and its own.
   # plymouth.ignore-serial-consoles: with a serial console on the command
   # line Plymouth would show only its text mode, everywhere.
   # bunix.live, bunix.usrhash=: the initrd's live /usr (files/live); root
   # in memory, /usr the dm-verity device it sets up.
   cmdline: >-
     bunix.live root=tmpfs mount.usr=/dev/mapper/usr mount.usrfstype=erofs mount.usrflags=ro
-    console=ttyS0,115200 console=tty0 quiet splash plymouth.use-simpledrm
+    console=ttyS0,115200 console=tty0 quiet splash
     plymouth.ignore-serial-consoles dm_verity.require_signatures=1
 
 config:

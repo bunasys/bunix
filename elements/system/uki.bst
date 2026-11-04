@@ -47,11 +47,13 @@ variables:
   # trusted because the signed UKI names it, without a signature of its own.
   # quiet splash: no kernel or systemd messages on the screen, only the
   # boot splash (Plymouth, base/plymouth.bst), unless something fails.
-  # plymouth.use-simpledrm: Plymouth draws on the firmware's framebuffer,
-  # which it otherwise ignores, until the GPU's driver module loads.
+  # No plymouth.use-simpledrm: Plymouth waits for the GPU's driver, which
+  # for Intel and QEMU's GPUs loads in the initrd (early KMS).  Drawing on
+  # the firmware's framebuffer first made it switch devices when the
+  # driver took over, between the firmware's logo and its own.
   # plymouth.ignore-serial-consoles: with a serial console on the command
   # line Plymouth would show only its text mode, everywhere.
-  cmdline: rw console=ttyS0,115200 console=tty0 quiet splash plymouth.use-simpledrm
+  cmdline: rw console=ttyS0,115200 console=tty0 quiet splash
     plymouth.ignore-serial-consoles
 
 config:

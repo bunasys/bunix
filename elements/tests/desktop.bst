@@ -14,7 +14,9 @@ config:
   - |
     loader=/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
     unresolved=0
-    for f in $(find /usr -type f); do
+    # (some firmware file names have spaces)
+    find /usr -type f -print0 > files
+    while IFS= read -r -d '' f; do
       is_elf=$(head -c 4 "$f" | tail -c 3)
       [ "$is_elf" = ELF ] || continue
       missing=$($loader --list "$f" 2>&1 | grep 'not found') || true
@@ -22,19 +24,19 @@ config:
         echo "UNRESOLVED in $f: $missing"
         unresolved=1
       fi
-    done
+    done < files
     exit $unresolved
 
   - |
-    # Mesa: EGL and GBM, and the drivers (one library, linked per driver)
-    for lib in libEGL.so.1 libGLESv2.so.2 libgbm.so.1 libgallium-*.so; do
-      ls /usr/lib/x86_64-linux-gnu/$lib
-    done
-    # virtio_gpu is virgl's name; swrast is llvmpipe
+    # Mesa: EGL, GLES and GBM, and the drivers -- all in libgallium, which
+    # EGL loads by the driver's name (there are no dri/*_dri.so files
+    # without GLX).  virtio_gpu is virgl's name; swrast is llvmpipe.
+    cd /usr/lib/x86_64-linux-gnu
+    ls libEGL.so.1 libGLESv2.so.2 libgbm.so.1 gbm/dri_gbm.so
+    drivers=$(strings libgallium-*.so | grep -xE 'iris|crocus|radeonsi|virtio_gpu|swrast' | sort -u)
     for driver in iris crocus radeonsi virtio_gpu swrast; do
-      test -e /usr/lib/x86_64-linux-gnu/dri/${driver}_dri.so || { echo "no $driver driver"; exit 1; }
+      echo "$drivers" | grep -qx $driver || { echo "no $driver driver"; exit 1; }
     done
-    test -e /usr/lib/x86_64-linux-gnu/gbm/dri_gbm.so
     ls /usr/lib/x86_64-linux-gnu/libLLVM.so.*
     seatd -v
     libinput --version

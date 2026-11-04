@@ -25,6 +25,8 @@ build-depends:
 
 depends:
 - base/llvm-libs.bst
+# radeonsi reads the shader binaries LLVM produces for AMD GPUs (ELF)
+- base/elfutils.bst
 - base/libdrm.bst
 - base/wayland.bst
 - base/expat.bst

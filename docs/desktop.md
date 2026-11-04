@@ -80,7 +80,8 @@ installed system.
      rules: logind is now built and started.
    - With a serial console on the command line Plymouth shows only its
      text mode: `plymouth.ignore-serial-consoles`.
-   - `plymouth.use-simpledrm`: until there are GPU drivers.
+   - `plymouth.use-simpledrm`: until there are GPU drivers (dropped in
+     0.1.9: early KMS loads them in the initrd).
    - fbcon's deferred takeover needs `CONFIG_FB` (without its firmware
      framebuffer drivers; simpledrm has the screen).
    - rootfs.bst wires units itself, so Plymouth's were added there.

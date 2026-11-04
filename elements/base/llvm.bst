@@ -27,7 +27,9 @@ variables:
   # LLVM accepts only its own build types, not the project's None
   cmake-global: -DCMAKE_BUILD_TYPE=Release
   # One shared libLLVM that every tool and Mesa link (and libclang-cpp
-  # likewise).  Linking it takes a few GB of memory: two links at a time.
+  # likewise).  Linking it takes a few GB of memory: two links at a time;
+  # clang's larger sources take about 1 GB each to compile: four at a time,
+  # for the 7.8 GB build host.
   # LLVM puts libraries in lib$LLVM_LIBDIR_SUFFIX, ignoring
   # CMAKE_INSTALL_LIBDIR: the suffix gives UAPI.9's multiarch directory.
   # Assertions off: LLVM turns them on for any build type but Release.
@@ -35,7 +37,7 @@ variables:
     -DLLVM_ENABLE_PROJECTS="clang;lld"
     -DLLVM_LIBDIR_SUFFIX=/%{triplet}
     -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCLANG_LINK_CLANG_DYLIB=ON
-    -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_ASSERTIONS=OFF -DLLVM_PARALLEL_LINK_JOBS=2
+    -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_ASSERTIONS=OFF -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_PARALLEL_COMPILE_JOBS=4
     -DLLVM_ENABLE_ZLIB=FORCE_ON -DLLVM_ENABLE_ZSTD=FORCE_ON
     -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_LIBPFM=OFF
     -DLLVM_ENABLE_FFI=OFF -DLLVM_ENABLE_CURL=OFF -DLLVM_ENABLE_HTTPLIB=OFF
