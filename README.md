@@ -195,7 +195,7 @@ per job, so a leak of one does not give away the others:
 | Key | Signs | Trusted by |
 | --- | --- | --- |
 | `secureboot.key/.crt` ("bunix Secure Boot signing key") | systemd-boot and the kernel images (`system/esp.bst`, `system/uki.bst`, `system/iso.bst`) | shim, once enrolled with MokManager |
-| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`, `devtools.bst`) | the kernel: `files/linux/verity.crt` is built in |
+| `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`, `devtools.bst`, `desktop.bst`) | the kernel: `files/linux/verity.crt` is built in |
 | `release.key` (OpenPGP) | update manifests (`tools/publish.sh`) | sysupdate: `files/rootfs/usr/lib/systemd/import-pubring.pgp` |
 
 **Secure Boot.** shim, signed by Microsoft, trusts the keys enrolled with

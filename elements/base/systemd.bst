@@ -47,7 +47,9 @@ variables:
   # revocation metadata shim checks in systemd-boot).  logind tracks seats
   # and sessions: its udev rule tags graphics and input devices "seat",
   # which is how Plymouth, and later the compositor, find the screen.
-  # hostnamed and timedated are behind hostnamectl and timedatectl.  The
+  # hostnamed and timedated are behind hostnamectl and timedatectl.  hwdb:
+  # udev's hardware database -- keyboard and touchpad fixes, sensor
+  # orientation, the names lsusb and lspci show.  The
   # rest are on by default and have no use here: no containers or VMs, no
   # hibernation.
   meson-local: >-
@@ -65,6 +67,6 @@ variables:
     -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled
     -Dutmp=false -Dbinfmt=false -Dfirstboot=false -Drandomseed=false
     -Dbacklight=false -Drfkill=false -Dvconsole=false -Dquotacheck=false
-    -Dstoragetm=false -Dhwdb=false -Dkernel-install=false
+    -Dstoragetm=false -Dhwdb=true -Dkernel-install=false
     -Dnss-myhostname=false -Dnss-systemd=false -Didn=false
     -Dtranslations=false -Dtests=false -Dinstall-tests=false

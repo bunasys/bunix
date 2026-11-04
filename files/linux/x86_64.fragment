@@ -379,3 +379,22 @@ CONFIG_BPF_JIT_ALWAYS_ON=y
 # Power: Intel's own idle driver, which knows each CPU's deeper C-states
 # (acpi_idle only knows what the firmware lists)
 CONFIG_INTEL_IDLE=y
+# ...package and core power as the CPU measures it (RAPL, read by powertop
+# and power-profile tools), and temperatures: per core (coretemp, AMD's
+# k10temp) and the NVMe drive's own sensor
+CONFIG_POWERCAP=y
+CONFIG_INTEL_RAPL=m
+CONFIG_HWMON=y
+CONFIG_SENSORS_CORETEMP=m
+CONFIG_SENSORS_K10TEMP=m
+CONFIG_NVME_HWMON=y
+
+# The kernel image zstd-compressed, not gzip: smaller (the firmware reads
+# and hashes every byte of the UKI before it starts) and quicker to unpack
+CONFIG_KERNEL_ZSTD=y
+# Symbols for functions only, not for every variable: those are for
+# kernel debugging, and tell an attacker where kernel data lives
+# CONFIG_KALLSYMS_ALL is not set
+# No IPv6-in-IPv4 tunnels (SIT): nothing here uses them, and the module
+# creates a sit0 interface on every machine
+# CONFIG_IPV6_SIT is not set

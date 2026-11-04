@@ -1,5 +1,6 @@
-# No login prompt: this is a live system without passwords, so the console
-# simply is root's fish.  The pattern is systemd's own debug-shell.service.
+# The console: root's fish while root has no password, a login prompt once
+# it has one (/usr/lib/bunix/console-shell).  The pattern is systemd's own
+# debug-shell.service.
 [Unit]
 Description=root shell on %I
 # start once boot has finished, so systemd's status lines do not land on the prompt
@@ -7,7 +8,7 @@ After=multi-user.target
 ConditionPathExists=/dev/%I
 
 [Service]
-ExecStart=-/usr/bin/fish --login
+ExecStart=-/usr/lib/bunix/console-shell
 WorkingDirectory=~
 User=root
 StandardInput=tty

@@ -44,6 +44,7 @@ buna ext enable|disable <name>
 | Kernel drivers | loadable modules (kmod), signed |
 | Admin access | run0 + polkit |
 | Compositor | Hyprland |
+| Graphics on the system | the `desktop` system extension, chosen at install: *Desktop or console?* (docs/schematics.md) |
 | `buna` and its screens | Rust + GTK4/libadwaita (gtk4-rs) |
 | Languages | Arabic and English from day 0: right-to-left layouts, Arabic fonts and keyboard |
 | Logo | `files/branding/buna-logo.svg` |
@@ -125,20 +126,34 @@ installed system.
    smartctl, mokutil, cryptsetup, tzdata, hostnamed, timedated) and the
    `devtools` extension (git, gdb, strace, file, unzip).  lsusb shows no
    vendor names, and warns, until hwdb comes with phase 3.
-  Today
-   the whole root file system is the ISO's initramfs, in RAM, and the ISO
-   carries /usr twice (the live system, and the image bunix-install
-   writes): with firmware that is a 777 MB ISO that needs 2 GB of RAM.
-   The live system will instead boot the same signed, dm-verity /usr image
-   the installer copies, mounted from the boot medium, with only /etc and
-   /var in RAM.
 
-3. **Graphics stack.**  Mesa (iris, radeonsi, llvmpipe; LLVM), Wayland,
-   libinput (mtdev, libevdev, libwacom), pixman, cairo, pango, fonts (Noto,
-   Arabic: Naskh and Kufi), fribidi, harfbuzz, GTK4 and libadwaita,
-   Hyprland and its libraries (hyprutils, hyprlang, hyprcursor,
-   hyprgraphics, aquamarine).  systemd with logind and hwdb
-   (libinput needs hwdb for touch screens).  No Xwayland at first.
+3. **Graphics stack**, in three steps, each tested in QEMU (llvmpipe) and
+   on the Intel test machine (iris).  No Xwayland at first, no Vulkan yet.
+   All of it goes into the `desktop` system extension
+   (sysext/desktop-content.bst), not the base: a console install leaves it
+   out, a desktop install merges it, the live ISO merges it from the stick
+   (docs/schematics.md, "Desktop or console").  The kernel's GPU drivers,
+   their firmware and hwdb stay in the base, which consoles need too.
+
+   - **3a. The drivers.**  Mesa 26.2 for Wayland: EGL, GBM, OpenGL ES;
+     iris and crocus (Intel), radeonsi (AMD), virgl (VMs), llvmpipe (the
+     CPU, when there is no supported GPU).  Mesa 26 compiles the Intel
+     drivers' OpenCL kernels while it builds, so it needs LLVM with clang,
+     SPIRV-Tools and the SPIR-V translator at build time; the system keeps
+     only libLLVM.  LLVM 22, the version Zig 0.17 needs (3c).  Wayland
+     1.26, wayland-protocols, libinput (mtdev; libwacom with 3c), seatd
+     and libseat, pixman, FreeType, Fontconfig; systemd's hwdb (device
+     quirks for libinput, names for lsusb).
+   - **3b. Hyprland** and its libraries (hyprutils, hyprlang, hyprcursor,
+     hyprgraphics, aquamarine, libdisplay-info): the first pixels, the
+     compositor's own background, from a console with seatd.
+   - **3c. GTK4 and the terminal.**  glib, pango, harfbuzz, fribidi,
+     cairo, gdk-pixbuf, graphene, GTK4, libadwaita, gtk4-layer-shell;
+     Noto next to the Arabic fonts.  The terminal is Ghostty (libghostty),
+     built with Zig 0.17 from Ghostty's release tarball and its pinned
+     dependencies -- Zig is a build tool like clang, not part of the
+     system.  The test: Ghostty under Hyprland, and an Arabic window laid
+     out right to left.
 
 4. **Users.**  polkit (with duktape), run0, logind sessions.  The live ISO
    runs its screens as an unprivileged user; time zone data (tzdata) and
@@ -151,10 +166,13 @@ installed system.
    network); `install` takes over `bunix-install`'s logic, which stays as
    the text-mode fallback until `buna install` passes the same tests.
 
-6. **The graphical first run.**  The live ISO starts Hyprland as a kiosk
-   with one app: welcome, network (Wi-Fi through iwd's D-Bus API when no
-   cable is plugged in), then the installer (disk, time zone, host name,
-   root password, user), progress, restart.  Touch: an on-screen keyboard
+6. **The graphical first run.**  The ISO carries the `desktop` extension
+   and the live system merges it from the stick.  It starts Hyprland as a
+   kiosk with one app: welcome, network (Wi-Fi through iwd's D-Bus API when
+   no cable is plugged in), then the installer (desktop or console, disk,
+   time zone, host name, root password, user), progress, restart.  A
+   desktop install copies the extension from the stick, so it needs no
+   network.  Touch: an on-screen keyboard
    and Hyprland's touch gestures.  Arabic and English, chosen on the first
    screen; the Arabic keyboard layout available everywhere.
 
@@ -165,6 +183,10 @@ installed system.
 
 - Arabic text on the boot splash (Plymouth needs pango for that); phase 1
   shows only the logo.
-- /usr's size: firmware and the graphics stack grow /usr from 129 MB to
-  maybe 600 MB; the 1 GiB slots still fit, but leave less room.
+- /usr's size: the graphics stack lives in the `desktop` extension, not in
+  /usr, so the base stays near today's 417 MB in its 1 GiB slots.  The
+  extension (perhaps 250 MB unpacked, 100 MB compressed) is one more file
+  per update for desktop machines, and on the ISO.
+- Headers for building against the desktop libraries (GTK apps) belong
+  with `gcc` or in a `desktop-devel` extension: not decided.
 - An on-screen keyboard that handles Arabic.

@@ -182,12 +182,18 @@ config:
       [ -e "$name" ] || ln -s coreutils "$name"
     done
     for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip ping ping6 \
-                traceroute which strings lsof; do
+                traceroute which strings lsof login passwd; do
       [ -e "$name" ] || ln -s busybox "$name"
     done
     ln -s nvim vi
     ln -s nvim vim
     echo "$(find . -lname coreutils | wc -l) commands from uutils, $(find . -lname busybox | wc -l) from BusyBox"
+
+  - |
+    # udev's hardware database, compiled once here: /usr is read-only, so
+    # the service that compiles it at boot is not used
+    %{in-image} %{install-root}%{bindir}/systemd-hwdb update --root=%{install-root} --usr --strict
+    ls -l %{install-root}/usr/lib/udev/hwdb.bin
 
   - |
     # Units.  Upstream's .wants links name units this system no longer has,
@@ -228,6 +234,9 @@ config:
     # up to date with /usr
     wants sysinit.target systemd-sysusers.service
     wants sysinit.target systemd-update-done.service
+    # ...and its machine ID: systemd makes one up in memory, and this saves
+    # it to /etc.  Without it every boot is a first boot with a new ID.
+    wants sysinit.target systemd-machine-id-commit.service
     # The initrd sets up /usr's dm-verity device from usrhash= (veritysetup
     # units come from a generator, started through veritysetup.target), then
     # creates the root partition on first boot (/usr/lib/repart.d)
@@ -244,8 +253,8 @@ config:
     wants multi-user.target systemd-logind.service
     # The other consoles (Ctrl+Alt+F2 to F6): logind starts autovt@ttyN when
     # one is switched to, which here is the console shell of tty1
-    # (files/rootfs, console-shell@.service).  A login prompt replaces it
-    # once there are users with passwords (docs/desktop.md, phase 4).
+    # (files/rootfs, console-shell@.service): root's shell, or a login
+    # prompt once root has a password.
     ln -s console-shell@.service autovt@.service
     wants multi-user.target plymouth-quit.service
     wants multi-user.target plymouth-quit-wait.service

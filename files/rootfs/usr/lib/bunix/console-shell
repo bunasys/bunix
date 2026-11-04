@@ -1,0 +1,9 @@
+#!/bin/sh
+# The console (console-shell@.service): root's shell straight away while
+# root has no password -- the live ISO, or a fresh install, where nobody
+# could log in otherwise -- and a login prompt once `passwd` has set one.
+root_password=$(awk -F: '$1 == "root" { print $2 }' /etc/shadow)
+case $root_password in
+  '' | '!'* | '*'*) exec /usr/bin/fish --login ;;
+esac
+exec /usr/bin/login

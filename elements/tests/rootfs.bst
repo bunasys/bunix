@@ -97,6 +97,8 @@ config:
     exit ${failed:-0}
 
   - |
+    # udev's hardware database is compiled (system/rootfs.bst)
+    test -s /usr/lib/udev/hwdb.bin
     # GNU tar and iproute2 replace BusyBox's, and the time zones are there
     tar --version | grep -q 'GNU tar'
     test "$(readlink /usr/bin/ip)" != busybox
@@ -125,11 +127,14 @@ config:
     for unit in systemd-networkd.service systemd-resolved.service \
                 systemd-timesyncd.service iwd.service console-shell@tty1.service \
                 systemd-sysext.service systemd-boot-check-no-failures.service \
-                zram-swap.service nftables.service; do
+                zram-swap.service nftables.service systemd-machine-id-commit.service; do
       linked=$(ls -d *.wants/$unit *.requires/$unit 2>/dev/null || true)
       [ -n "$linked" ] || { echo "$unit is not enabled"; exit 1; }
     done
     test "$(readlink default.target)" = multi-user.target
+    # the journal survives a reboot; PCI devices power down when idle
+    grep -qx 'Storage=persistent' /usr/lib/systemd/journald.conf.d/bunix.conf
+    grep -q 'power/control}="auto"' /usr/lib/udev/rules.d/60-bunix-power.rules
     test -z "$(ls -A /etc/systemd/system)"
     # no link to a unit that is not there
     dangling=$(find /usr/lib/systemd/system -xtype l)

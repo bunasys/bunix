@@ -28,6 +28,10 @@ config:
     cd /rootfs
     cp -a --parents usr/lib/systemd usr/lib/udev usr/lib/tmpfiles.d \
           usr/lib/sysusers.d usr/lib/os-release %{build-root}/initrd/
+    # not udev's hardware database: 12 MB of keyboard fixes and device
+    # names, which the initrd does not need, in an image the firmware reads
+    # and hashes at every boot
+    rm -rf %{build-root}/initrd/usr/lib/udev/hwdb.bin %{build-root}/initrd/usr/lib/udev/hwdb.d
     # The boot splash (base/plymouth.bst): its daemon, plugins and theme.
     # Its units came with usr/lib/systemd above.
     cp -a --parents usr/lib/plymouth usr/lib/%{triplet}/plymouth usr/share/plymouth \
@@ -35,7 +39,7 @@ config:
     for program in systemctl journalctl udevadm systemd-tmpfiles systemd-sysusers \
                    systemd-repart systemd-escape systemd-ask-password mount umount \
                    blkid fsck mke2fs mkfs.ext4 e2fsck fsck.ext4 bash sh busybox \
-                   ls cat dmesg dmsetup losetup systemd-dissect plymouth plymouthd; do
+                   dmesg dmsetup losetup systemd-dissect plymouth plymouthd; do
       cp -a --parents usr/bin/$program %{build-root}/initrd/
       # follow links (sh -> bash, ls -> coreutils, ...) to the program itself
       target=$(readlink usr/bin/$program || true)
@@ -51,9 +55,10 @@ config:
     done
     rm -rf system/dbus* system/iwd* system/console-shell*
     find system -xtype l -delete
-    # BusyBox's tools for the emergency shell
+    # BusyBox's tools for the emergency shell -- ls and cat too: uutils'
+    # coreutils would add 14 MB that the firmware reads and hashes at boot
     cd %{build-root}/initrd/usr/bin
-    for applet in grep head tail sed awk cut less ps tr mkdir mountpoint cp mv rm ln chmod; do
+    for applet in ls cat grep head tail sed awk cut less ps tr mkdir mountpoint cp mv rm ln chmod; do
       [ -e $applet ] || ln -s busybox $applet
     done
     cd /rootfs

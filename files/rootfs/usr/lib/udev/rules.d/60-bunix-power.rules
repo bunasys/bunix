@@ -1,0 +1,4 @@
+# PCI devices power down when idle (runtime power management); the kernel
+# leaves this off by default.  Drivers that cannot suspend keep their
+# devices on regardless.
+ACTION=="add", SUBSYSTEM=="pci", TEST=="power/control", ATTR{power/control}="auto"

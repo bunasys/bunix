@@ -1,0 +1,12 @@
+# Checks for tools/boot-test.py (BOOT_CHECKS=...): the console is root's
+# shell while root has no password, and asks for a login once it has one.
+# Also the audit fixes of 0.1.9: the machine ID is saved, the journal is on
+# disk, idle PCI devices suspend, the audio codec powers down, no sit0.
+# The root shell is fish; the last line ends the session on purpose.
+
+echo start; systemctl is-system-running; grep IMAGE_VERSION /etc/os-release; grep -c root:\* /etc/shadow
+systemctl is-active systemd-machine-id-commit.service; findmnt /etc/machine-id; or echo "machine-id saved"; ls -d /var/log/journal/*
+ip -br link | grep -c sit0; cat /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null; or echo "no hda"; for d in /sys/bus/pci/devices/*; cat $d/power/control; end | sort | uniq -c
+ls /sys/class/powercap/ 2>/dev/null | head -2; for h in /sys/class/hwmon/*; cat $h/name; end
+echo 'root:bunix-test' | chpasswd; and grep -o 'root:\$6\$' /etc/shadow
+systemctl restart console-shell@ttyS0.service
