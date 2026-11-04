@@ -182,6 +182,19 @@ installed system.
 
 ## Open points
 
+- The screen blinks off for 1-3 s when the Intel driver takes over from the
+  firmware's picture, on the Coffee Lake test machine's eDP panel (and
+  likely other Gen9 panels).  The firmware drives the panel's clock with
+  spread spectrum (DPLL0 `ctrl1` 0x13, a 0.25% slower link: M/N data
+  6937900, link 289079 over 2^23 and 2^19), the driver without (0x3; M/N
+  6920601, 288358), so its seamless takeover ("fastset") check fails and
+  it does a full modeset.  `i915.panel_use_ssc` does not change Gen9 DP
+  clocks, and no integer link clock reproduces the firmware's M/N exactly:
+  a fix has to inherit spread spectrum and the firmware's M/N, which
+  belongs upstream.  Found with a signed UKI add-on carrying
+  `drm.debug=0x1e` (`ukify build --stub=.../addonx64.efi.stub`, installed
+  in `$BOOT/EFI/Linux/<uki>.efi.extra.d/`).
+
 - Arabic text on the boot splash (Plymouth needs pango for that); phase 1
   shows only the logo.
 - /usr's size: the graphics stack lives in the `desktop` extension, not in
