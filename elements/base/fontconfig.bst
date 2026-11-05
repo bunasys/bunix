@@ -24,3 +24,4 @@ variables:
   meson-local: >-
     -Ddoc=disabled -Dnls=disabled -Dtests=disabled -Dtools=enabled
     -Dcache-build=disabled -Dxml-backend=expat -Dcache-dir=/var/cache/fontconfig
+    -Dbaseconfig-dir=/usr/share/fontconfig -Dconfig-dir=/usr/share/fontconfig/conf.d

@@ -59,14 +59,30 @@ config:
     cp -a /usr/bin/ldconfig /usr/bin/getent %{install-root}%{bindir}/
 
   - |
+    # Locales: C.UTF-8 (the default, /etc/locale.conf), US English and every
+    # Arabic locale glibc has, compiled from the toolchain's glibc sources
+    # into one archive, where they share most of their data.  Translations
+    # are kept for Arabic only: English is what programs are written in.
+    # (glibc reads them from its libdir: /usr/lib/x86_64-linux-gnu/locale)
+    mkdir -p %{install-root}%{libdir}/locale
+    locales="C en_US $(cd /usr/share/i18n/locales && ls -d ar_*)"
+    for locale in $locales; do
+      localedef --prefix=%{install-root} -i $locale -f UTF-8 $locale.UTF-8
+    done
+    localedef --prefix=%{install-root} --list-archive | tr '\n' ' '
+    du -sh %{install-root}%{libdir}/locale
+
+  - |
     # what is only needed to build software: headers, static libraries,
-    # pkg-config and cmake files, documentation, translations, and the
-    # *-config scripts and terminfo compilers
+    # pkg-config and cmake files, documentation, translations other than
+    # Arabic (see the locales below), and the *-config scripts and terminfo
+    # compilers
     cd %{install-root}
     rm -rf usr/include .%{libdir}/pkgconfig .%{libdir}/cmake usr/share/pkgconfig \
            usr/share/aclocal usr/share/man usr/share/doc usr/share/info \
-           usr/share/locale usr/share/gettext usr/share/bash-completion usr/share/zsh \
+           usr/share/gettext usr/share/bash-completion usr/share/zsh \
            usr/share/fish/man usr/share/fish/groff
+    find usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'ar*' -exec rm -rf {} +
     find .%{libdir} -maxdepth 1 \( -name '*.a' -o -name '*.la' \) -delete
     cd usr/bin
     rm -f tic infocmp toe tabs captoinfo infotocap ncursesw6-config ncurses6-config \

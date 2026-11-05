@@ -8,6 +8,7 @@ description: |
   have.
 
 depends:
+- base/alsa-utils.bst
 - base/ghostty.bst
 - base/fonts-noto.bst
 - base/hyprland.bst

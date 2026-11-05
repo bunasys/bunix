@@ -32,13 +32,16 @@ config:
     done
 
   - |
-    # What is for building software, and documentation and translations.
+    # What is for building software, and documentation.
     # libLLVM stays (Mesa loads it); LLVM's and clang's tools are not here
     # at all (base/llvm-libs.bst).
     cd %{install-root}/usr
     rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
-           share/man share/info share/doc share/locale share/bash-completion share/zsh \
+           share/man share/info share/doc share/bash-completion share/zsh \
            share/wayland share/wayland-protocols
+    # translations: Arabic only, as in the root file system.  GTK lays its
+    # windows out right to left from its own Arabic translation.
+    find share/locale -mindepth 1 -maxdepth 1 ! -name 'ar*' -exec rm -rf {} +
     rm -f bin/wayland-scanner bin/xmlwf
     find lib -maxdepth 2 \( -name '*.a' -o -name '*.la' \) -delete
     find . -type d -empty -delete
