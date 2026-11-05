@@ -13,6 +13,7 @@ depends:
 - base/pipewire.bst
 - base/wireplumber.bst
 - base/ghostty.bst
+- base/greetd.bst
 - base/fonts-noto.bst
 - base/hyprland.bst
 - base/mesa.bst
