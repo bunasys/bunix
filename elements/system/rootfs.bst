@@ -121,7 +121,7 @@ config:
     rm -f usr/bin/ukify usr/lib/systemd/ukify
     rm -rf usr/share/systemd usr/lib/environment.d usr/lib/binfmt.d \
            usr/lib/sysctl.d/50-coredump.conf \
-           usr/share/polkit-1 usr/lib/dbus-1.0/dbus-daemon-launch-helper
+           usr/lib/dbus-1.0/dbus-daemon-launch-helper
     # ...and their unit files, so `systemctl list-unit-files` shows only what exists
     cd usr/lib/systemd/system
     for pattern in 'ssh-access.target' 'systemd-sleep*' 'systemd-hibernate*' 'systemd-suspend*' \
@@ -198,7 +198,7 @@ config:
       [ -e "$name" ] || ln -s coreutils "$name"
     done
     for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip ping ping6 \
-                traceroute which strings lsof passwd chpasswd; do
+                traceroute which strings lsof; do
       [ -e "$name" ] || ln -s busybox "$name"
     done
     ln -s nvim vi
@@ -243,6 +243,9 @@ config:
     wants sockets.target systemd-udevd-kernel.socket
     # the system bus, for busctl, resolvectl and networkctl; started on first use
     wants sockets.target dbus.socket
+    # polkit's password check for unprivileged agents (run0, the desktop's
+    # prompt): a service started per request, not a setuid helper
+    wants sockets.target polkit-agent-helper.socket
     wants local-fs.target tmp.mount
     wants timers.target systemd-tmpfiles-clean.timer
     # an installed system's first boot starts with an empty /etc: users

@@ -1,0 +1,5 @@
+# bunix: shadow's userdel, which only root may run
+auth      sufficient  pam_rootok.so
+auth      required    pam_deny.so
+account   required    pam_permit.so
+session   required    pam_permit.so

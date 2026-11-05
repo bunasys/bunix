@@ -33,11 +33,13 @@ depends:
 - base/openssh.bst
 - base/pciutils.bst
 - base/plymouth.bst
+- base/polkit.bst
 - base/procps-ng.bst
 - base/psmisc.bst
 - base/ripgrep.bst
 - base/rsync.bst
 - base/smartmontools.bst
+- base/shadow.bst
 - base/sqv.bst
 - base/systemd.bst
 - base/tar.bst

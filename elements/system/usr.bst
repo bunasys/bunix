@@ -62,8 +62,16 @@ config:
     mkdir -p tmp out
     export TMPDIR=$PWD/tmp
     install -m 0600 keys/verity.key tmp/verity.key
+    # The one setuid program, passwd: users change their own password, in
+    # /etc/shadow, which only root may write (PAM asks for the old one
+    # first).  Set here, on a copy: BuildStream's artifacts keep no setuid
+    # bits, so system/rootfs.bst cannot.
+    mkdir image
+    cp -a /rootfs/usr image/
+    chmod 4755 image/usr/bin/passwd
+    find image/usr -perm -4000 -type f
     /usr/bin/systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
-      --definitions=usr.d --copy-source=/rootfs --split=yes \
+      --definitions=usr.d --copy-source=image --split=yes \
       --private-key=tmp/verity.key --certificate=keys/verity.crt \
       --seed=$(printf 'bunix usr %s' %{release-version} | sha256sum | head -c 32) --json=short \
       out/bunix_%{release-version}.raw > repart.json
