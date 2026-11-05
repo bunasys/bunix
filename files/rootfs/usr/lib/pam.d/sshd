@@ -1,0 +1,9 @@
+# bunix: sshd checks keys itself (passwords are off, /etc/ssh/sshd_config);
+# PAM only checks the account and opens the session, so an SSH login is a
+# logind session like the console's: /run/user/<uid>, the user's services,
+# and polkit able to ask for the password (run0).  PAM's own password
+# check is refused outright, so no setting can bring passwords back.
+auth      required  pam_deny.so
+account   include   system-login
+password  required  pam_deny.so
+session   include   system-login

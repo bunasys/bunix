@@ -10,4 +10,4 @@
 # system's own.  (Not a project variable: those are in every cache key.)
 
 variables:
-  release-version: 0.1.21
+  release-version: 0.1.22

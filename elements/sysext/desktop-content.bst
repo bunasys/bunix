@@ -9,6 +9,9 @@ description: |
 
 depends:
 - base/alsa-utils.bst
+- base/dbus-user-session.bst
+- base/pipewire.bst
+- base/wireplumber.bst
 - base/ghostty.bst
 - base/fonts-noto.bst
 - base/hyprland.bst

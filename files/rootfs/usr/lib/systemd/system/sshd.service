@@ -7,8 +7,12 @@ After=network.target nftables.service
 Type=notify
 # this machine's host keys, made the first time
 ExecStartPre=/usr/bin/ssh-keygen -A
-ExecStartPre=/usr/bin/sshd -t
-ExecStart=/usr/bin/sshd -D
+# UsePAM on the command line, not in /etc/ssh/sshd_config: installs keep
+# their own copy of that file, and this reaches them with an update.  PAM
+# makes each login a logind session (usr/lib/pam.d/sshd); keys stay the
+# only way in.
+ExecStartPre=/usr/bin/sshd -t -o UsePAM=yes
+ExecStart=/usr/bin/sshd -D -o UsePAM=yes
 ExecStartPost=/usr/lib/bunix/sshd-firewall open
 ExecStopPost=/usr/lib/bunix/sshd-firewall close
 ExecReload=/usr/bin/kill -HUP $MAINPID

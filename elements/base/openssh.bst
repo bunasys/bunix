@@ -2,14 +2,16 @@ kind: autotools
 description: |
   OpenSSH -- ssh, scp, sftp, ssh-keygen and ssh-agent, and sshd, which is
   installed but off until an admin enables it (sshd.service): keys only,
-  no passwords (files/rootfs/etc/ssh/sshd_config).  Without PAM (bunix has
-  none); sshd tells systemd when it is ready.
+  no passwords (files/rootfs/etc/ssh/sshd_config).  With PAM for accounts
+  and sessions only (files/rootfs/usr/lib/pam.d/sshd), so SSH logins are
+  logind sessions; sshd tells systemd when it is ready.
 
 build-depends:
 - bootstrap/build-env.bst
 
 depends:
 - base/openssl.bst
+- base/linux-pam.bst
 - base/zlib.bst
 
 sources:
@@ -25,7 +27,7 @@ variables:
     --with-privsep-path=/usr/share/empty.sshd --with-privsep-user=sshd
     --with-pid-dir=/run --with-default-path=/usr/bin --with-superuser-path=/usr/bin
     --disable-lastlog --disable-utmp --disable-utmpx --disable-wtmp --disable-wtmpx
-    --disable-strip --without-pam
+    --disable-strip --with-pam
 
 config:
   install-commands:
