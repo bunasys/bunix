@@ -1,7 +1,8 @@
 kind: meson
 description: |
-  FreeType -- reads and renders font files.  Without HarfBuzz for now:
-  it comes with GTK's libraries, and FreeType is rebuilt against it then.
+  FreeType -- reads and renders font files.  Without HarfBuzz, which is
+  built on FreeType (base/harfbuzz.bst): FreeType would use it only to
+  auto-hint fonts that lack hints, and the two would depend on each other.
 
 build-depends:
 - bootstrap/build-env.bst

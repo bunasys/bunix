@@ -2,7 +2,8 @@ kind: autotools
 description: |
   shadow -- the tools that manage users and groups: useradd, usermod,
   userdel, groupadd, groupmod, groupdel, chage, and passwd and chpasswd,
-  which set passwords through PAM (yescrypt, files/rootfs/usr/lib/pam.d).
+  which set passwords through PAM (files/rootfs/usr/lib/pam.d).  passwd is
+  setuid root, set in system/usr.bst (artifacts keep no setuid bits).
   Its own login and su, chfn/chsh, newgrp, lastlog and faillog are left
   out (util-linux's login, run0).  /etc/login.defs and /etc/default/useradd
   reach installed systems through /usr/share/factory/etc.
@@ -41,12 +42,13 @@ config:
       for program in login su nologin faillog lastlog chfn chsh newgrp sg expiry \
                      vipw vigr pwconv pwunconv grpconv grpunconv logoutd newusers \
                      getsubids newuidmap newgidmap; do
-        rm -f usr/bin/$program usr/sbin/$program
+        rm -f usr/bin/$program
       done
       # PAM rules come from files/rootfs/usr/lib/pam.d, not /etc/pam.d
       rm -rf etc/pam.d
       # bunix's account defaults: a group per user, a private home made at
-      # creation, fish like root's, passwords hashed with yescrypt
+      # creation, and fish, root's shell too (base/fish.bst,
+      # files/rootfs/usr/lib/sysusers.d/00-bunix-root.conf)
       sed -i -e 's/^#\?ENCRYPT_METHOD.*/ENCRYPT_METHOD YESCRYPT/' \
              -e 's/^#\?CREATE_HOME.*/CREATE_HOME yes/' \
              -e 's/^#\?HOME_MODE.*/HOME_MODE 0700/' etc/login.defs

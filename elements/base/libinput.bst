@@ -2,8 +2,8 @@ kind: meson
 description: |
   libinput -- keyboards, mice, touchpads and touch screens for the
   compositor: gestures, palm detection, acceleration, and the per-device
-  quirks it ships.  libwacom (tablet identification) comes with GTK's
-  libraries; until then tablets work as generic ones.
+  quirks it ships.  Without libwacom (tablet identification): tablets
+  work as generic pointing devices.
 
 build-depends:
 - bootstrap/build-env.bst

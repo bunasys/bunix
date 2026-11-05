@@ -45,9 +45,7 @@ config:
       ExecStart=-/usr/bin/alsactl restore
       ExecStop=-/usr/bin/alsactl store
       UNIT
-      # Upholds=, not a .wants link: the extension's units arrive after the
-      # boot has decided what to start, and Upholds= starts the unit
-      # whenever it is not running
+      # Upholds=, not a .wants link: docs/desktop.md, "Units in an extension"
       cat > $units/multi-user.target.d/alsa-restore.conf <<'UNIT'
       [Unit]
       Upholds=alsa-restore.service

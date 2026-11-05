@@ -56,6 +56,27 @@ only shapes right-to-left text.  GTK4 costs about 30 more libraries (glib,
 pango, harfbuzz, fribidi, gdk-pixbuf, graphene, libadwaita, ...).  Every
 screen, `buna` included, is translated with gettext.
 
+### Units in an extension
+
+The desktop extension brings systemd units of its own (ALSA's volumes,
+the font cache, later PipeWire and greetd).  Two things make them start:
+
+- **systemd has to know them.**  It reads its units before
+  `systemd-sysext.service` merges the extensions in early boot.  The
+  extension's `extension-release` file sets `EXTENSION_RELOAD_MANAGER=1`
+  (sysext/desktop-tree.bst), so sysext reloads systemd right after the
+  merge.
+- **Something has to start them.**  The boot's jobs are planned before the
+  merge, so a `.wants` link of `multi-user.target` would never be acted
+  on.  Each unit is instead named by an `Upholds=` drop-in
+  (`multi-user.target.d/<unit>.conf`): systemd starts an upheld unit
+  whenever it is not running, including when it first appears.  An upheld
+  unit must not fail at boot (prefix its command with `-`), or systemd
+  keeps restarting it.
+
+sysext/desktop-tree.bst refuses an extension with a service that no
+target upholds.
+
 ## Phases
 
 Each phase ends with a QEMU test, and with a release when it changes the

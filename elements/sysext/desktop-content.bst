@@ -2,8 +2,8 @@ kind: stack
 description: |
   What the desktop extension is made from: the graphical system
   (docs/desktop.md, phase 3; docs/schematics.md, "Desktop or console").
-  Grows with each step: the drivers (Mesa, libinput, seatd, the font
-  libraries), then Hyprland, then GTK4 and Ghostty.
+  The drivers (Mesa, libinput, seatd, ALSA), Hyprland, GTK 4, Ghostty and
+  the desktop's fonts.
   sysext/desktop-tree.bst keeps only what the root file system does not
   have.
 

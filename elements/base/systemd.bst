@@ -50,6 +50,9 @@ variables:
   # which is how Plymouth, and later the compositor, find the screen.
   # PAM: pam_systemd puts logins into logind's sessions, and gives
   # systemd's per-user manager (user@.service) and run0 their logins.
+  # polkit: without it, systemd refuses every privileged request from a
+  # user other than root (run0, rebooting from the desktop) instead of
+  # asking polkit (base/polkit.bst), which needs no build-time link.
   # hostnamed and timedated are behind hostnamectl and timedatectl.  hwdb:
   # udev's hardware database -- keyboard and touchpad fixes, sensor
   # orientation, the names lsusb and lspci show.  The
@@ -65,7 +68,7 @@ variables:
     -Dsbat-distro-version=261.3 -Dsbat-distro-url=https://github.com/bunasys/bunix
     -Dsysusers=true -Dtmpfiles=true -Danalyze=true
     -Dnetworkd=true -Dresolve=true -Dtimesyncd=true
-    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d
+    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d -Dpolkit=enabled
     -Dlogind=true -Dhostnamed=true -Dtimedated=true -Dlocaled=false
     -Dmachined=false -Dportabled=false -Duserdb=false
     -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled

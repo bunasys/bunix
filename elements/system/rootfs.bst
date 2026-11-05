@@ -5,7 +5,9 @@ description: |
   plus glibc and gcc's runtime libraries from the toolchain, made into a
   bootable system.  Build-only files are removed,
   commands get their names, units are enabled, system users created and
-  binaries stripped.  tests/rootfs.bst checks the result.
+  binaries stripped.  tests/rootfs.bst checks the result.  Setuid bits
+  (passwd) are set where /usr is packed, system/usr.bst: artifacts keep
+  none.
 
 (@): include/release.yml
 
@@ -59,7 +61,7 @@ config:
     cp -a /usr/bin/ldconfig /usr/bin/getent %{install-root}%{bindir}/
 
   - |
-    # Locales: C.UTF-8 (the default, /etc/locale.conf), US English and every
+    # Locales: C.UTF-8 (systemd's default LANG), US English and every
     # Arabic locale glibc has, compiled from the toolchain's glibc sources
     # into one archive, where they share most of their data.  Translations
     # are kept for Arabic only: English is what programs are written in.
@@ -75,7 +77,7 @@ config:
   - |
     # what is only needed to build software: headers, static libraries,
     # pkg-config and cmake files, documentation, translations other than
-    # Arabic (see the locales below), and the *-config scripts and terminfo
+    # Arabic (see the locales above), and the *-config scripts and terminfo
     # compilers
     cd %{install-root}
     rm -rf usr/include .%{libdir}/pkgconfig .%{libdir}/cmake usr/share/pkgconfig \

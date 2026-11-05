@@ -112,7 +112,15 @@ config:
     # The live UKI: the installed system's kernel and initrd, the live
     # additions, and a command line naming this release's /usr.
     # --no-sign-kernel: the UKI's signature covers the kernel inside (as
-    # system/uki.bst).
+    # system/uki.bst).  As there: the kernel must come from the same build
+    # as /usr's modules, which system/usr.bst fingerprints.
+    kernel_modules=$( (cd /usr/lib/modules && find . -name '*.ko*' -type f | sort | xargs sha256sum) \
+      | sha256sum | cut -c1-64)
+    usr_modules=$(cat /usr-partitions/modules.sha256)
+    if [ "$kernel_modules" != "$usr_modules" ]; then
+      echo "the kernel and /usr's modules come from different builds of system/linux.bst" >&2
+      exit 1
+    fi
     mkdir -p tmp
     install -m 0600 keys/secureboot.key tmp/secureboot.key
     release=$(basename /usr/lib/modules/*)

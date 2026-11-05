@@ -25,3 +25,14 @@ variables:
     --disable-bash-completion --disable-makeinstall-chown --disable-makeinstall-setuid
     --without-python --without-systemd --without-udev --without-libmagic
     --without-econf --without-audit --without-selinux --without-btrfs --without-readline
+
+config:
+  install-commands:
+    (>):
+    # (as base/util-linux.bst) a few programs go to /usr/sbin whatever
+    # --sbindir says, and the directory is made even when empty
+    - |
+      if [ -d %{install-root}/usr/sbin ]; then
+        find %{install-root}/usr/sbin -mindepth 1 -maxdepth 1 -exec mv {} %{install-root}%{bindir}/ \;
+        rmdir %{install-root}/usr/sbin
+      fi

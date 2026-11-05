@@ -1,8 +1,9 @@
 kind: meson
 description: |
   seatd and libseat -- give the compositor the screens and input devices
-  without running it as root: through logind's sessions, or seatd's own
-  daemon until there are user sessions (docs/desktop.md, phase 4)
+  without running it as root.  In a login session libseat asks logind;
+  seatd's own daemon (seatd-launch) is for starting a compositor outside
+  one, as root from a console.
 
 build-depends:
 - bootstrap/build-env.bst

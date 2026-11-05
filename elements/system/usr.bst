@@ -62,14 +62,21 @@ config:
     mkdir -p tmp out
     export TMPDIR=$PWD/tmp
     install -m 0600 keys/verity.key tmp/verity.key
-    # The one setuid program, passwd: users change their own password, in
-    # /etc/shadow, which only root may write (PAM asks for the old one
-    # first).  Set here, on a copy: BuildStream's artifacts keep no setuid
-    # bits, so system/rootfs.bst cannot.
+    # The system's setuid programs, set here on a copy: BuildStream's
+    # artifacts keep no setuid bits, so system/rootfs.bst cannot.  passwd:
+    # users change their own password, in /etc/shadow, which only root may
+    # write (PAM asks for the old one first).
+    setuid_programs="passwd"
     mkdir image
     cp -a /rootfs/usr image/
-    chmod 4755 image/usr/bin/passwd
+    for program in $setuid_programs; do
+      chmod 4755 image/usr/bin/$program
+    done
     find image/usr -perm -4000 -type f
+    # The modules' fingerprint, which system/uki.bst checks against the
+    # kernel it boots: each kernel build signs its modules with a new key
+    (cd image/usr/lib/modules && find . -name '*.ko*' -type f | sort | xargs sha256sum) \
+      | sha256sum | cut -c1-64 > modules.sha256
     /usr/bin/systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
       --definitions=usr.d --copy-source=image --split=yes \
       --private-key=tmp/verity.key --certificate=keys/verity.crt \
@@ -86,4 +93,4 @@ config:
   install-commands:
   - |
     mkdir -p %{install-root}
-    cp out/*.raw usrhash %{install-root}/
+    cp out/*.raw usrhash modules.sha256 %{install-root}/

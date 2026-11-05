@@ -35,7 +35,7 @@ remote=bunix-publish/$release
 
 ssh "$HOST" "rm -rf ~/$remote ~/$remote.parts && mkdir -p ~/$remote.parts && cd src/bunix &&
   for element in system/usr.bst system/uki.bst sysext/gcc.bst sysext/rust.bst sysext/swift.bst sysext/devtools.bst sysext/desktop.bst; do
-    $BST artifact checkout \$element --directory ~/$remote.parts/\$(basename \$element .bst)
+    $BST artifact checkout \$element --directory ~/$remote.parts/\$(basename \$element .bst) || exit 1
   done &&
   mkdir ~/$remote && mv ~/$remote.parts/*/*.raw ~/$remote.parts/*/*.efi ~/$remote/ &&
   rm -rf ~/$remote.parts"

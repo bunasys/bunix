@@ -1,3 +1,4 @@
-# bunix: runuser, which only root may use -- no password, no session
+# bunix: runuser, which only root may use -- no password, and no login
+# session (runuser -l opens one: runuser-l)
 auth      sufficient  pam_rootok.so
 session   include     system-auth
