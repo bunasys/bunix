@@ -3,7 +3,9 @@
 # logind session like the console's: /run/user/<uid>, the user's services,
 # and polkit able to ask for the password (run0).  PAM's own password
 # check is refused outright, so no setting can bring passwords back.
+# A locked password locks SSH too (usr/lib/bunix/ssh-account-locked).
 auth      required  pam_deny.so
+account   required  pam_exec.so quiet /usr/lib/bunix/ssh-account-locked
 account   include   system-login
 password  required  pam_deny.so
 session   include   system-login

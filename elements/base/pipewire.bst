@@ -55,4 +55,3 @@ config:
       mkdir -p $units/sockets.target.wants
       ln -s ../pipewire.socket $units/sockets.target.wants/pipewire.socket
       ln -s ../pipewire-pulse.socket $units/sockets.target.wants/pipewire-pulse.socket
-      ls $units

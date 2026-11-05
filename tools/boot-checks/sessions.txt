@@ -12,6 +12,8 @@ runuser -l test -c 'id -un; echo "runtime $XDG_RUNTIME_DIR"; echo "session $XDG_
 sleep 2; loginctl list-users --no-legend --no-pager; systemctl is-active user@1000.service
 runuser -l test -c 'systemctl --user is-system-running'
 find /usr -perm -4000 -type f; ls -l /usr/bin/passwd
+# sshd's PAM account check: a locked password locks SSH keys out too
+env PAM_USER=test /usr/lib/bunix/ssh-account-locked; and echo "test may log in by key"; usermod -L test; env PAM_USER=test /usr/lib/bunix/ssh-account-locked; or echo "locked test refused"; usermod -U test
 pkaction | wc -l; systemctl is-active polkit.service polkit-agent-helper.socket
 # logind hands the seat's devices (sound, cameras) to the active user via ACLs
 ls /usr/lib/udev/rules.d/70-uaccess.rules; getfacl -v; journalctl -b --no-pager -o cat | grep -c 'Failed to apply ACL'

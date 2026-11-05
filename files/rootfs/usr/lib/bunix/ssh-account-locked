@@ -1,0 +1,17 @@
+#!/bin/sh
+# PAM's account check for sshd (usr/lib/pam.d/sshd, through pam_exec):
+# refuses an account whose password is locked.  sshd makes that check
+# itself only without PAM; with PAM it leaves it to the modules, and
+# pam_unix does not make it -- so `passwd -l` or `usermod -L` would not cut
+# off someone's SSH keys.
+#
+# Locked means "!" in front of a password hash ("!$y$..."), which is what
+# those commands write.  A "!" with no hash after it ('!', '!*', sysusers'
+# '!unprovisioned') means no password was ever set, which says nothing
+# about keys: those accounts may still log in with a key.  To cut off an
+# account that has no password, expire it: `usermod -e 1 <user>`.
+password=$(getent shadow "$PAM_USER" | cut -d: -f2)
+case $password in
+  '!'*'$'*) exit 1 ;;
+esac
+exit 0

@@ -1,0 +1,8 @@
+# greetd's configuration (/usr/share/greetd/config.toml): on tty1, run
+# buna-login as the "greeter" user, inside its one-window Hyprland.
+[terminal]
+vt = 1
+
+[default_session]
+command = "Hyprland --config /usr/share/buna-login/hyprland.lua"
+user = "greeter"

@@ -4,8 +4,8 @@ description: |
   (base/greetd.bst), in GTK 4 and libadwaita, styled with the Banan Design
   System, English and Arabic.  It runs inside a Hyprland of its own with
   one window and nothing else (/usr/share/buna-login/hyprland.lua), as the
-  "greeter" user; a successful login quits it, and greetd starts the
-  user's Hyprland.
+  "greeter" user, and tells greetd so (/usr/share/greetd/config.toml); a
+  successful login quits it, and greetd starts the user's Hyprland.
 
 build-depends:
 - bootstrap/build-env.bst
@@ -315,34 +315,9 @@ sources:
 config:
   install-commands:
     (>):
-    - install -D -m 0644 branding/buna-logo.svg %{install-root}/usr/share/buna-login/buna-logo.svg
+    # The logo, the one-window Hyprland the screen runs in, and greetd's
+    # configuration naming that Hyprland as the greeter (src/buna-login/data)
     - |
-      # The greeter's compositor: one monitor setup, no wallpaper or logo,
-      # no gaps; it starts buna-login and ends when buna-login does
-      # (greetd then starts the user's session).  Keyboard: US and Arabic,
-      # Alt+Shift switches.
-      cat > %{install-root}/usr/share/buna-login/hyprland.lua <<'LUA'
-      hl.monitor({
-          output   = "",
-          mode     = "preferred",
-          position = "auto",
-          scale    = "auto",
-      })
-      hl.config({
-          misc = {
-              force_default_wallpaper = 0,
-              disable_hyprland_logo   = true,
-          },
-          general = {
-              gaps_in  = 0,
-              gaps_out = 0,
-          },
-          input = {
-              kb_layout  = "us,ara",
-              kb_options = "grp:alt_shift_toggle",
-          },
-      })
-      hl.on("hyprland.start", function ()
-          hl.exec_cmd("buna-login; hyprctl dispatch 'hl.dsp.exit()'")
-      end)
-      LUA
+      install -D -m 0644 branding/buna-logo.svg %{install-root}/usr/share/buna-login/buna-logo.svg
+      install -D -m 0644 data/hyprland.lua %{install-root}/usr/share/buna-login/hyprland.lua
+      install -D -m 0644 data/greetd.toml %{install-root}/usr/share/greetd/config.toml

@@ -3,12 +3,12 @@ description: |
   greetd -- the login manager: on tty1 it runs a greeter as the
   unprivileged "greeter" user, takes the user name and password the
   greeter sends it, checks them with PAM, and starts the user's session
-  (Hyprland) as that user, in a logind session of its own.  The greeter is
-  buna-login (base/buna-login.bst), in a Hyprland of its own.  Without
-  agreety, greetd's text greeter: the console login on tty2 to tty6 is the
-  fallback.  Part of the desktop extension, so its
-  configuration is in /usr/share/greetd (an extension carries no /etc),
-  and its unit replaces the console shell on tty1 once merged.
+  (Hyprland) as that user, in a logind session of its own.  Part of the
+  desktop extension, so its configuration is /usr/share/greetd/config.toml
+  (an extension carries no /etc), which the greeter's package provides
+  (base/buna-login.bst); its unit replaces the console shell on tty1 once
+  merged.  Without agreety, greetd's text greeter: the console login on
+  tty2 to tty6 is the fallback.
 
 build-depends:
 - bootstrap/build-env.bst
@@ -277,18 +277,9 @@ config:
     install -D -m 0755 target/release/greetd %{install-root}%{bindir}/greetd
 
   - |
-    # What greetd runs on tty1: the greeter, as the "greeter" user --
-    # buna-login in its one-window Hyprland, which asks for a user and has
-    # greetd start their Hyprland (start-hyprland, its watchdog)
-    mkdir -p %{install-root}/usr/share/greetd
-    cat > %{install-root}/usr/share/greetd/config.toml <<'CONF'
-    [terminal]
-    vt = 1
-
-    [default_session]
-    command = "Hyprland --config /usr/share/buna-login/hyprland.lua"
-    user = "greeter"
-    CONF
+    # The user greetd runs the greeter as.  Which greeter, and its command,
+    # is the greeter's package's choice: /usr/share/greetd/config.toml
+    # comes from base/buna-login.bst.
     mkdir -p %{install-root}/usr/lib/sysusers.d
     echo 'u greeter - "greetd greeter" /var/lib/greetd' > %{install-root}/usr/lib/sysusers.d/greetd.conf
 
@@ -320,11 +311,18 @@ config:
     # keep theirs.  The greeter user and its home are made here too: the
     # boot's sysusers may run before the extension is merged, and makes no
     # homes (greetd starts the greeter in it).
+    # It must never end up failed: greetd exits whenever the greeter does
+    # without a login (no usable GPU, a crash), and with systemd's default
+    # start limit it would be failed within seconds -- tty1 blank for good,
+    # and the boot not blessed (an update would roll back).  So no start
+    # limit, and a pause between tries; the consoles on tty2 to tty6 stay
+    # there for whoever has to look.
     units=%{install-root}/usr/lib/systemd/system
     mkdir -p $units/multi-user.target.d
     cat > $units/greetd.service <<'UNIT'
     [Unit]
     Description=Login screen (greetd)
+    StartLimitIntervalSec=0
     After=systemd-sysext.service systemd-user-sessions.service plymouth-quit-wait.service
     After=console-shell@tty1.service
     Conflicts=console-shell@tty1.service
@@ -338,7 +336,7 @@ config:
     TimeoutStopSec=30s
     KeyringMode=shared
     Restart=always
-    RestartSec=1
+    RestartSec=3
     UNIT
     cat > $units/multi-user.target.d/greetd.conf <<'UNIT'
     [Unit]

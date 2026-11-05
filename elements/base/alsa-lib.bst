@@ -1,9 +1,9 @@
 kind: autotools
 description: |
   alsa-lib -- the library programs play and record sound with, straight
-  to the kernel's sound drivers (and, from phase 4, through PipeWire), and
-  its configuration in /usr/share/alsa, which every copy of libasound reads
-  -- Chromium's own included
+  to the kernel's sound drivers or through PipeWire (its ALSA plugin,
+  base/pipewire.bst), and its configuration in /usr/share/alsa, which
+  every copy of libasound reads
 
 build-depends:
 - bootstrap/build-env.bst

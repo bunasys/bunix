@@ -56,8 +56,14 @@ pub enum LoginError {
 }
 
 /// Checks `username`'s `password` with greetd and, when it matches, has
-/// greetd start `session` for them once this greeter exits.
-pub fn log_in(username: &str, password: &str, session: &[&str]) -> Result<(), LoginError> {
+/// greetd start `session` for them, with `env` added to its environment,
+/// once this greeter exits.
+pub fn log_in(
+    username: &str,
+    password: &str,
+    session: &[&str],
+    env: &[&str],
+) -> Result<(), LoginError> {
     let mut greetd = Connection::open()?;
     let mut reply = greetd.send(&Request::CreateSession { username })?;
     let mut password_sent = false;
@@ -95,7 +101,8 @@ pub fn log_in(username: &str, password: &str, session: &[&str]) -> Result<(), Lo
     }
 
     let cmd = session.iter().map(|part| part.to_string()).collect();
-    match greetd.send(&Request::StartSession { cmd, env: Vec::new() })? {
+    let env = env.iter().map(|variable| variable.to_string()).collect();
+    match greetd.send(&Request::StartSession { cmd, env })? {
         Response::Success => Ok(()),
         Response::Error { description, .. } => {
             greetd.cancel();

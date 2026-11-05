@@ -40,39 +40,47 @@ pub struct Text {
     pub wrong_password: &'static str,
     pub needs_more: &'static str,
     pub failed: &'static str,
+    pub restart_failed: &'static str,
+    pub power_off_failed: &'static str,
     pub restart: &'static str,
     pub power_off: &'static str,
     /// The switch's label, written in the language it switches to.
     pub other_language: &'static str,
 }
 
-pub fn text(language: Language, host_name: &str) -> Text {
-    match language {
-        Language::English => Text {
-            title: format!("Log in to {host_name}"),
-            user_name: "User name",
-            password: "Password",
-            log_in: "Log in",
-            checking: "Checking…",
-            wrong_password: "That user name and password don't match.",
-            needs_more: "This account needs more than a password. Log in on a console (Ctrl+Alt+F2).",
-            failed: "Could not log in:",
-            restart: "Restart",
-            power_off: "Power off",
-            other_language: "العربية",
-        },
-        Language::Arabic => Text {
-            title: format!("تسجيل الدخول إلى {host_name}"),
-            user_name: "اسم المستخدم",
-            password: "كلمة المرور",
-            log_in: "دخول",
-            checking: "جارٍ التحقق…",
-            wrong_password: "اسم المستخدم وكلمة المرور غير متطابقين.",
-            needs_more: "يتطلب هذا الحساب أكثر من كلمة مرور. سجّل الدخول من الطرفية (Ctrl+Alt+F2).",
-            failed: "تعذّر تسجيل الدخول:",
-            restart: "إعادة التشغيل",
-            power_off: "إيقاف التشغيل",
-            other_language: "English",
-        },
+impl Text {
+    pub fn new(language: Language, host_name: &str) -> Text {
+        match language {
+            Language::English => Text {
+                title: format!("Log in to {host_name}"),
+                user_name: "User name",
+                password: "Password",
+                log_in: "Log in",
+                checking: "Checking…",
+                wrong_password: "That user name and password don't match.",
+                needs_more: "This account needs more than a password. Log in on a console (Ctrl+Alt+F2).",
+                failed: "Could not log in:",
+                restart_failed: "Could not restart:",
+                power_off_failed: "Could not power off:",
+                restart: "Restart",
+                power_off: "Power off",
+                other_language: "العربية",
+            },
+            Language::Arabic => Text {
+                title: format!("تسجيل الدخول إلى {host_name}"),
+                user_name: "اسم المستخدم",
+                password: "كلمة المرور",
+                log_in: "دخول",
+                checking: "جارٍ التحقق…",
+                wrong_password: "اسم المستخدم وكلمة المرور غير متطابقين.",
+                needs_more: "يتطلب هذا الحساب أكثر من كلمة مرور. سجّل الدخول من الطرفية (Ctrl+Alt+F2).",
+                failed: "تعذّر تسجيل الدخول:",
+                restart_failed: "تعذّرت إعادة التشغيل:",
+                power_off_failed: "تعذّر إيقاف التشغيل:",
+                restart: "إعادة التشغيل",
+                power_off: "إيقاف التشغيل",
+                other_language: "English",
+            },
+        }
     }
 }

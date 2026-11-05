@@ -1,23 +1,29 @@
 //! buna-login: bunix's login screen.  greetd runs it as its greeter, inside a
-//! one-window Hyprland (/usr/share/buna-login/hyprland.lua); it asks for a
-//! user name and password, has greetd check them (greetd.rs), and quits so
-//! greetd can start the user's session.  Styled with the Banan Design
-//! System (style.css), light or dark as the system prefers; English or
-//! Arabic, right to left in Arabic, switchable on the screen.
+//! one-window Hyprland (data/hyprland.lua); it asks for a user name and
+//! password, has greetd check them (greetd.rs), and quits so greetd can
+//! start the user's session.  Styled with the Banan Design System
+//! (style.css), light or dark as the system prefers; English or Arabic,
+//! right to left in Arabic, switchable on the screen.
 
 mod greetd;
 mod power;
 mod text;
+
+use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::gio;
 use gtk::glib;
 
 use greetd::LoginError;
+use power::PowerAction;
 use text::{Language, Text};
 
 /// What a successful login starts: Hyprland, through its watchdog.
 const SESSION: &[&str] = &["start-hyprland"];
+/// Added to the session's environment before logind registers it, so the
+/// login shows as a Wayland desktop session, not a text console one.
+const SESSION_ENV: &[&str] = &["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=Hyprland"];
 const LOGO: &str = "/usr/share/buna-login/buna-logo.svg";
 
 fn main() -> glib::ExitCode {
@@ -67,116 +73,119 @@ fn follow_color_scheme(window: &adw::ApplicationWindow) {
     style.connect_dark_notify(apply);
 }
 
-/// Builds the whole screen in `language` and puts it in the window.  The
-/// language switch calls this again, so nothing has to be relabelled.
+/// Puts the whole screen, in `language`, into the window.  The language
+/// switch calls this again, so nothing has to be relabelled.
 fn show_screen(window: &adw::ApplicationWindow, language: Language) {
-    let direction = if language.is_right_to_left() {
-        gtk::TextDirection::Rtl
-    } else {
-        gtk::TextDirection::Ltr
-    };
-    gtk::Widget::set_default_direction(direction);
     if language.is_right_to_left() {
+        gtk::Widget::set_default_direction(gtk::TextDirection::Rtl);
         window.add_css_class("arabic");
     } else {
+        gtk::Widget::set_default_direction(gtk::TextDirection::Ltr);
         window.remove_css_class("arabic");
     }
 
-    let host_name = glib::host_name();
-    let text = text::text(language, &host_name);
+    let screen = Rc::new(Screen::build(Text::new(language, &glib::host_name())));
+    window.set_content(Some(&screen.root));
+    connect(&screen, window, language);
+    screen.user_name.grab_focus();
+}
 
-    // The card in the middle: logo, title, the two fields, the message
-    // line, the button
-    let logo = gtk::Picture::for_filename(LOGO);
-    logo.set_can_shrink(true);
-    logo.set_size_request(56, 56);
-    logo.set_halign(gtk::Align::Start);
-    logo.add_css_class("logo");
+/// The screen's widgets that change after it is built, and what it says.
+struct Screen {
+    root: gtk::Box,
+    user_name: gtk::Entry,
+    password: gtk::PasswordEntry,
+    log_in: gtk::Button,
+    message: gtk::Label,
+    switch_language: gtk::Button,
+    restart: gtk::Button,
+    power_off: gtk::Button,
+    text: Text,
+}
 
-    let title = label(&text.title, "title");
+impl Screen {
+    /// The card in the middle (logo, title, the two fields, the message
+    /// line, the button) and the bar at the bottom (the language switch at
+    /// the start, restart and power off at the end).
+    fn build(text: Text) -> Screen {
+        let logo = gtk::Picture::for_filename(LOGO);
+        logo.set_can_shrink(true);
+        logo.set_size_request(56, 56);
+        logo.set_halign(gtk::Align::Start);
+        logo.add_css_class("logo");
 
-    let user_name = gtk::Entry::builder()
-        .placeholder_text(text.user_name)
-        .input_purpose(gtk::InputPurpose::FreeForm)
-        .build();
-    let password = gtk::PasswordEntry::builder()
-        .placeholder_text(text.password)
-        .show_peek_icon(true)
-        .build();
-    let message = label("", "message");
-    message.set_wrap(true);
-    message.set_visible(false);
-    let log_in = gtk::Button::with_label(text.log_in);
-    log_in.add_css_class("primary");
+        let user_name = gtk::Entry::builder().placeholder_text(text.user_name).build();
+        let password = gtk::PasswordEntry::builder()
+            .placeholder_text(text.password)
+            .show_peek_icon(true)
+            .build();
+        let message = label("", "message");
+        message.set_wrap(true);
+        message.set_visible(false);
+        let log_in = button(text.log_in, "primary");
 
-    let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    card.add_css_class("card");
-    card.set_halign(gtk::Align::Center);
-    card.set_valign(gtk::Align::Center);
-    card.set_vexpand(true);
-    for widget in [
-        logo.upcast_ref::<gtk::Widget>(),
-        title.upcast_ref(),
-        label(text.user_name, "field-label").upcast_ref(),
-        user_name.upcast_ref(),
-        label(text.password, "field-label").upcast_ref(),
-        password.upcast_ref(),
-        message.upcast_ref(),
-        log_in.upcast_ref(),
-    ] {
-        card.append(widget);
+        let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        card.add_css_class("card");
+        card.set_halign(gtk::Align::Center);
+        card.set_valign(gtk::Align::Center);
+        card.set_vexpand(true);
+        card.append(&logo);
+        card.append(&label(&text.title, "title"));
+        card.append(&label(text.user_name, "field-label"));
+        card.append(&user_name);
+        card.append(&label(text.password, "field-label"));
+        card.append(&password);
+        card.append(&message);
+        card.append(&log_in);
+
+        let switch_language = button(text.other_language, "quiet");
+        let restart = button(text.restart, "secondary");
+        let power_off = button(text.power_off, "secondary");
+        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        spacer.set_hexpand(true);
+        let bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        bar.add_css_class("bar");
+        bar.append(&switch_language);
+        bar.append(&spacer);
+        bar.append(&restart);
+        bar.append(&power_off);
+
+        let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        root.add_css_class("screen");
+        root.append(&card);
+        root.append(&bar);
+
+        Screen { root, user_name, password, log_in, message, switch_language, restart, power_off, text }
     }
 
-    // The bottom bar: the language switch at the start, power at the end
-    let switch_language = gtk::Button::with_label(text.other_language);
-    switch_language.add_css_class("quiet");
-    let restart = gtk::Button::with_label(text.restart);
-    restart.add_css_class("secondary");
-    let power_off = gtk::Button::with_label(text.power_off);
-    power_off.add_css_class("secondary");
+    /// Nothing on the screen can be pressed while a check runs: a second
+    /// login would make greetd cancel the first, and the language switch
+    /// would build a screen the running check knows nothing about.
+    fn set_busy(&self, busy: bool) {
+        let controls: [&gtk::Widget; 6] = [
+            self.user_name.upcast_ref(),
+            self.password.upcast_ref(),
+            self.log_in.upcast_ref(),
+            self.switch_language.upcast_ref(),
+            self.restart.upcast_ref(),
+            self.power_off.upcast_ref(),
+        ];
+        for control in controls {
+            control.set_sensitive(!busy);
+        }
+        let label = if busy { self.text.checking } else { self.text.log_in };
+        self.log_in.set_label(label);
+    }
 
-    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    bar.add_css_class("bar");
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&switch_language);
-    bar.append(&spacer);
-    bar.append(&restart);
-    bar.append(&power_off);
+    fn show_error(&self, message: &str) {
+        self.message.set_text(message);
+        self.message.set_visible(true);
+    }
 
-    let screen = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    screen.add_css_class("screen");
-    screen.append(&card);
-    screen.append(&bar);
-    window.set_content(Some(&screen));
-
-    // Behaviour
-    let form = Form { user_name, password, log_in, message, text };
-    form.user_name.grab_focus();
-    {
-        let password = form.password.clone();
-        form.user_name.connect_activate(move |_| {
-            password.grab_focus();
-        });
+    fn clear_error(&self) {
+        self.message.set_visible(false);
+        self.password.remove_css_class("invalid");
     }
-    let form = std::rc::Rc::new(form);
-    {
-        let form = form.clone();
-        form.password.clone().connect_activate(move |_| form.submit());
-    }
-    {
-        let form = form.clone();
-        form.log_in.clone().connect_clicked(move |_| form.submit());
-    }
-    {
-        let window = window.clone();
-        switch_language.connect_clicked(move |_| show_screen(&window, language.other()));
-    }
-    {
-        let form = form.clone();
-        restart.connect_clicked(move |_| form.power(power::PowerAction::Restart));
-    }
-    power_off.connect_clicked(move |_| form.power(power::PowerAction::PowerOff));
 }
 
 fn label(text: &str, class: &str) -> gtk::Label {
@@ -186,75 +195,91 @@ fn label(text: &str, class: &str) -> gtk::Label {
     label
 }
 
-/// The fields and the line under them, with what the screen says.
-struct Form {
-    user_name: gtk::Entry,
-    password: gtk::PasswordEntry,
-    log_in: gtk::Button,
-    message: gtk::Label,
-    text: Text,
+fn button(text: &str, class: &str) -> gtk::Button {
+    let button = gtk::Button::with_label(text);
+    button.add_css_class(class);
+    button
 }
 
-impl Form {
-    /// Checks the password with greetd off the main thread (a wrong one
-    /// takes PAM's two-second delay), then quits on success, so greetd
-    /// starts the session, or says what went wrong.
-    fn submit(self: &std::rc::Rc<Self>) {
-        let user_name = self.user_name.text().trim().to_string();
-        let password = self.password.text().to_string();
-        if user_name.is_empty() {
-            self.user_name.grab_focus();
-            return;
-        }
+/// What each control does.  Enter in the user name moves to the password;
+/// Enter there, or the button, logs in.
+fn connect(screen: &Rc<Screen>, window: &adw::ApplicationWindow, language: Language) {
+    let password = screen.password.clone();
+    screen.user_name.connect_activate(move |_| {
+        password.grab_focus();
+    });
 
-        self.set_busy(true);
-        let form = self.clone();
-        let check = gio::spawn_blocking(move || greetd::log_in(&user_name, &password, SESSION));
-        glib::spawn_future_local(async move {
-            let result = check.await.unwrap_or_else(|_| {
-                Err(LoginError::Failed("the login check stopped unexpectedly".into()))
-            });
-            form.set_busy(false);
-            match result {
-                Ok(()) => {
-                    if let Some(app) = gio::Application::default() {
-                        app.quit();
-                    }
-                }
-                Err(error) => form.show_error(error),
-            }
+    let on_enter = screen.clone();
+    screen.password.connect_activate(move |_| log_in(&on_enter));
+    let on_click = screen.clone();
+    screen.log_in.connect_clicked(move |_| log_in(&on_click));
+
+    let window = window.clone();
+    screen.switch_language.connect_clicked(move |_| show_screen(&window, language.other()));
+
+    let on_restart = screen.clone();
+    screen.restart.connect_clicked(move |_| power(&on_restart, PowerAction::Restart));
+    let on_power_off = screen.clone();
+    screen.power_off.connect_clicked(move |_| power(&on_power_off, PowerAction::PowerOff));
+}
+
+/// Checks the password with greetd off the main thread (a wrong one takes
+/// PAM's two-second delay), then quits on success, so greetd starts the
+/// session, or says what went wrong.
+fn log_in(screen: &Rc<Screen>) {
+    let user_name = screen.user_name.text().trim().to_string();
+    let password = screen.password.text().to_string();
+    if user_name.is_empty() {
+        screen.user_name.grab_focus();
+        return;
+    }
+
+    screen.clear_error();
+    screen.set_busy(true);
+    let screen = screen.clone();
+    let check = gio::spawn_blocking(move || {
+        greetd::log_in(&user_name, &password, SESSION, SESSION_ENV)
+    });
+    glib::spawn_future_local(async move {
+        let result = check.await.unwrap_or_else(|_| {
+            Err(LoginError::Failed("the login check stopped unexpectedly".into()))
         });
-    }
-
-    fn show_error(&self, error: LoginError) {
-        let message = match error {
-            LoginError::WrongPassword => self.text.wrong_password.to_string(),
-            LoginError::NeedsMore => self.text.needs_more.to_string(),
-            LoginError::Failed(reason) => format!("{} {reason}", self.text.failed),
+        screen.set_busy(false);
+        let error = match result {
+            Ok(()) => {
+                if let Some(app) = gio::Application::default() {
+                    app.quit();
+                }
+                return;
+            }
+            Err(error) => error,
         };
-        self.message.set_text(&message);
-        self.message.set_visible(true);
-        self.password.add_css_class("invalid");
-        self.password.set_text("");
-        self.password.grab_focus();
-    }
 
-    fn set_busy(&self, busy: bool) {
-        self.user_name.set_sensitive(!busy);
-        self.password.set_sensitive(!busy);
-        self.log_in.set_sensitive(!busy);
-        let label = if busy { self.text.checking } else { self.text.log_in };
-        self.log_in.set_label(label);
-        if busy {
-            self.message.set_visible(false);
-            self.password.remove_css_class("invalid");
-        }
-    }
+        let text = &screen.text;
+        let message = match error {
+            LoginError::WrongPassword => text.wrong_password.to_string(),
+            LoginError::NeedsMore => text.needs_more.to_string(),
+            LoginError::Failed(reason) => format!("{} {reason}", text.failed),
+        };
+        screen.show_error(&message);
+        screen.password.add_css_class("invalid");
+        screen.password.set_text("");
+        screen.password.grab_focus();
+    });
+}
 
-    fn power(&self, action: power::PowerAction) {
-        if let Err(error) = power::request(action) {
-            self.message.set_text(&format!("{} {error}", self.text.failed));
-            self.message.set_visible(true);
-        }
-    }
+/// Asks logind to restart or power off; only a refusal shows on screen.
+fn power(screen: &Rc<Screen>, action: PowerAction) {
+    screen.clear_error();
+    let screen = screen.clone();
+    glib::spawn_future_local(async move {
+        let Err(error) = power::request(action).await else {
+            return;
+        };
+        let prefix = match action {
+            PowerAction::Restart => screen.text.restart_failed,
+            PowerAction::PowerOff => screen.text.power_off_failed,
+        };
+        screen.show_error(&format!("{prefix} {}", error.message()));
+    });
 }

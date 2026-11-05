@@ -1,7 +1,7 @@
-/* buna-login in the Banan Design System (https://claude.ai/artifact/P72mtWqfX7dVtzTPokpPRp):
- * its tokens as CSS variables, light on the window, dark (Snazzy) under
- * .dark; the components below use only the variables.  Values are the
- * system's own (tokens.json), oklch() included, which GTK 4.24 reads. */
+/* buna-login in the Banan Design System: its tokens as CSS variables,
+ * light on the window, dark (Snazzy) under .dark; the components below use
+ * only the variables.  Values are the system's own (its tokens.json),
+ * oklch() included, which GTK 4.24 reads. */
 
 window.buna-login {
   /* light: warm paper */
@@ -54,7 +54,7 @@ window.buna-login.dark {
   --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.35), 0 1px 1px oklch(0 0 0 / 0.25);
 }
 
-/* Arabic: IBM Plex Sans Arabic first, no negative tracking */
+/* Arabic: IBM Plex Sans Arabic first */
 window.buna-login.arabic {
   font-family: "IBM Plex Sans Arabic", "Geist", sans-serif;
 }
@@ -83,6 +83,7 @@ window.buna-login.arabic {
   margin-bottom: 24px;
 }
 
+/* no negative tracking in Arabic */
 window.buna-login.arabic .title {
   letter-spacing: 0;
 }
