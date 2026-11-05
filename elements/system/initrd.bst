@@ -98,7 +98,8 @@ config:
     # Libraries: what systemd loads at run time with dlopen() --
     # libcryptsetup for dm-verity, libfdisk for repart, OpenSSL for verity
     # signatures, NSS for users, libkmod (udev loads the GPU's driver), the
-    # TPM libraries (boot phase measurements) -- and everything all the programs and
+    # TPM libraries (boot phase measurements), libacl (udev's uaccess rule,
+    # which otherwise logs an error for every seat device) -- and everything all the programs and
     # libraries here link, resolved by the image's own loader.
     loader=/rootfs%{libdir}/ld-linux-x86-64.so.2
     libs=/rootfs%{libdir}
@@ -106,7 +107,7 @@ config:
     mkdir -p .%{libdir}
     for lib in $(cd $libs && ls ld-linux-x86-64.so.2 libcryptsetup.so.* libdevmapper.so.* \
                                libjson-c.so.* libfdisk.so.* libcrypto.so.* libnss_files.so.* \
-                               libkmod.so.* libtss2-*.so.*); do
+                               libkmod.so.* libtss2-*.so.* libacl.so.*); do
       cp -a $libs/$lib .%{libdir}/
     done
     find . -type f | while read -r f; do

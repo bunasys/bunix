@@ -13,6 +13,8 @@ sleep 2; loginctl list-users --no-legend --no-pager; systemctl is-active user@10
 runuser -l test -c 'systemctl --user is-system-running'
 find /usr -perm -4000 -type f; ls -l /usr/bin/passwd
 pkaction | wc -l; systemctl is-active polkit.service polkit-agent-helper.socket
+# logind hands the seat's devices (sound, cameras) to the active user via ACLs
+ls /usr/lib/udev/rules.d/70-uaccess.rules; getfacl -v; journalctl -b --no-pager -o cat | grep -c 'Failed to apply ACL'
 runuser -l test -c 'pkcheck --action-id org.freedesktop.systemd1.manage-units --process $fish_pid; echo "pkcheck exit $status"'
 # systemd built with polkit: a wheel user is asked to authenticate
 # ("Interactive authentication required"), not refused ("Access denied")

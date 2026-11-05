@@ -323,7 +323,9 @@ a patch carried forever against every systemd release.
   Moving signing to an offline machine is part of step 3.
 * No negative test yet for the kernel side (an image signed with another key,
   or a modified image).
-* Whether to add a TPM-sealed LUKS root in step 2 or later.
+* Settled: an encrypted root (LUKS2, TPM2 + PIN, a recovery key) is an
+  installer choice in phase 6 (docs/desktop.md); /usr stays unencrypted,
+  guarded by dm-verity.
 * Where to host the files (a bucket behind a CDN is enough).
 
 ## References

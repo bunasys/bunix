@@ -192,11 +192,28 @@ installed system.
    and the live system merges it from the stick.  It starts Hyprland as a
    kiosk with one app: welcome, network (Wi-Fi through iwd's D-Bus API when
    no cable is plugged in), then the installer (desktop or console, disk,
-   time zone, host name, root password, user), progress, restart.  A
-   desktop install copies the extension from the stick, so it needs no
-   network.  Touch: an on-screen keyboard
+   encryption, time zone, host name, root password, user), progress,
+   restart.  A desktop install copies the extension from the stick, so it
+   needs no network.  Touch: an on-screen keyboard
    and Hyprland's touch gestures.  Arabic and English, chosen on the first
    screen; the Arabic keyboard layout available everywhere.
+
+   **Encryption** (one more choice, on by default for desktops): the root
+   partition -- /etc, /var and /home, everything that is the user's -- is
+   LUKS2.  /usr is not encrypted: it is the same public image on every
+   machine, and dm-verity under the signed UKI already guards it against
+   changes (docs/updates.md).  The boot partition holds only signed UKIs;
+   swap is zram, in memory.
+   - systemd-repart formats the root encrypted at first boot
+     (`Encrypt=` in `repart.d/10-root.conf`), as it creates it today.
+   - Unlocked by the TPM, bound to Secure Boot (PCR 7) and to bunix's
+     signed PCR policy, so an update needs no new enrolment; with a PIN by
+     default (`systemd-cryptenroll --tpm2-with-pin`), so a stolen machine
+     does not unlock itself.  Machines without a TPM 2.0 use a passphrase.
+   - A recovery key, shown once in the installer (as text and a QR code),
+     for a cleared TPM or a new main board.
+   - The initrd asks for the PIN or passphrase on the boot splash
+     (Plymouth), in Arabic or English.
 
 7. **The installed desktop.**  A login screen, Hyprland session for the
    user, `buna update` as a graphical notification.

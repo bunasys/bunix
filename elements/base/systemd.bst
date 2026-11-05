@@ -22,6 +22,7 @@ build-depends:
 depends:
 - base/libcap.bst
 - base/linux-pam.bst
+- base/acl.bst
 - base/util-linux.bst
 - base/openssl.bst
 # sysupdate's downloader (systemd-pull): libcurl, and xz/zlib to unpack
@@ -53,6 +54,9 @@ variables:
   # polkit: without it, systemd refuses every privileged request from a
   # user other than root (run0, rebooting from the desktop) instead of
   # asking polkit (base/polkit.bst), which needs no build-time link.
+  # acl: logind gives the active session's user the seat's devices that
+  # programs open themselves (sound, cameras) through ACLs, set by the
+  # uaccess udev rule, which systemd installs only with ACL support.
   # hostnamed and timedated are behind hostnamectl and timedatectl.  hwdb:
   # udev's hardware database -- keyboard and touchpad fixes, sensor
   # orientation, the names lsusb and lspci show.  The
@@ -68,7 +72,7 @@ variables:
     -Dsbat-distro-version=261.3 -Dsbat-distro-url=https://github.com/bunasys/bunix
     -Dsysusers=true -Dtmpfiles=true -Danalyze=true
     -Dnetworkd=true -Dresolve=true -Dtimesyncd=true
-    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d -Dpolkit=enabled
+    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d -Dpolkit=enabled -Dacl=enabled
     -Dlogind=true -Dhostnamed=true -Dtimedated=true -Dlocaled=false
     -Dmachined=false -Dportabled=false -Duserdb=false
     -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled
