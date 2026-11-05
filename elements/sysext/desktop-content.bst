@@ -8,6 +8,8 @@ description: |
   have.
 
 depends:
+- base/ghostty.bst
+- base/fonts-noto.bst
 - base/hyprland.bst
 - base/mesa.bst
 - base/libinput.bst

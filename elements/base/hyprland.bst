@@ -53,3 +53,13 @@ sources:
 variables:
   cmake-local: >-
     -DNO_XWAYLAND=ON -DNO_HYPRPM=ON -DNO_UWSM=ON -DNO_RTKIT=ON -DBUILD_TESTING=OFF
+
+config:
+  install-commands:
+    (>):
+    # The example config Hyprland copies to ~/.config/hypr on first start:
+    # its terminal is kitty; bunix's is Ghostty (base/ghostty.bst)
+    - |
+      config=%{install-root}/usr/share/hypr/hyprland.lua
+      sed -i 's/^local terminal *= *"kitty"/local terminal    = "ghostty"/' $config
+      grep -x 'local terminal    = "ghostty"' $config

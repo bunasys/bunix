@@ -44,6 +44,14 @@ config:
     find . -type d -empty -delete
 
   - |
+    # GSettings reads its schemas only compiled, and GTK aborts when one of
+    # its own is missing (the file chooser's, for one).  Compiled here: /usr
+    # is read-only on the running system.
+    env LD_LIBRARY_PATH=%{sysroot}%{libdir} %{sysroot}%{bindir}/glib-compile-schemas \
+      --strict %{install-root}/usr/share/glib-2.0/schemas
+    ls -l %{install-root}/usr/share/glib-2.0/schemas/gschemas.compiled
+
+  - |
     # Programs and shared libraries without debug information, as in the
     # root file system
     cd %{install-root}/usr

@@ -40,3 +40,9 @@ config:
     ls /usr/lib/x86_64-linux-gnu/libLLVM.so.*
     seatd -v
     libinput --version
+
+  - |
+    # The terminal starts (+version needs no display), and GTK's settings
+    # schemas are compiled
+    ghostty +version | head -3
+    ls /usr/share/glib-2.0/schemas/gschemas.compiled
