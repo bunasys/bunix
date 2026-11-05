@@ -1,0 +1,13 @@
+# Checks for tools/boot-test.py (BOOT_CHECKS=...): phase 4a -- PAM, logind
+# sessions and the per-user manager (docs/desktop.md).  A user is written
+# into /etc by hand (useradd comes with 4b); `runuser -l` goes through PAM's
+# login rules (pam_systemd) like the console's login does.  Root's shell is fish.
+
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; test -e /run/nologin; and echo "nologin still there"; or echo "logins open"
+echo 'test:x:1000:1000::/home/test:/bin/sh' >> /etc/passwd; echo 'test:x:1000:' >> /etc/group; echo 'test:!:20000::::::' >> /etc/shadow; mkdir -p /home/test; chown 1000:1000 /home/test
+echo 'test:bunix-test' | chpasswd; grep -o '^test:\$[0-9a-z]*\$' /etc/shadow
+runuser -l test -c 'id -un; echo "runtime $XDG_RUNTIME_DIR"; echo "session $XDG_SESSION_ID"'
+sleep 2; loginctl list-sessions --no-legend --no-pager; loginctl list-users --no-legend --no-pager
+systemctl is-active user@1000.service; ls -ld /run/user/1000
+runuser -l test -c 'systemctl --user is-system-running; systemctl --user --no-legend --no-pager list-units --state=running | head -5'
+ls /usr/lib/pam.d | tr '\n' ' '; echo; journalctl -b -p err --no-pager -o cat | head -8

@@ -44,6 +44,7 @@ depends:
 - base/tzdata.bst
 - base/usbutils.bst
 - base/util-linux.bst
+- base/util-linux-login.bst
 - base/uutils-coreutils.bst
 - base/uutils-findutils.bst
 - base/wireless-regdb.bst

@@ -91,7 +91,8 @@ config:
 
   - |
     # systemd components this system never starts: no sleep, no remote
-    # journals, no portable services, no user sessions.  Kept for installed
+    # journals, no portable services.  Kept: user sessions (user@.service,
+    # the per-user manager and its units), and for installed
     # systems (docs/updates.md, step 2): fsck, update-done (first boot with
     # an empty /etc), repart (creates the root partition), boot counting
     # (bless-boot, boot-check-no-failures), and the generators that find and
@@ -102,11 +103,10 @@ config:
                   pstore reply-password report report-basic report-cgroup \
                   sleep socket-proxyd ssh-issue ssh-proxy storage-block storage-fs \
                   sulogin-shell update-helper \
-                  validatefs xdg-autostart-condition; do
+                  validatefs; do
       rm -f systemd-$helper
     done
-    rm -rf tests boot user user-* initrd-preset varlink-bridges profile.d \
-           ssh_config.d user.conf.d user-generators user-environment-generators
+    rm -rf tests boot initrd-preset varlink-bridges profile.d ssh_config.d
     cd system-generators
     for generator in *; do
       case $generator in
@@ -198,7 +198,7 @@ config:
       [ -e "$name" ] || ln -s coreutils "$name"
     done
     for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip ping ping6 \
-                traceroute which strings lsof login passwd chpasswd; do
+                traceroute which strings lsof passwd chpasswd; do
       [ -e "$name" ] || ln -s busybox "$name"
     done
     ln -s nvim vi
@@ -267,6 +267,9 @@ config:
     wants initrd-switch-root.target plymouth-start.service
     wants initrd-switch-root.target plymouth-switch-root.service
     wants multi-user.target systemd-logind.service
+    # ...and lets users other than root log in: systemd-tmpfiles creates
+    # /run/nologin at boot, which pam_nologin obeys, and this removes it
+    wants multi-user.target systemd-user-sessions.service
     # The other consoles (Ctrl+Alt+F2 to F6): logind starts autovt@ttyN when
     # one is switched to, which here is the console shell of tty1
     # (files/rootfs, console-shell@.service): root's shell, or a login

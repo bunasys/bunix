@@ -21,6 +21,7 @@ build-depends:
 
 depends:
 - base/libcap.bst
+- base/linux-pam.bst
 - base/util-linux.bst
 - base/openssl.bst
 # sysupdate's downloader (systemd-pull): libcurl, and xz/zlib to unpack
@@ -47,6 +48,8 @@ variables:
   # revocation metadata shim checks in systemd-boot).  logind tracks seats
   # and sessions: its udev rule tags graphics and input devices "seat",
   # which is how Plymouth, and later the compositor, find the screen.
+  # PAM: pam_systemd puts logins into logind's sessions, and gives
+  # systemd's per-user manager (user@.service) and run0 their logins.
   # hostnamed and timedated are behind hostnamectl and timedatectl.  hwdb:
   # udev's hardware database -- keyboard and touchpad fixes, sensor
   # orientation, the names lsusb and lspci show.  The
@@ -62,6 +65,7 @@ variables:
     -Dsbat-distro-version=261.3 -Dsbat-distro-url=https://github.com/bunasys/bunix
     -Dsysusers=true -Dtmpfiles=true -Danalyze=true
     -Dnetworkd=true -Dresolve=true -Dtimesyncd=true
+    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d
     -Dlogind=true -Dhostnamed=true -Dtimedated=true -Dlocaled=false
     -Dmachined=false -Dportabled=false -Duserdb=false
     -Dcoredump=false -Doomd=false -Dhibernate=false -Dtpm=true -Dtpm2=enabled

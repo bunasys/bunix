@@ -1,0 +1,9 @@
+# bunix: any program without rules of its own is refused, and logged
+auth      required  pam_warn.so
+auth      required  pam_deny.so
+account   required  pam_warn.so
+account   required  pam_deny.so
+password  required  pam_warn.so
+password  required  pam_deny.so
+session   required  pam_warn.so
+session   required  pam_deny.so

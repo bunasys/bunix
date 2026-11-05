@@ -1,0 +1,12 @@
+# bunix: what a login does beyond checking the password -- no logins while
+# /run/nologin exists (shutdown), the audit login ID, a fresh kernel keyring,
+# and the logind session (pam_systemd), which brings the seat's devices,
+# /run/user/<uid> and the user's own services.
+auth      include   system-auth
+account   required  pam_nologin.so
+account   include   system-auth
+password  include   system-auth
+session   required  pam_loginuid.so
+session   optional  pam_keyinit.so force revoke
+session   include   system-auth
+session   optional  pam_systemd.so

@@ -1,0 +1,5 @@
+# bunix: runuser -l, a login shell as another user (root only)
+auth      include   runuser
+session   optional  pam_keyinit.so force revoke
+session   include   runuser
+session   optional  pam_systemd.so

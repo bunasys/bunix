@@ -1,0 +1,27 @@
+kind: autotools
+description: |
+  login and runuser from util-linux, with PAM: the console's login prompt
+  (console-shell@.service), whose sessions logind now knows, and runuser,
+  root's way to run something as another user.  A separate build from the
+  same source as base/util-linux.bst, which systemd itself is built on:
+  PAM there would rebuild most of the system.  No su: run0 is the way up.
+
+build-depends:
+- bootstrap/build-env.bst
+- base/pkgconf.bst
+
+depends:
+- base/linux-pam.bst
+
+sources:
+- kind: tar
+  url: kernel:linux/utils/util-linux/v2.42/util-linux-2.42.3.tar.xz
+  ref: 66ac7c0e725278eb2b039e3104f2c91119341d941b41bac7a285c695f940bd57
+
+variables:
+  conf-local: >-
+    --disable-all-programs --enable-login --enable-runuser
+    --disable-static --disable-nls --disable-asciidoc --disable-poman
+    --disable-bash-completion --disable-makeinstall-chown --disable-makeinstall-setuid
+    --without-python --without-systemd --without-udev --without-libmagic
+    --without-econf --without-audit --without-selinux --without-btrfs --without-readline
