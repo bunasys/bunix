@@ -61,6 +61,19 @@ config:
   # --no-sign-kernel: the kernel inside needs no signature of its own, the
   # UKI's covers it (and ukify cannot check one with systemd-sbsign)
   - |
+    release=$(basename /usr/lib/modules/*)
+    # The kernel must come from the same build as /usr's modules: each
+    # kernel build signs its modules with a new random key, and the kernel
+    # rejects modules signed by another build's key.  Two builds of
+    # system/linux.bst have the same cache key, so a cache shared between
+    # build hosts (tools/cache-sync.sh) can pair one host's kernel with a
+    # rootfs built from the other's -- 0.1.10 shipped that way, with no
+    # network or GPU drivers on real hardware.
+    if ! diff -rq /usr/lib/modules/$release/kernel /rootfs/usr/lib/modules/$release/kernel; then
+      echo "the kernel and /usr's modules come from different builds of system/linux.bst" >&2
+      exit 1
+    fi
+  - |
     mkdir -p tmp
     install -m 0600 keys/secureboot.key tmp/secureboot.key
     release=$(basename /usr/lib/modules/*)

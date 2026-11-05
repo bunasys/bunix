@@ -8,6 +8,7 @@ description: |
   have.
 
 depends:
+- base/hyprland.bst
 - base/mesa.bst
 - base/libinput.bst
 - base/seatd.bst

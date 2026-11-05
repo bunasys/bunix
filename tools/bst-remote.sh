@@ -39,7 +39,8 @@ RUN=""
 if [ -n "${BUNIX_BUILD_PATH:-}" ]; then
   RUN="env PATH=$BUNIX_BUILD_PATH "
 fi
-EXCLUDE=(--exclude '.stage*.log')
+# out/: release files and test images made here, which no build reads
+EXCLUDE=(--exclude '.stage*.log' --exclude /out)
 if [ "${BUNIX_BUILD_KEYS:-yes}" = no ]; then
   # only elements that sign (system/uki.bst, the sysext images) read keys/
   EXCLUDE+=(--exclude /keys)
