@@ -124,6 +124,14 @@ config:
     rm -rf usr/share/systemd usr/lib/environment.d usr/lib/binfmt.d \
            usr/lib/sysctl.d/50-coredump.conf \
            usr/lib/dbus-1.0/dbus-daemon-launch-helper
+    # systemd's example PAM rules (system-auth, other), which its tmpfiles
+    # rule copies to /etc/pam.d -- where they override bunix's own in
+    # /usr/lib/pam.d (files/rootfs): SHA-512 hashes, and an "other" that
+    # lets any program through.  Installs that have them already lose them
+    # with bunix-pam-cleanup.service.
+    rm -rf usr/share/factory/etc/pam.d
+    sed -i '\|^C! /etc/pam.d |d' usr/lib/tmpfiles.d/etc.conf
+    if grep -q pam.d usr/lib/tmpfiles.d/etc.conf; then exit 1; fi
     # ...and their unit files, so `systemctl list-unit-files` shows only what exists
     cd usr/lib/systemd/system
     for pattern in 'ssh-access.target' 'systemd-sleep*' 'systemd-hibernate*' 'systemd-suspend*' \
@@ -258,6 +266,9 @@ config:
     # ...and its machine ID: systemd makes one up in memory, and this saves
     # it to /etc.  Without it every boot is a first boot with a new ID.
     wants sysinit.target systemd-machine-id-commit.service
+    # ...and drops systemd's example PAM rules that older installs copied to
+    # /etc/pam.d (files/rootfs/usr/lib/bunix/pam-cleanup)
+    wants sysinit.target bunix-pam-cleanup.service
     # The initrd sets up /usr's dm-verity device from usrhash= (veritysetup
     # units come from a generator, started through veritysetup.target), then
     # creates the root partition on first boot (/usr/lib/repart.d)

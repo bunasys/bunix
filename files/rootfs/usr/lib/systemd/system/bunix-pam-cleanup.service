@@ -1,0 +1,12 @@
+# Removes systemd's example PAM rules from /etc/pam.d on installs from before
+# 0.1.18 (/usr/lib/bunix/pam-cleanup), before anyone can log in.
+[Unit]
+Description=Remove systemd's example PAM rules from /etc
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target systemd-user-sessions.service
+ConditionPathIsDirectory=/etc/pam.d
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/bunix/pam-cleanup

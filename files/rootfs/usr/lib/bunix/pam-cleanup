@@ -1,0 +1,18 @@
+#!/bin/sh
+# Installs before 0.1.18 got systemd's example PAM rules copied to
+# /etc/pam.d, where they override bunix's own (/usr/lib/pam.d): SHA-512
+# password hashes, and an "other" that lets any program through.  Each is
+# removed only while it is exactly systemd 261's file (every release so far
+# shipped that one), so rules an admin wrote or changed stay.
+remove_if_unchanged() {
+  file=$1
+  expected=$2
+  [ -f "$file" ] || return 0
+  actual=$(sha256sum "$file" | cut -d' ' -f1)
+  [ "$actual" = "$expected" ] || return 0
+  rm "$file"
+  echo "removed systemd's example $file"
+}
+remove_if_unchanged /etc/pam.d/system-auth cb715cc234dffb914966cf143872f47a8ef177dfed336700dcea6fce40fe6643
+remove_if_unchanged /etc/pam.d/other 73fa71815a900524c896d5594639f28d24e9f2ec987d2a7a6fde3989a6c94148
+rmdir /etc/pam.d 2>/dev/null || true

@@ -4,7 +4,10 @@
 # console's login does.  Root's shell is fish.
 
 systemctl is-system-running; systemctl --failed --no-legend --no-pager; test -e /run/nologin; and echo "nologin still there"; or echo "logins open"
-useradd -m -G wheel -c 'Test User' test; and echo 'test:bunix-test' | chpasswd; getent passwd test; id test; grep -o '^test:\$[a-z0-9]*\$' /etc/shadow; ls -ld /home/test
+useradd -m -G wheel -c 'Test User' test; and echo 'test:bunix-test' | chpasswd; getent passwd test; id test; ls -ld /home/test
+# new passwords are yescrypt ($y$), through bunix's PAM rules: nothing in
+# /etc/pam.d overrides /usr/lib/pam.d
+string match -q 'test:$y$*' (grep '^test:' /etc/shadow); and echo "hash yescrypt"; or echo "HASH NOT YESCRYPT"; ls /etc/pam.d 2>&1; systemctl is-active bunix-pam-cleanup.service
 runuser -l test -c 'id -un; echo "runtime $XDG_RUNTIME_DIR"; echo "session $XDG_SESSION_ID"'
 sleep 2; loginctl list-users --no-legend --no-pager; systemctl is-active user@1000.service
 runuser -l test -c 'systemctl --user is-system-running'
