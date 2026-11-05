@@ -3,9 +3,10 @@ description: |
   greetd -- the login manager: on tty1 it runs a greeter as the
   unprivileged "greeter" user, takes the user name and password the
   greeter sends it, checks them with PAM, and starts the user's session
-  (Hyprland) as that user, in a logind session of its own.  The greeter
-  for now is agreety, its text one; buna-login takes its place
-  (docs/desktop.md, phase 4d).  Part of the desktop extension, so its
+  (Hyprland) as that user, in a logind session of its own.  The greeter is
+  buna-login (base/buna-login.bst), in a Hyprland of its own.  Without
+  agreety, greetd's text greeter: the console login on tty2 to tty6 is the
+  fallback.  Part of the desktop extension, so its
   configuration is in /usr/share/greetd (an extension carries no /etc),
   and its unit replaces the console shell on tty1 once merged.
 
@@ -265,29 +266,27 @@ sources:
     version: 0.52.5
     sha: bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0
 config:
-  # The workspace as one build: agreety compiles only with the library
-  # features the other members turn on, which `cargo install` of one
-  # member alone does not
+  # The workspace as one build: its members compile only with the library
+  # features the others turn on, which `cargo install` of one member alone
+  # does not; only greetd itself is installed
   build-commands:
   - cargo build --jobs "${MAXJOBS}" --frozen --release --workspace
 
   install-commands:
   - |
-    for program in greetd agreety; do
-      install -D -m 0755 target/release/$program %{install-root}%{bindir}/$program
-    done
+    install -D -m 0755 target/release/greetd %{install-root}%{bindir}/greetd
 
   - |
-    # What greetd runs on tty1: the greeter, as the "greeter" user, which
-    # asks for a user and starts Hyprland for them (start-hyprland, its
-    # watchdog, which restarts it after a crash)
+    # What greetd runs on tty1: the greeter, as the "greeter" user --
+    # buna-login in its one-window Hyprland, which asks for a user and has
+    # greetd start their Hyprland (start-hyprland, its watchdog)
     mkdir -p %{install-root}/usr/share/greetd
     cat > %{install-root}/usr/share/greetd/config.toml <<'CONF'
     [terminal]
     vt = 1
 
     [default_session]
-    command = "agreety --cmd start-hyprland"
+    command = "Hyprland --config /usr/share/buna-login/hyprland.lua"
     user = "greeter"
     CONF
     mkdir -p %{install-root}/usr/lib/sysusers.d
@@ -318,8 +317,9 @@ config:
   - |
     # The unit, upheld by multi-user.target (docs/desktop.md, "Units in an
     # extension").  It takes tty1 from the console shell; tty2 to tty6
-    # keep theirs.  The greeter user is made here too: the boot's sysusers
-    # may run before the extension is merged.
+    # keep theirs.  The greeter user and its home are made here too: the
+    # boot's sysusers may run before the extension is merged, and makes no
+    # homes (greetd starts the greeter in it).
     units=%{install-root}/usr/lib/systemd/system
     mkdir -p $units/multi-user.target.d
     cat > $units/greetd.service <<'UNIT'
@@ -331,6 +331,7 @@ config:
 
     [Service]
     ExecStartPre=/usr/bin/systemd-sysusers /usr/lib/sysusers.d/greetd.conf
+    ExecStartPre=/usr/bin/install -d -m 0750 -o greeter -g greeter /var/lib/greetd
     ExecStart=/usr/bin/greetd --config /usr/share/greetd/config.toml
     IgnoreSIGPIPE=no
     SendSIGHUP=yes
