@@ -61,19 +61,36 @@ config:
   # Hyprland writes to a new user's ~/.config/hypr/hyprland.lua
   configure-commands:
     (<):
-    # Its terminal is kitty; bunix's is Ghostty (base/ghostty.bst).  So
-    # are the first-run hint over a new config, the safe-mode notice (in
-    # English) and the terminals emergency mode tries, for a config that
-    # fails to load.
+    # Its terminal is kitty; bunix's is Ghostty (base/ghostty.bst).  So are
+    # the terminals emergency mode tries, for a config that fails to load.
     - |
       sed -i 's/^local terminal *= *"kitty"/local terminal    = "ghostty"/' example/hyprland.lua
       grep -x 'local terminal    = "ghostty"' example/hyprland.lua
-      sed -i 's/SUPER+Q -> kitty (/SUPER+Q -> Ghostty (/' src/config/lua/ConfigManager.cpp
-      grep -q 'SUPER+Q -> Ghostty (' src/config/lua/ConfigManager.cpp
-      sed -i 's/Default keybinds apply: SUPER+Q for kitty,/Default keybinds apply: SUPER+Q for Ghostty,/' src/i18n/Engine.cpp
-      grep -q 'SUPER+Q for Ghostty,' src/i18n/Engine.cpp
       sed -i 's/launch_first_installed({ "kitty",/launch_first_installed({ "ghostty", "kitty",/' src/config/lua/Emergency.hpp
       grep -q 'launch_first_installed({ "ghostty", "kitty",' src/config/lua/Emergency.hpp
+    # Super+Return opens the terminal and Super+Shift+Return opens Buna
+    # Browser (base/buna-browser.bst); Hyprland uses Super+Q for the
+    # terminal.  The first-run hint and the safe-mode notice, in every
+    # language, name the new key.
+    - |
+      sed -i '/^local fileManager *=/i\local browser     = "buna-browser"' example/hyprland.lua
+      grep -x 'local browser     = "buna-browser"' example/hyprland.lua
+      sed -i 's/^hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))$/hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))/' example/hyprland.lua
+      grep -x 'hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))' example/hyprland.lua
+      sed -i '/^hl.bind(mainMod .. " + RETURN"/a\hl.bind(mainMod .. " + SHIFT + RETURN", hl.dsp.exec_cmd(browser))' example/hyprland.lua
+      grep -x 'hl.bind(mainMod .. " + SHIFT + RETURN", hl.dsp.exec_cmd(browser))' example/hyprland.lua
+      sed -i 's/SUPER+Q -> kitty (/SUPER+RETURN -> Ghostty (/' src/config/lua/ConfigManager.cpp
+      grep -q 'SUPER+RETURN -> Ghostty (' src/config/lua/ConfigManager.cpp
+      sed -i '/SUPER+Q/{s/SUPER+Q/SUPER+RETURN/g; s/[Kk]itty/Ghostty/g}' src/i18n/Engine.cpp
+      grep -q 'Default keybinds apply: SUPER+RETURN for Ghostty,' src/i18n/Engine.cpp
+      test -z "$(grep 'SUPER+Q' src/i18n/Engine.cpp)"
+    # Super+M ends the session, so greetd shows the login screen again.  The
+    # example asks hyprshutdown, which bunix does not have.
+    - |
+      sed -i 's/^hl.bind(mainMod .. " + M", .*$/hl.bind(mainMod .. " + M", hl.dsp.exit())/' example/hyprland.lua
+      grep -x 'hl.bind(mainMod .. " + M", hl.dsp.exit())' example/hyprland.lua
+      sed -i 's/SUPER+M -> exit Hyprland/SUPER+M -> log out/' src/config/lua/ConfigManager.cpp
+      grep -q 'SUPER+M -> log out' src/config/lua/ConfigManager.cpp
     # Hyprland warns, in a banner, when its dialogs (hyprland-guiutils:
     # permission prompts, "app not responding") are missing; bunix does not
     # have them yet

@@ -11,7 +11,7 @@
 
 systemctl is-system-running; lsblk -o NAME,SIZE,TYPE,LABEL
 printf 'label: gpt\nsize=100MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="EFI system partition"\nsize=16MiB, type=E3C9E316-0B5C-4DB8-817D-F92DF00215AE, name="Microsoft reserved partition"\nsize=4GiB, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="Basic data partition"\nstart=20GiB, size=600MiB, type=DE94BBA4-06D1-4D40-A16A-BFD50179D6AC, name="Windows recovery"\n' | sfdisk -q /dev/vda; sfdisk -d /dev/vda
-mkfs.vfat -F 32 -n SYSTEM /dev/vda1 >/dev/null; mkdir -p /mnt/esp /mnt/cd; mount /dev/vda1 /mnt/esp; mount -o ro /dev/sr0 /mnt/cd; mkdir -p /mnt/esp/EFI/Microsoft/Boot; cp /mnt/cd/install/esp/EFI/bunix/systemd-bootx64.efi /mnt/esp/EFI/Microsoft/Boot/bootmgfw.efi; umount /mnt/esp /mnt/cd; echo esp ready
+mkfs.vfat -F 32 -n SYSTEM /dev/vda1 >/dev/null; mkdir -p /mnt/esp; mount /dev/vda1 /mnt/esp; mkdir -p /mnt/esp/EFI/Microsoft/Boot; cp /run/bunix/medium/install/esp/EFI/bunix/systemd-bootx64.efi /mnt/esp/EFI/Microsoft/Boot/bootmgfw.efi; umount /mnt/esp; echo esp ready
 for p in vda2 vda3 vda4; dd if=/dev/urandom of=/dev/$p bs=1M count=16 status=none; end; for p in vda2 vda3 vda4; head -c 16M /dev/$p | sha256sum; end > /root/before.sha256; cat /root/before.sha256
 efibootmgr -q -c -d /dev/vda -p 1 -L 'Windows Boot Manager' -l '\EFI\Microsoft\Boot\bootmgfw.efi'; efibootmgr
 # the menus, without answering the second question
