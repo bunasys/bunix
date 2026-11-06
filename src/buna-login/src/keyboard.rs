@@ -196,9 +196,12 @@ fn add_typing_keys(state: &Rc<State>, row: &gtk::Box, keys: &str, capitals: bool
 }
 
 /// A key never takes the focus, so what it types goes to the field that
-/// has it.
-fn key(state: &Rc<State>, label: &str, press: Press, class: &str) -> gtk::Button {
-    let button = gtk::Button::with_label(label);
+/// has it.  Its label is left to right like the rows: in right to left,
+/// "?123" would read "123?".
+fn key(state: &Rc<State>, text: &str, press: Press, class: &str) -> gtk::Button {
+    let label = gtk::Label::new(Some(text));
+    label.set_direction(gtk::TextDirection::Ltr);
+    let button = gtk::Button::builder().child(&label).build();
     button.add_css_class("key");
     button.add_css_class(class);
     button.set_focusable(false);

@@ -287,6 +287,11 @@ impl Screen {
         self.clear_error();
         self.user_name.grab_focus();
     }
+
+    /// False on a single person's screen, until "someone else" is chosen.
+    fn asks_for_user_name(&self) -> bool {
+        WidgetExt::is_visible(&self.user_name)
+    }
 }
 
 fn label(text: &str, class: &str) -> gtk::Label {
@@ -397,6 +402,9 @@ fn log_in(screen: &Rc<Screen>) {
 
         let text = &screen.text;
         let message = match error {
+            LoginError::WrongPassword if screen.asks_for_user_name() => {
+                text.wrong_user_name_or_password.to_string()
+            }
             LoginError::WrongPassword => text.wrong_password.to_string(),
             LoginError::NeedsMore => text.needs_more.to_string(),
             LoginError::Failed(reason) => format!("{} {reason}", text.failed),
