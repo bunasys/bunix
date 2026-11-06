@@ -52,7 +52,13 @@ flyctl machine update <id> --app bunix-build --vm-size performance-16x --vm-memo
 flyctl machine update <id> --app bunix-build --vm-size shared-cpu-2x --vm-memory 2048 --yes
 ```
 
-## Filling the cache from the testbed
+## The shared cache
+
+`tools/bst-fly.sh` connects the machine to the shared cache on pro13
+(tools/cache-server/README.md) when pro13 is reachable: the machine pulls
+what pro13 built and pushes what it builds, so nothing is copied by hand.
+
+## Filling the cache from the testbed (before the shared cache)
 
 The first time, the testbed's cache was copied in (29 GB, about an hour at
 7 MB/s): the testbed reaches the machine through this Mac's proxy

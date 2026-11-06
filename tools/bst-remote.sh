@@ -30,7 +30,7 @@ HOST=${BUNIX_BUILD_HOST:-pro13.home.arpa}
 BUILDERS=${BUNIX_BUILDERS:-2}   # parallel element builds; gcc at -j8 needs a few GB each
 # The jobs each build runs (make -j, project.conf's MAKEFLAGS), the same on
 # every host: they are part of every cache key, and equal keys are what lets
-# tools/cache-sync.sh share one host's packages with another.
+# the shared cache (tools/cache-server) share one host's packages with another.
 MAX_JOBS=8
 VENV=${BUNIX_BUILD_VENV:-'~/.local/share/bunix-bst'}
 SSH=(ssh)

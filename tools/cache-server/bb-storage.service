@@ -1,0 +1,17 @@
+[Unit]
+Description=Shared BuildStream cache: content store (bunix tools/cache-server)
+# its data is on the USB disk
+RequiresMountsFor=/srv/ci/bst-cache
+
+[Service]
+User=bst-cache
+ExecStart=/usr/local/bin/bb_storage /etc/bst-cache/storage.jsonnet
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/ci/bst-cache
+
+[Install]
+WantedBy=multi-user.target
