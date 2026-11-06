@@ -2,10 +2,10 @@ kind: cargo
 description: |
   buna-login -- bunix's login screen (src/buna-login): greetd's greeter
   (base/greetd.bst), in GTK 4 and libadwaita, styled with the Banan Design
-  System, English and Arabic.  It runs inside a Hyprland of its own with
-  one window and nothing else (/usr/share/buna-login/hyprland.lua), as the
-  "greeter" user, and tells greetd so (/usr/share/greetd/config.toml); a
-  successful login quits it, and greetd starts the user's Hyprland.
+  System, English and Arabic.  It runs full screen in cage
+  (base/cage.bst), as the "greeter" user, and tells greetd so
+  (/usr/share/greetd/config.toml); a successful login quits it, and greetd
+  starts the user's Hyprland.
 
 build-depends:
 - bootstrap/build-env.bst
@@ -15,7 +15,7 @@ build-depends:
 depends:
 - base/fonts-geist.bst
 - base/gtk4.bst
-- base/hyprland.bst
+- base/cage.bst
 - base/libadwaita.bst
 
 sources:
@@ -315,9 +315,8 @@ sources:
 config:
   install-commands:
     (>):
-    # The logo, the one-window Hyprland the screen runs in, and greetd's
-    # configuration naming that Hyprland as the greeter (src/buna-login/data)
+    # The logo, and greetd's configuration naming buna-login, in cage, as
+    # the greeter (src/buna-login/data)
     - |
       install -D -m 0644 branding/buna-logo.svg %{install-root}/usr/share/buna-login/buna-logo.svg
-      install -D -m 0644 data/hyprland.lua %{install-root}/usr/share/buna-login/hyprland.lua
       install -D -m 0644 data/greetd.toml %{install-root}/usr/share/greetd/config.toml

@@ -207,3 +207,53 @@ button.primary:active {
 .bar {
   padding: 24px;
 }
+
+/* The on-screen keyboard: a panel along the bottom, keys tall enough for a
+ * finger (44px, the usual touch target), in the card's surface color */
+.keyboard {
+  background-color: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  padding: 12px;
+  margin: 0 24px;
+}
+
+button.key {
+  background-color: var(--bg-surface);
+  color: var(--text-strong);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  min-height: 44px;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 400;
+}
+
+/* narrow enough for the longest row on an 800px portrait screen */
+button.key.letter {
+  min-width: 36px;
+}
+
+button.key.special {
+  min-width: 56px;
+  background-color: var(--bg-active);
+  font-size: 15px;
+}
+
+button.key.special.on {
+  background-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+button.key.space {
+  min-width: 160px;
+}
+
+button.key:active {
+  background-color: var(--bg-active);
+}
+
+/* "Log in as someone else", under the button */
+button.other-user {
+  margin-top: 8px;
+}

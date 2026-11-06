@@ -63,3 +63,10 @@ config:
       config=%{install-root}/usr/share/hypr/hyprland.lua
       sed -i 's/^local terminal *= *"kitty"/local terminal    = "ghostty"/' $config
       grep -x 'local terminal    = "ghostty"' $config
+    # Hyprland warns, in a banner, when its dialogs (hyprland-guiutils:
+    # permission prompts, "app not responding") are missing; bunix does not
+    # have them yet
+    - |
+      config=%{install-root}/usr/share/hypr/hyprland.lua
+      sed -i '/^        disable_hyprland_logo *=/a\        disable_hyprland_guiutils_check = true,' $config
+      grep -q '^        disable_hyprland_guiutils_check = true,' $config

@@ -1,8 +1,15 @@
 # greetd's configuration (/usr/share/greetd/config.toml): on tty1, run
-# buna-login as the "greeter" user, inside its one-window Hyprland.
+# buna-login as the "greeter" user, full screen in cage, a compositor that
+# shows one app and quits when it does, so greetd can start the user's
+# session (or the greeter again).
 [terminal]
 vt = 1
 
 [default_session]
-command = "Hyprland --config /usr/share/buna-login/hyprland.lua"
+# - US and Arabic keyboards, Alt+Shift switches (cage takes its keyboard
+#   layout from libxkbcommon's environment variables)
+# - with several screens, the login screen goes on the last one connected
+#   (a laptop's external monitor) rather than stretched across them all
+# - cage's output goes to the journal, not onto the console
+command = "env XKB_DEFAULT_LAYOUT=us,ara XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle systemd-cat --identifier=buna-login cage -m last -- buna-login"
 user = "greeter"

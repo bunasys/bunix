@@ -15,6 +15,7 @@ depends:
 - base/ghostty.bst
 - base/buna-login.bst
 - base/greetd.bst
+- base/cage.bst
 - base/grim.bst
 - base/fonts-noto.bst
 - base/hyprland.bst

@@ -1,13 +1,18 @@
-//! buna-login: bunix's login screen.  greetd runs it as its greeter, inside a
-//! one-window Hyprland (data/hyprland.lua); it asks for a user name and
+//! buna-login: bunix's login screen.  greetd runs it as its greeter, full
+//! screen in cage (data/greetd.toml); it asks for a user name and
 //! password, has greetd check them (greetd.rs), and quits so greetd can
 //! start the user's session.  Styled with the Banan Design System
 //! (style.css), light or dark as the system prefers; English or Arabic,
-//! right to left in Arabic, switchable on the screen.
+//! right to left in Arabic, switchable on the screen.  With only one person
+//! who can log in (users.rs), it asks just for their password; on a
+//! touchscreen it has its own keyboard (keyboard.rs).
 
 mod greetd;
+mod keyboard;
+mod last_user;
 mod power;
 mod text;
+mod users;
 
 use std::rc::Rc;
 
@@ -16,15 +21,21 @@ use gtk::gio;
 use gtk::glib;
 
 use greetd::LoginError;
+use keyboard::{Key, Keyboard};
 use power::PowerAction;
 use text::{Language, Text};
+use users::Person;
 
-/// What a successful login starts: Hyprland, through its watchdog.
-const SESSION: &[&str] = &["start-hyprland"];
+/// What a successful login starts: Hyprland, through its watchdog, with its
+/// output in the journal rather than on the console behind it.
+const SESSION: &[&str] = &["systemd-cat", "--identifier=hyprland", "start-hyprland"];
 /// Added to the session's environment before logind registers it, so the
 /// login shows as a Wayland desktop session, not a text console one.
 const SESSION_ENV: &[&str] = &["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=Hyprland"];
 const LOGO: &str = "/usr/share/buna-login/buna-logo.svg";
+/// The card's width, and the logo's: fixed, whatever the screen's size.
+const CARD_WIDTH: i32 = 360;
+const LOGO_SIZE: i32 = 64;
 
 fn main() -> glib::ExitCode {
     let app = adw::Application::builder()
@@ -84,19 +95,43 @@ fn show_screen(window: &adw::ApplicationWindow, language: Language) {
         window.remove_css_class("arabic");
     }
 
-    let screen = Rc::new(Screen::build(Text::new(language, &glib::host_name())));
+    let people = users::people();
+    let only_person = match people.as_slice() {
+        [person] => Some(person),
+        _ => None,
+    };
+    let text = Text::new(language, &glib::host_name());
+    let screen = Rc::new(Screen::build(text, language, only_person));
     window.set_content(Some(&screen.root));
     connect(&screen, window, language);
-    screen.user_name.grab_focus();
+
+    // The user name, when the screen can know it: the only person's, or
+    // the last one to log in, who is likely the one at the screen now.
+    // Then the password is what is left to type.
+    let known_name = match only_person {
+        Some(person) => Some(person.user_name.clone()),
+        None => last_user::read(),
+    };
+    let Some(name) = known_name else {
+        screen.user_name.grab_focus();
+        return;
+    };
+    screen.user_name.set_text(&name);
+    screen.password.grab_focus();
 }
 
 /// The screen's widgets that change after it is built, and what it says.
 struct Screen {
     root: gtk::Box,
+    title: gtk::Label,
+    user_name_label: gtk::Label,
     user_name: gtk::Entry,
     password: gtk::PasswordEntry,
     log_in: gtk::Button,
+    other_user: gtk::Button,
     message: gtk::Label,
+    keyboard: Keyboard,
+    show_keyboard: gtk::Button,
     switch_language: gtk::Button,
     restart: gtk::Button,
     power_off: gtk::Button,
@@ -105,12 +140,16 @@ struct Screen {
 
 impl Screen {
     /// The card in the middle (logo, title, the two fields, the message
-    /// line, the button) and the bar at the bottom (the language switch at
-    /// the start, restart and power off at the end).
-    fn build(text: Text) -> Screen {
-        let logo = gtk::Picture::for_filename(LOGO);
-        logo.set_can_shrink(true);
-        logo.set_size_request(56, 56);
+    /// line, the button), the on-screen keyboard below it, and the bar at
+    /// the bottom (the language switch and the keyboard button at the
+    /// start, restart and power off at the end).
+    ///
+    /// With `only_person`, the card is theirs: their name as its title, and
+    /// no user name field to fill in, until "someone else" brings it back.
+    fn build(text: Text, language: Language, only_person: Option<&Person>) -> Screen {
+        // an Image, not a Picture: a Picture grows to the SVG's own size
+        let logo = gtk::Image::from_file(LOGO);
+        logo.set_pixel_size(LOGO_SIZE);
         logo.set_halign(gtk::Align::Start);
         logo.add_css_class("logo");
 
@@ -123,22 +162,42 @@ impl Screen {
         message.set_wrap(true);
         message.set_visible(false);
         let log_in = button(text.log_in, "primary");
+        let other_user = button(text.other_user, "quiet");
+        other_user.add_css_class("other-user");
+        let title = label(&text.title, "title");
+        let user_name_label = label(text.user_name, "field-label");
 
         let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
         card.add_css_class("card");
+        card.set_size_request(CARD_WIDTH, -1);
         card.set_halign(gtk::Align::Center);
         card.set_valign(gtk::Align::Center);
         card.set_vexpand(true);
         card.append(&logo);
-        card.append(&label(&text.title, "title"));
-        card.append(&label(text.user_name, "field-label"));
+        card.append(&title);
+        card.append(&user_name_label);
         card.append(&user_name);
         card.append(&label(text.password, "field-label"));
         card.append(&password);
         card.append(&message);
         card.append(&log_in);
+        card.append(&other_user);
+        // Their account may be locked, or someone else may need the machine
+        other_user.set_visible(only_person.is_some());
+        if let Some(person) = only_person {
+            title.set_text(&person.display_name);
+            user_name_label.set_visible(false);
+            user_name.set_visible(false);
+        }
+
+        let keyboard = Keyboard::new(language);
 
         let switch_language = button(text.other_language, "quiet");
+        // Only offered where there is a touchscreen to type on it with
+        let show_keyboard = button(text.keyboard, "quiet");
+        keyboard::show_with_touchscreen(&show_keyboard);
+        // Keeps the focus in the field the keyboard is to type into
+        show_keyboard.set_focus_on_click(false);
         let restart = button(text.restart, "secondary");
         let power_off = button(text.power_off, "secondary");
         let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
@@ -146,6 +205,7 @@ impl Screen {
         let bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         bar.add_css_class("bar");
         bar.append(&switch_language);
+        bar.append(&show_keyboard);
         bar.append(&spacer);
         bar.append(&restart);
         bar.append(&power_off);
@@ -153,19 +213,48 @@ impl Screen {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.add_css_class("screen");
         root.append(&card);
+        root.append(&keyboard.widget);
         root.append(&bar);
 
-        Screen { root, user_name, password, log_in, message, switch_language, restart, power_off, text }
+        Screen {
+            root,
+            title,
+            user_name_label,
+            user_name,
+            password,
+            log_in,
+            other_user,
+            message,
+            keyboard,
+            show_keyboard,
+            switch_language,
+            restart,
+            power_off,
+            text,
+        }
+    }
+
+    /// The field the on-screen keyboard types into: the user name while it
+    /// has the focus, the password otherwise.
+    fn typing_field(&self) -> gtk::Editable {
+        let focus = self.root.root().and_then(|root| root.focus());
+        let user_name_has_focus = focus.is_some_and(|focus| focus.is_ancestor(&self.user_name));
+        if user_name_has_focus {
+            return self.user_name.clone().upcast();
+        }
+        self.password.clone().upcast()
     }
 
     /// Nothing on the screen can be pressed while a check runs: a second
     /// login would make greetd cancel the first, and the language switch
     /// would build a screen the running check knows nothing about.
     fn set_busy(&self, busy: bool) {
-        let controls: [&gtk::Widget; 6] = [
+        let controls: [&gtk::Widget; 8] = [
             self.user_name.upcast_ref(),
             self.password.upcast_ref(),
             self.log_in.upcast_ref(),
+            self.other_user.upcast_ref(),
+            self.keyboard.widget.upcast_ref(),
             self.switch_language.upcast_ref(),
             self.restart.upcast_ref(),
             self.power_off.upcast_ref(),
@@ -185,6 +274,18 @@ impl Screen {
     fn clear_error(&self) {
         self.message.set_visible(false);
         self.password.remove_css_class("invalid");
+    }
+
+    /// The full form, for logging in as anyone: the general title and an
+    /// empty user name field.
+    fn ask_for_user_name(&self) {
+        self.title.set_text(&self.text.title);
+        self.user_name_label.set_visible(true);
+        self.user_name.set_visible(true);
+        self.user_name.set_text("");
+        self.other_user.set_visible(false);
+        self.clear_error();
+        self.user_name.grab_focus();
     }
 }
 
@@ -214,13 +315,48 @@ fn connect(screen: &Rc<Screen>, window: &adw::ApplicationWindow, language: Langu
     let on_click = screen.clone();
     screen.log_in.connect_clicked(move |_| log_in(&on_click));
 
+    let on_other_user = screen.clone();
+    screen.other_user.connect_clicked(move |_| on_other_user.ask_for_user_name());
+
+    // The old screen is not freed (its widgets' handlers hold it), so the
+    // password typed into it is cleared first
     let window = window.clone();
-    screen.switch_language.connect_clicked(move |_| show_screen(&window, language.other()));
+    let on_switch = screen.clone();
+    screen.switch_language.connect_clicked(move |_| {
+        on_switch.password.set_text("");
+        show_screen(&window, language.other());
+    });
 
     let on_restart = screen.clone();
     screen.restart.connect_clicked(move |_| power(&on_restart, PowerAction::Restart));
     let on_power_off = screen.clone();
     screen.power_off.connect_clicked(move |_| power(&on_power_off, PowerAction::PowerOff));
+
+    // The on-screen keyboard: opened by a finger on either field, or by
+    // the bar's button
+    screen.keyboard.open_on_touch(&screen.user_name);
+    screen.keyboard.open_on_touch(&screen.password);
+    let on_toggle = screen.clone();
+    screen.show_keyboard.connect_clicked(move |_| on_toggle.keyboard.toggle());
+    let on_key = screen.clone();
+    screen.keyboard.connect_key(move |key| type_key(&on_key, key));
+}
+
+/// A key from the on-screen keyboard: typed into the field with the focus,
+/// and Enter does what it does on a real keyboard (`connect`).
+fn type_key(screen: &Rc<Screen>, key: Key) {
+    let field = screen.typing_field();
+    let is_enter = matches!(key, Key::Enter);
+    if !is_enter {
+        keyboard::type_into(&field, &key);
+        return;
+    }
+    let in_user_name = field == *screen.user_name.upcast_ref::<gtk::Editable>();
+    if in_user_name {
+        screen.password.grab_focus();
+        return;
+    }
+    log_in(screen);
 }
 
 /// Checks the password with greetd off the main thread (a wrong one takes
@@ -237,16 +373,19 @@ fn log_in(screen: &Rc<Screen>) {
     screen.clear_error();
     screen.set_busy(true);
     let screen = screen.clone();
+    let checked_name = user_name.clone();
     let check = gio::spawn_blocking(move || {
-        greetd::log_in(&user_name, &password, SESSION, SESSION_ENV)
+        greetd::log_in(&checked_name, &password, SESSION, SESSION_ENV)
     });
     glib::spawn_future_local(async move {
         let result = check.await.unwrap_or_else(|_| {
             Err(LoginError::Failed("the login check stopped unexpectedly".into()))
         });
-        screen.set_busy(false);
+        // On success the controls stay disabled: the screen is about to go,
+        // and a second login now would cancel the session greetd is starting
         let error = match result {
             Ok(()) => {
+                last_user::write(&user_name);
                 if let Some(app) = gio::Application::default() {
                     app.quit();
                 }
@@ -254,6 +393,7 @@ fn log_in(screen: &Rc<Screen>) {
             }
             Err(error) => error,
         };
+        screen.set_busy(false);
 
         let text = &screen.text;
         let message = match error {

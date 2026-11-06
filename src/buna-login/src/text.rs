@@ -44,6 +44,8 @@ pub struct Text {
     pub power_off_failed: &'static str,
     pub restart: &'static str,
     pub power_off: &'static str,
+    pub keyboard: &'static str,
+    pub other_user: &'static str,
     /// The switch's label, written in the language it switches to.
     pub other_language: &'static str,
 }
@@ -64,6 +66,8 @@ impl Text {
                 power_off_failed: "Could not power off:",
                 restart: "Restart",
                 power_off: "Power off",
+                keyboard: "Keyboard",
+                other_user: "Log in as someone else",
                 other_language: "العربية",
             },
             Language::Arabic => Text {
@@ -79,6 +83,8 @@ impl Text {
                 power_off_failed: "تعذّر إيقاف التشغيل:",
                 restart: "إعادة التشغيل",
                 power_off: "إيقاف التشغيل",
+                keyboard: "لوحة المفاتيح",
+                other_user: "الدخول بحساب آخر",
                 other_language: "English",
             },
         }

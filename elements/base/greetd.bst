@@ -317,19 +317,32 @@ config:
     # and the boot not blessed (an update would roll back).  So no start
     # limit, and a pause between tries; the consoles on tty2 to tty6 stay
     # there for whoever has to look.
+    # The boot splash stays on the screen until the greeter draws over it:
+    # plymouth-quit.service, which the root file system starts with
+    # multi-user.target, quits it with --retain-splash here, so its last
+    # frame stays instead of the console (it runs seconds before greetd,
+    # which only starts once the extension is merged).  greetd's own quit
+    # covers a restart.  The font cache is rebuilt before the greeter's
+    # first GTK start needs it.
     units=%{install-root}/usr/lib/systemd/system
-    mkdir -p $units/multi-user.target.d
+    mkdir -p $units/multi-user.target.d $units/plymouth-quit.service.d
+    cat > $units/plymouth-quit.service.d/greetd.conf <<'UNIT'
+    [Service]
+    ExecStart=
+    ExecStart=-/usr/bin/plymouth quit --retain-splash
+    UNIT
     cat > $units/greetd.service <<'UNIT'
     [Unit]
     Description=Login screen (greetd)
     StartLimitIntervalSec=0
-    After=systemd-sysext.service systemd-user-sessions.service plymouth-quit-wait.service
-    After=console-shell@tty1.service
+    After=systemd-sysext.service systemd-user-sessions.service fontconfig-cache.service
+    After=plymouth-start.service console-shell@tty1.service
     Conflicts=console-shell@tty1.service
 
     [Service]
     ExecStartPre=/usr/bin/systemd-sysusers /usr/lib/sysusers.d/greetd.conf
     ExecStartPre=/usr/bin/install -d -m 0750 -o greeter -g greeter /var/lib/greetd
+    ExecStartPre=-/usr/bin/plymouth quit --retain-splash
     ExecStart=/usr/bin/greetd --config /usr/share/greetd/config.toml
     IgnoreSIGPIPE=no
     SendSIGHUP=yes
