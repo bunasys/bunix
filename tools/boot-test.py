@@ -14,21 +14,28 @@ target): create <outdir>/disk.raw, install to it from the ISO, then boot it
 with a disk run of the same <outdir>.
 
 Boots the ISO's default GRUB entry, waits for boot to finish, then types each
-check on the VM's keyboard -- the screen console (tty1) runs root's fish --
-with the output redirected to the serial port, which this script reads.
-Writes serial.log (the checks' output) and screenshots as PNG to <outdir>:
-every 3 s for the first 15 s (the boot splash), after boot, at the end.
+check on the VM's keyboard -- the screen console (tty1) runs root's fish on
+the live ISO and on a disk whose root has no password -- with the output
+redirected to the serial port, which this script reads.  Writes serial.log
+(the checks' output) and screenshots as PNG to <outdir>: every 3 s for the
+first 15 s (the boot splash), after boot, after BOOT_KEYS, at the end.
 Exits non-zero if a check did not finish.
+
+BOOT_KEYS=<text> is typed on the screen after boot, before the checks: a
+password at a desktop install's login screen, say.  "\\n" is Enter,
+"<meta_l-q>" a QEMU key name (lower case), "<sleep_10>" a pause.  The
+screenshot follows BOOT_KEYS_WAIT seconds later (default 20).
 
 BOOT_MEMORY sets the VM's memory (default 1G), BOOT_NIC its network card
 (default e1000e).  BOOT_SHELL=bash types the checks for bash (an
 initrd's emergency shell) instead of root's fish.  BOOT_CHECKS=<file> replaces the checks below with the file's lines (one
-command line each; empty lines and lines starting with # are skipped).
+command line each; empty lines and lines starting with # are skipped); an
+empty file (/dev/null) means no checks, only the screenshots.
 
 Uses KVM when /dev/kvm is usable.  OVMF is looked up in the usual places;
 set OVMF_CODE to point elsewhere.
 """
-import os, shutil, socket, struct, subprocess, sys, tempfile, time, zlib
+import os, re, shutil, socket, struct, subprocess, sys, tempfile, time, zlib
 
 CHECKS = [
     "systemctl is-system-running; systemctl --failed --no-legend --no-pager",
@@ -145,6 +152,22 @@ def monitor_command(command):
     discard_monitor_output()
 
 
+def type_keys(text):
+    """BOOT_KEYS: text, with "<name>" for QEMU's key names (<meta_l-q> is
+    Super+Q) and "<sleep_N>" for a pause of N seconds, for what the keys
+    before it started."""
+    for token in re.findall(r"<[a-z0-9_-]+>|[^<]+|<", text):
+        sleep = re.fullmatch(r"<sleep_(\d+)>", token)
+        is_key_name = re.fullmatch(r"<[a-z0-9_-]+>", token)
+        if sleep:
+            time.sleep(int(sleep[1]))
+        elif is_key_name:
+            monitor.sendall(f"sendkey {token[1:-1]}\n".encode())
+            time.sleep(0.04)
+        else:
+            type_on_screen(token)
+
+
 def discard_monitor_output():
     monitor.setblocking(False)
     try:
@@ -216,7 +239,15 @@ for second in (3, 6, 9, 12, 15):
     screenshot(f"1-boot-{second:02}s")
 read_serial(int(os.environ.get("BOOT_WAIT", "60")))
 screenshot("2-after-boot")
-type_on_screen("clear\n")
+if os.environ.get("BOOT_KEYS"):
+    # typed on whatever the screen shows, a login screen's password field say
+    type_keys(os.environ["BOOT_KEYS"].replace("\\n", "\n"))
+    read_serial(int(os.environ.get("BOOT_KEYS_WAIT", "20")))
+    screenshot("2-after-keys")
+# Without checks the screen may be a login screen: "clear" would go into
+# its password field
+if CHECKS:
+    type_on_screen("clear\n")
 
 unfinished = 0
 for i, check in enumerate(CHECKS):

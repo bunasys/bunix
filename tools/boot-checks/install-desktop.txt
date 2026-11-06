@@ -1,0 +1,10 @@
+# Checks for tools/boot-test.py on the live ISO with a blank disk attached
+# (BOOT_DISK=<outdir>/disk.raw): a desktop install to the whole disk, for
+# the user "sara".  Then boot the disk with no checks (BOOT_CHECKS=/dev/null):
+# its screenshots should show the login screen, asking Sara for her password.
+# The root shell is fish.
+
+systemctl is-system-running; lsblk -o NAME,SIZE,TYPE,LABEL
+printf '1\n1\n1\nSara\nsara\nsecret\nsecret\n/dev/vda\n' | bunix-install; echo "install exit $status"
+lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE /dev/vda
+mkdir -p /mnt/root; mount /dev/disk/by-partlabel/root /mnt/root; grep -E '^(root|sara):' /mnt/root/etc/passwd; grep '^wheel:' /mnt/root/etc/group; awk -F: '$1 == "root" || $1 == "sara" { print $1, substr($2, 1, 4) }' /mnt/root/etc/shadow; ls -ln /mnt/root/home /mnt/root/var/lib/extensions/desktop.raw.v; cat /mnt/root/etc/sysupdate.d/desktop.feature.d/enable.conf; umount /mnt/root; sync; echo synced

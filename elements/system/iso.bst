@@ -49,6 +49,10 @@ build-depends:
 - filename: system/uki.bst
   config:
     location: /uki
+# the desktop extension, which bunix-install copies for a desktop install
+- filename: sysext/desktop.bst
+  config:
+    location: /desktop
 
 sources:
 - kind: local
@@ -153,9 +157,10 @@ config:
 
   - |
     # The ISO 9660 file system: this release's /usr, UKI and ESP files,
-    # which the live system mounts /usr from and bunix-install installs
+    # which the live system mounts /usr from and bunix-install installs,
+    # and the desktop extension
     mkdir -p iso/install
-    cp /usr-partitions/*.raw /uki/*.efi iso/install/
+    cp /usr-partitions/*.raw /uki/*.efi /desktop/*.raw iso/install/
     cp -a /usr/lib/bunix/esp iso/install/esp
     cp esp/bunix.cer iso/
 

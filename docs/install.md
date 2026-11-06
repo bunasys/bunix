@@ -59,6 +59,27 @@ so nothing lands in some other free stretch of the disk. The root partition
 is created by the installer, not on first boot as with the disk image:
 systemd-repart in the initrd would put it in whatever free space it found.
 
+## The system and its user
+
+After the place, and before anything on the disk changes, the installer
+asks:
+
+- **Desktop or console.**  A desktop install copies the `desktop`
+  extension from the medium (`install/desktop_<release>.raw`) to
+  `/var/lib/extensions/desktop.raw.v/` and turns its sysupdate feature on,
+  so the first boot shows the login screen and updates bring the
+  extension's next versions.  A console install leaves both out.
+- **Your name, user name and password.**  The account is created on the
+  new root file system: first the system's own accounts, as the first boot
+  would make them (`systemd-sysusers --root`, from the live system's
+  `/usr`, the same as the installed one's), then the person's with
+  `useradd --prefix`, in `wheel`, so run0 and polkit let them administer
+  the machine.
+
+Root gets a random password, locked: nobody logs in as root, and the
+console shows a login prompt (console-shell opens root's shell only while
+root has no password hash at all, as on the live ISO).
+
 ## Found on real hardware
 
 - The firmware may not pass a boot entry's options to the program it
@@ -97,4 +118,16 @@ BOOT_CHECKS=tools/boot-checks/dual-boot.txt tools/boot-test.py any.raw uefi out/
 The first run makes the "Windows" disk on the live ISO and installs into its
 free space; the second boots it through the "bunix" entry and checks
 `/boot` (XBOOTLDR), `/efi` (the shared ESP) and that systemd-boot lists
-only bunix.
+only bunix.  The first run is a console install; it gives root an empty
+password again on the new disk, so the second run's checks get root's
+shell.
+
+A desktop install, to a whole disk; the second run has no checks, and its
+screenshots show the login screen:
+
+```
+truncate -s 24G out/desktop/disk.raw
+BOOT_DISK=out/desktop/disk.raw BOOT_CHECKS=tools/boot-checks/install-desktop.txt BOOT_MEMORY=2G \
+  tools/boot-test.py bunix-x86_64.iso uefi out/desktop
+BOOT_CHECKS=/dev/null BOOT_WAIT=90 tools/boot-test.py any.raw uefi out/desktop
+```

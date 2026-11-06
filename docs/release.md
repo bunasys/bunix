@@ -84,6 +84,10 @@ cp out/updates/$v/* out/release-$v/
   BOOT_CHECKS=/tmp/after-update.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
   ```
 
+  install-windows.txt answers the installer of the ISO it comes with: for a
+  previous ISO from before 0.2 (no account questions), take that release's
+  copy from git (`git show v<previous>:tools/boot-checks/install-windows.txt`).
+
   `serial.log` in the output directory must show `update exit 0`, then
   `IMAGE_VERSION=<new version>` and `systemd-bless-boot ... good` after the
   reboot.

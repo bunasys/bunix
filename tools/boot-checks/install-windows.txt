@@ -1,7 +1,8 @@
 # Checks for tools/boot-test.py on the live ISO with a blank disk attached
 # (BOOT_DISK=<outdir>/disk.raw, 24 GB): lay the disk out like a Windows PC,
-# install bunix into its free space, and check that nothing of "Windows"
-# changed.  Then boot the disk with tools/boot-checks/dual-boot.txt.
+# install bunix into its free space (a console install), and check that
+# nothing of "Windows" changed.  Then boot the disk with
+# tools/boot-checks/dual-boot.txt.
 #
 # The "Windows" disk: a 100 MiB ESP with EFI/Microsoft/Boot/bootmgfw.efi
 # (a stand-in: a copy of systemd-boot), MSR, C: and the recovery partition
@@ -15,7 +16,11 @@ for p in vda2 vda3 vda4; dd if=/dev/urandom of=/dev/$p bs=1M count=16 status=non
 efibootmgr -q -c -d /dev/vda -p 1 -L 'Windows Boot Manager' -l '\EFI\Microsoft\Boot\bootmgfw.efi'; efibootmgr
 # the menus, without answering the second question
 printf '1\n' | bunix-install; echo "exit $status"
-printf '1\n4\nyes\n' | bunix-install; echo "install exit $status"
+# a console install (2), for the user "tester"
+printf '1\n4\n2\nTest User\ntester\nsecret\nsecret\nyes\n' | bunix-install; echo "install exit $status"
+# the accounts: tester in wheel, root's password locked; then root's empty
+# password again, so dual-boot.txt gets console-shell's root shell
+mkdir -p /mnt/root; mount /dev/disk/by-partlabel/root /mnt/root; grep -E '^(root|tester):' /mnt/root/etc/passwd; grep '^wheel:' /mnt/root/etc/group; awk -F: '$1 == "root" || $1 == "tester" { print $1, substr($2, 1, 4) }' /mnt/root/etc/shadow; ls /mnt/root/var/lib/extensions 2>&1; usermod --prefix /mnt/root --password '' root; umount /mnt/root
 sfdisk -d /dev/vda; lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE /dev/vda
 for p in vda2 vda3 vda4; head -c 16M /dev/$p | sha256sum; end > /root/after.sha256; sha256sum /root/before.sha256 /root/after.sha256
 mount /dev/vda1 /mnt/esp; find /mnt/esp -type f; umount /mnt/esp; efibootmgr

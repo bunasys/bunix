@@ -25,8 +25,16 @@
 # bunix must sit on the same disk as the ESP it boots from: the initrd finds
 # the root partition on that disk.  A disk without an ESP gets its own.
 #
-# Questions are read from standard input, so a test can answer them:
-#   printf '1\n2\nyes\n' | bunix-install
+# On the root file system it also puts the person's account, an
+# administrator through run0 (wheel), and, for a desktop, the `desktop`
+# extension from the medium, turned on, so the first boot shows the login
+# screen.  Root gets a locked password: nobody logs in as root, and the
+# console asks for a login instead of opening root's shell.
+#
+# Questions are read from standard input, so a test can answer them (disk,
+# place, desktop or console, name, user name, password twice, confirmation;
+# tools/boot-checks/install-*.txt answer them in this order):
+#   printf '1\n2\n1\nSara\nsara\nsecret\nsecret\nyes\n' | bunix-install
 set -euo pipefail
 # so that a failed $(ask ...) inside a function stops the script too
 shopt -s inherit_errexit
@@ -60,7 +68,7 @@ ask() {
   local answer
   printf '%s ' "$1" >&2
   read -r answer || die "no answer"
-  echo "$answer"
+  printf '%s\n' "$answer"
 }
 
 # Asks for a number from 1 to $2; prints it less one, an array index
@@ -71,6 +79,16 @@ ask_number() {
   [[ "$answer" =~ ^[0-9]+$ ]] || die "not a number: $answer"
   [ "$answer" -ge 1 ] && [ "$answer" -le "$count" ] || die "no such choice: $answer"
   echo $(( answer - 1 ))
+}
+
+# A password: not echoed on a terminal, and taken as typed, spaces at its
+# ends too (IFS=)
+ask_secret() {
+  local answer
+  printf '%s ' "$1" >&2
+  IFS= read -rs answer || die "no answer"
+  echo >&2
+  printf '%s\n' "$answer"
 }
 
 new_uuid() { cat /proc/sys/kernel/random/uuid; }
@@ -234,6 +252,50 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
   [ "$esp_free_mib" -ge 8 ] || die "the ESP ($esp) has only $esp_free_mib MiB free; bunix needs 8"
 fi
 
+# --- the system and its user --------------------------------------------
+
+# Asked, and checked, before anything on the disk changes: a failure
+# later would leave the disk half installed
+echo
+echo "Install:"
+echo "  1) the desktop: Hyprland, with a login screen"
+echo "  2) the console only: text, no graphics"
+systems=(desktop console)
+index=$(ask_number "Which?" ${#systems[@]})
+system=${systems[$index]}
+desktop_image=$files/desktop_$release.raw
+if [ "$system" = desktop ] && [ ! -e "$desktop_image" ]; then
+  die "the medium has no desktop extension (desktop_$release.raw)"
+fi
+
+echo
+echo "Your account.  It can run administrator commands (run0); root itself"
+echo "cannot log in."
+full_name=$(ask "Your name:")
+# (they separate the fields of /etc/passwd and of its name field)
+case $full_name in
+  *:*|*,*) die "the name cannot contain ':' or ','" ;;
+esac
+
+user_name=$(ask "User name (lower case, like \"sara\"):")
+valid_user_name='^[a-z_][a-z0-9_-]{0,31}$'
+[[ "$user_name" =~ $valid_user_name ]] ||
+  die "a user name is lower-case letters, digits, '-' and '_', starting with a letter or '_': $user_name"
+# The system's own accounts and groups: the live system has the same ones
+# as the installed system, except those of the extensions it has not
+# merged -- the desktop's greeter (base/greetd.bst).  useradd also makes a
+# group of the user's name, so that name must be free too.
+taken=no
+getent passwd "$user_name" >/dev/null && taken=yes
+getent group "$user_name" >/dev/null && taken=yes
+[ "$user_name" = greeter ] && taken=yes
+[ "$taken" = no ] || die "\"$user_name\" is one of the system's own names"
+
+password=$(ask_secret "Password:")
+[ -n "$password" ] || die "the password is empty"
+password_again=$(ask_secret "Password again:")
+[ "$password" = "$password_again" ] || die "the passwords differ"
+
 # --- confirm, then clear the place --------------------------------------
 
 case $kind in
@@ -343,6 +405,37 @@ ln -s usr/bin "$WORK"/root/bin
 ln -s usr/bin "$WORK"/root/sbin
 ln -s usr/lib "$WORK"/root/lib
 ln -s usr/lib/x86_64-linux-gnu "$WORK"/root/lib64
+
+# --- the system and its user, on the new root ---------------------------
+
+echo "Creating your account..."
+# The system's own accounts first, so that wheel exists to join: made as
+# the first boot would make them, from /usr's sysusers.d.  The new root
+# has no /usr of its own (that is the verity partition, mounted at boot),
+# so they come from the live system's, the same release's.  (Warnings
+# only: it would list every account it makes.)
+cat /usr/lib/sysusers.d/*.conf | SYSTEMD_LOG_LEVEL=warning systemd-sysusers --root="$WORK"/root -
+# useradd's defaults (the id range, the password hash, the shell), which
+# the first boot would copy too
+mkdir -p "$WORK"/root/etc/default
+cp /usr/share/factory/etc/login.defs "$WORK"/root/etc/
+cp /usr/share/factory/etc/default/useradd "$WORK"/root/etc/default/
+useradd --prefix "$WORK"/root --create-home --comment "$full_name" --groups wheel "$user_name"
+printf '%s:%s\n' "$user_name" "$password" | chpasswd --prefix "$WORK"/root
+# Root: a random password, locked.  Without a hash console-shell would take
+# root for a machine nobody has set up yet and open its shell.
+printf 'root:%s\n' "$(head -c 32 /dev/urandom | base64)" | chpasswd --prefix "$WORK"/root
+usermod --prefix "$WORK"/root --lock root
+
+if [ "$system" = desktop ]; then
+  echo "Adding the desktop..."
+  # Where sysupdate keeps the extension's versions, and its feature turned
+  # on, so updates bring the next ones (/usr/lib/sysupdate.d/desktop.feature,
+  # 54-desktop.transfer)
+  mkdir -p "$WORK"/root/var/lib/extensions/desktop.raw.v "$WORK"/root/etc/sysupdate.d/desktop.feature.d
+  cp "$desktop_image" "$WORK"/root/var/lib/extensions/desktop.raw.v/
+  printf '[Feature]\nEnabled=true\n' > "$WORK"/root/etc/sysupdate.d/desktop.feature.d/enable.conf
+fi
 sync
 
 # --- the firmware boot entry --------------------------------------------
@@ -384,6 +477,7 @@ fi
 
 echo
 echo "bunix $release is installed on $disk (boot entry Boot$bunix_entry)."
+echo "Log in as \"$user_name\"."
 if [ "$has_windows" = yes ]; then
   echo "Windows stays the default: to start bunix, choose \"bunix\" in the"
   echo "firmware's boot menu (a key like F12, F11 or Esc at power-on)."
