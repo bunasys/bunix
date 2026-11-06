@@ -1,0 +1,15 @@
+# Keys only, root only: the machine is reached through `fly proxy` (Fly's
+# private network), never from the internet.
+# Port 22 is Fly's own SSH server (`fly ssh console`)
+Port 2022
+PermitRootLogin prohibit-password
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+# start.sh writes the keys from the AUTHORIZED_KEYS environment variable
+AuthorizedKeysFile /etc/ssh/authorized_keys
+HostKey /data/ssh/ssh_host_ed25519_key
+# A client that vanished (this Mac asleep, its network gone) sends no
+# goodbye: without these its connection would look alive for two hours,
+# keeping the machine up and billed (start.sh counts SSH connections).
+ClientAliveInterval 60
+ClientAliveCountMax 3

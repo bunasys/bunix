@@ -1,0 +1,7 @@
+# Only for building the image (tools/fly/README.md): the machine itself is
+# made with `flyctl machine run`, so it has no services and no public address.
+app = "bunix-build"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"

@@ -1,0 +1,5 @@
+{
+  "BlockThirdPartyCookies": true,
+  "HttpsOnlyMode": "force_balanced_enabled",
+  "MetricsReportingEnabled": false
+}

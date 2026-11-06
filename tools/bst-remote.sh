@@ -19,6 +19,8 @@
 #   BUNIX_BUILD_VENV=/opt/bst/venv BUNIX_BUILD_PATH=/opt/bst/bin:/usr/bin \
 #   BUNIX_BUILD_KEYS=no tools/bst-remote.sh build base/mesa.bst
 #
+# The Fly.io build machine: tools/bst-fly.sh (tools/fly/README.md).
+#
 # BUNIX_BUILD_PATH: the whole PATH bst runs with, for a host whose
 # bubblewrap is not in the SSH session's PATH.
 set -euo pipefail
@@ -35,12 +37,18 @@ SSH=(ssh)
 if [ -n "${BUNIX_BUILD_SSH_KEY:-}" ]; then
   SSH=(ssh -i "$BUNIX_BUILD_SSH_KEY")
 fi
+# BUNIX_BUILD_SSH_OPTS: more ssh options, split on spaces (tools/bst-fly.sh
+# passes a port and a host key alias)
+if [ -n "${BUNIX_BUILD_SSH_OPTS:-}" ]; then
+  SSH+=($BUNIX_BUILD_SSH_OPTS)
+fi
 RUN=""
 if [ -n "${BUNIX_BUILD_PATH:-}" ]; then
   RUN="env PATH=$BUNIX_BUILD_PATH "
 fi
-# out/: release files and test images made here, which no build reads
-EXCLUDE=(--exclude '.stage*.log' --exclude /out)
+# out/: release files and test images made here, which no build reads.
+# .bst/: the host's own BuildStream state (its workspaces), kept there.
+EXCLUDE=(--exclude '.stage*.log' --exclude /out --exclude /.bst)
 if [ "${BUNIX_BUILD_KEYS:-yes}" = no ]; then
   # only elements that sign (system/uki.bst, the sysext images) read keys/
   EXCLUDE+=(--exclude /keys)

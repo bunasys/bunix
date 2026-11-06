@@ -1,6 +1,9 @@
 # A browser for bunix
 
-Status: plan (2026-11-05).  Nothing built yet.
+Status (2026-11-06): being built.  Phase 0 (toolchain and libraries)
+built on the Fly machine; Shields' engine built and tested.  Chromium 157
+compiles with Buna's changes and runs (headless, on the Fly machine);
+its packaged build and the desktop extension are next.
 
 ## The goal
 
@@ -18,7 +21,7 @@ privacy defaults:
 Out of scope: Brave's Rewards, wallet, VPN, AI assistant and news.
 
 The browser is called **Buna Browser** (Chromium's and Brave's names and
-logos are trademarks).
+logos are trademarks).  It is part of the desktop extension.
 
 ## Decisions
 
@@ -27,165 +30,208 @@ logos are trademarks).
 | Name | Buna Browser |
 | Build host | a Fly.io machine, 16 CPUs and 48 GB, run only while building (tools/bst-fly.sh, tools/fly/README.md): about $1 an hour, $35 a month for its 200 GB cache volume |
 | H.264 and AAC | yes: `proprietary_codecs = true`, `ffmpeg_branding = "Chrome"` |
-| Ad blocking | adblock-rust built in from the start (Shields option A); no extension in between |
+| Ad blocking | adblock-rust built in from the start; no extension in between |
+| Where it ships | the desktop extension |
+
+## The elements
+
+| Element | What | Rebuilt when |
+| --- | --- | --- |
+| base/chromium.bst | Chromium 157 with Buna's changes, in /usr/lib/buna-browser: hours on the Fly machine | Chromium, a patch, the Shields code or the toolchain changes |
+| base/buna-shields.bst | the Shields engine (libbuna_shields.so) and the filter lists compiled into shields.dat | the lists or the engine change |
+| base/buna-browser.bst | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
+
+The split matters because BuildStream rebuilds an element from scratch
+when any of its inputs changes: a new filter list must not cost a
+Chromium build.  base/chromium.bst therefore reads only the engine's
+header (files/buna-browser/shields/include), not the engine.
+
+Build tools, only for Chromium: base/llvm-23.bst, base/chromium-rust.bst,
+base/crubit.bst, base/nodejs.bst, base/bindgen.bst, base/go.bst.
+Libraries it takes from the system: NSS and NSPR (certificates; its TLS
+is its own BoringSSL), at-spi2-core (accessibility), GLib, D-Bus, GTK 4,
+Fontconfig, Mesa's GBM, libdrm, xkbcommon, Wayland, libffi, libpci (GPU
+ids), libudev, ALSA, PipeWire (screen sharing).  Everything else (ICU, FFmpeg,
+HarfBuzz, libvpx, ...) stays Chromium's own copy: unbundling means more
+patches with every release, for little gain.
+
+### What Chromium needs from the toolchain
+
+Found in Chromium 157's source (2026-11-06):
+
+- **clang**: Chromium follows LLVM's development branch (157 is built with
+  LLVM 24's).  LLVM 22, the system's, is too old, and Mesa and Zig are
+  pinned to it, so the browser gets its own build-only LLVM 23.1.5
+  (base/llvm-23.bst, in /usr/lib/llvm-23).
+- **compiler-rt**: Chromium links clang's `builtins` and `profile`
+  runtime libraries from clang's own directory; base/llvm-23.bst builds
+  those two.
+- **Rust and Crubit**: Chromium 157 calls some of its Rust code (Blink's
+  fonts, QR codes, CBOR, web bundles, ...) through C++ bindings made by
+  Crubit's `cc_bindings_from_rs`, which only works with Chromium's own
+  toolchain layout (`third_party/rust-toolchain`): a nightly rustc, the
+  standard library's source (Chromium compiles it itself) and rustc's
+  crates, which the generator is built against.  The system's Rust
+  (`rust_sysroot_absolute`) is no longer enough, so base/chromium-rust.bst
+  builds the 2026-09-10 nightly, the closest after Chromium's pinned
+  commit (2026-09-09; no standard library file added or removed in
+  between) against LLVM 23,
+  and base/crubit.bst builds the generator at Chromium's pinned revision
+  into it.  Chromium's other Crubit tool, `rs_bindings_from_cc`, is off by
+  default and not built.
+- **bindgen**: Chromium runs it for the C libraries its Rust code calls
+  (base/logging, HarfBuzz, BoringSSL, ...): base/bindgen.bst, with LLVM
+  23's libclang, and tidies the output with Chromium's Rust's rustfmt
+  (Crubit's bindings too).
+- **Node.js**: Chromium 157 is built with Node 24 and checks the exact
+  version; base/nodejs.bst is the newest Node 24, and the check is given
+  its version.  Node 24's `configure` refuses Python 3.15 by name, so
+  `configure.py` is called directly.
+- **gn**: bootstrapped from its source in the tarball, with LLVM 23's
+  clang (its bootstrap looks for clang on PATH).
+- **Go**: Dawn (WebGPU) generates part of Tint, its shader compiler, with
+  a Go program during the build; it needs only Go's standard library.
+  base/go.bst is Go 1.26 from source, compiled by a pinned binary Go 1.25
+  (bootstrap/go-seed.bst), as Rust is from bootstrap/rust-seed.bst.
+- **System libraries instead of Google's sysroot**: libffi
+  (`use_system_libffi`), libpci (ANGLE's GPU ids), and OpenGL's headers
+  from Mesa through a small gl.pc (Mesa installs none without GLX).
+- **Left out**: VR headsets (`enable_openxr = false`; OpenXR's loader
+  wants Vulkan's headers), besides CUPS, Kerberos, Qt, VA-API, Widevine
+  and Google's API keys.
+- **GTK**: `gtk_version = 4` builds against GTK 4's headers; GTK 3 is not
+  needed.
 
 ## How Brave is made
 
 brave-core is a set of patches and overriding files (`chromium_src/`) on
-top of Chromium, MPL-2.0.  The parts that matter here:
+top of Chromium, MPL-2.0.  Its ad blocking is
+[adblock-rust](https://github.com/brave/adblock-rust) (MPL-2.0): the
+browser asks it about every network request, and it hands out CSS
+selectors that hide ads on the page.  Brave Search is already one of
+Chromium's built-in engines; Brave only makes it the default.
+Fingerprinting protection ("farbling") is many patches spread over Blink.
 
-- **Ad blocking** is [adblock-rust](https://github.com/brave/adblock-rust)
-  (MPL-2.0): a Rust engine that reads EasyList and uBlock Origin filter
-  lists.  The browser asks it about every network request, and it also
-  hands out CSS selectors that hide ads on the page (cosmetic filtering).
-  Brave downloads the lists from its own servers.
-- **Search**: Brave Search is already one of Chromium's built-in engines
-  (`components/search_engines/prepopulated_engines.json`, id 109); Brave
-  only makes it the default.
-- **Fingerprinting protection** ("farbling") adds random noise to canvas,
-  audio and other APIs: many patches spread over Blink.
-- The Shields panel and its per-site settings are Brave's own UI.
+## Shields
 
-## Building Chromium here
+Full uBlock Origin was not an option (Chromium removed Manifest V2), nor
+its Manifest V3 version (a stopgap with fixed rule limits); Chromium's own
+`subresource_filter` blocks requests only.  Shields are Brave's engine
+built in:
 
-One element, `base/chromium.bst` (kind `manual`):
+- **The engine** (files/buna-browser/shields): adblock-rust 0.13 behind a
+  small C interface, in a shared library of its own.  Not linked into
+  Chromium: Chromium links its own Rust standard library, and two copies
+  in one binary clash.  The browser loads it at start
+  (`base::LoadNativeLibrary`) from its own directory; if it is missing,
+  the browser works without Shields.  adblock-rust's `single-thread`
+  feature is off: the engine is loaded on one thread and used on another.
+- **The lists**, pinned like any source and compiled into shields.dat
+  when the engine is built (loading it takes milliseconds, parsing the
+  lists seconds; uBlock Origin's `!#if` blocks are resolved for a
+  Chromium browser, so Firefox-, Safari- and mobile-only rules are left
+  out): EasyList and EasyPrivacy (from uBlock Origin's uAssets,
+  which carries them), uBlock Origin's filters, privacy, unbreak and
+  quick-fix lists, and Liste AR for Arabic sites.  Refreshed with each
+  browser release; nothing is fetched from anyone's server.
+- **Requests** (chrome/browser/buna_shields/shields_url_loader_factory):
+  every web page's and worker's requests go through a factory placed in
+  front of the network (`WillCreateURLLoaderFactory`, the hook Chromium's
+  own extensions use), and so do their redirects.  Blocked requests fail
+  with `ERR_BLOCKED_BY_CLIENT`, as in any ad blocker; a tab's own page is
+  never blocked.  Whether a request is third-party is decided against the
+  document that makes it (for a sandboxed frame, the site it came from).
+  WebSockets do not go through this factory: `$websocket` rules do not
+  apply yet.
+- **Hiding** (shields_tab_helper): once a frame's document is parsed, and
+  again once it has loaded, the site's own hiding rules apply, and the
+  page's classes and ids are collected (in an isolated world the page
+  cannot see) to find the generic rules that match them.
+- **The per-site switch** is Chromium's "ads" content setting, which page
+  info now shows on every site (patch 04): Block (the default) is Shields
+  up, Allow is down.
 
-- **Source**: Google's official tarball for distributions,
-  `chromium-<version>-lite.tar.xz` from `chromium-browser-official`,
-  pinned by checksum.  "Lite" leaves out the Debian sysroots and the
-  bundled clang and Rust: distributions bring their own.  Our patches come
-  as `patch` sources (the plugin is already in project.conf), from
-  `files/chromium/patches/`.
-- **gn** (Chromium's build file generator) is bootstrapped from the
-  tarball; ninja is base's.
-- **Toolchain**: our clang, lld and Rust, not Google's.  Chromium follows
-  LLVM's and Rust's development branches, so a released toolchain needs a
-  few flags and patches; Gentoo and Arch keep such patches and are the
-  reference.  Chromium's own libc++ stays (every distribution keeps it).
-- **Bundled libraries stay bundled** (ICU, HarfBuzz, FFmpeg, libvpx, ...),
-  except what Chromium always takes from the system (fontconfig, NSS,
-  Mesa's GBM, libdrm, libxkbcommon, Wayland, D-Bus, ALSA).  Unbundling
-  means more patches with every release, for little gain.
+Not yet (phase 3):
+- uBlock Origin's resources: scriptlets (anti-anti-adblock scripts, which
+  must run before the page's own) and the harmless stand-ins that
+  `$redirect` rules serve instead of a blocked script.  Without them a
+  `$redirect` rule blocks outright, which can stall a page that waits for
+  the script (Google Tag Manager's callback, for one).
+- Hiding with a user style sheet, from the renderer: today's `<style>`
+  element is the page's own kind of style, so an inline `!important`
+  beats it and the page can find and remove it.
+- Re-hiding as pages change after load; matching off the UI thread;
+  WebSockets.
+- An engine panic aborts the browser (panic = "abort": it must not unwind
+  into C++); none is known in adblock-rust 0.13.
 
-A first `args.gn`:
+## Defaults
 
-```
-is_official_build = true
-is_debug = false
-symbol_level = 0
-treat_warnings_as_errors = false
-use_sysroot = false
-is_clang = true
-clang_base_path = "/usr"
-use_lld = true
-rust_sysroot_absolute = "/usr"
-ozone_platform = "wayland"
-ozone_platform_wayland = true
-ozone_platform_x11 = false
-use_cups = false
-use_kerberos = false
-use_pulseaudio = false       # ALSA; pipewire-alsa makes PipeWire ALSA's default device
-rtc_use_pipewire = true      # screen sharing through xdg-desktop-portal
-enable_widevine = false
-proprietary_codecs = true
-ffmpeg_branding = "Chrome"   # FFmpeg with H.264 and AAC
-```
+- **Search**: Chromium lists its search engines per country in a data
+  file; files/buna-browser/scripts/brave-search-first.py moves Brave to
+  the front of every country's list (the first is the default) when
+  Chromium is built.  Done on the data, not as a patch, so it keeps
+  working as Google edits the lists.
+- **Recommended policies** (the user can change them), in
+  /usr/share/buna-browser/policies (patch 05: vendor defaults belong in
+  the signed /usr): third-party cookies blocked, HTTPS-First (balanced),
+  no usage reports.
+- **First-run preferences** (/usr/lib/buna-browser/initial_preferences):
+  no sign-in, WebRTC shows only the public address, no first-run screens.
+  Enforced policies would show "Managed by your organization", so none
+  are used.
+- No "Google API keys are missing" bar (patch 07): there are no Google
+  services to miss them.
+- The profile lives in ~/.config/buna-browser (patch 06).
 
-### What bunix does not have yet
+## Patches
 
-| Missing | Why Chromium needs it |
+files/buna-browser/patches, made from a pristine tree by
+files/buna-browser/patches/make-patches.py: every edit names the exact text
+it replaces, so a new Chromium version that moved it fails loudly there.
+
+| Patch | What |
 | --- | --- |
-| Rust's std sources (`rust-src`) | Chromium compiles Rust's standard library itself; bootstrap/rust.bst installs only rustc and cargo |
-| compiler-rt (clang's runtime libraries) | clang links them into Chromium; base/llvm.bst builds clang and lld only |
-| Possibly a newer LLVM | Chromium tracks LLVM's main branch; LLVM 22 may be too old for Chromium 157 |
-| Node.js (build only) | Chromium generates its built-in pages and DevTools with it |
-| NSS and NSPR | certificates and the system's trusted roots (Chromium's TLS itself is its bundled BoringSSL) |
-| at-spi2-core | accessibility (screen readers), required on Linux |
-| GTK 3 headers, or no GTK | `use_gtk` builds against GTK 3 even when it runs with GTK 4; without GTK the file chooser goes through xdg-desktop-portal |
+| 01-shields-network | the request blocker in WillCreateURLLoaderFactory |
+| 02-shields-tab-helper | the element hider on every tab |
+| 03-shields-build | Shields' sources in the browser's build |
+| 04-shields-page-info-switch | the per-site switch in page info on every site |
+| 05-policy-path | policies from /usr/share/buna-browser/policies |
+| 06-profile-directory | ~/.config/buna-browser |
+| 07-no-api-keys-infobar | no "Google API keys are missing" bar |
 
-### What it costs
+## What it costs
 
-- **Build time**: by far the largest package.  Roughly a working day on 8
-  cores, and every new version is a full rebuild (the source changes, so
-  the cache key does).
-- **Memory**: the heavy files take 1-2 GB each to compile, and linking
-  the `chrome` binary takes several GB on its own.  pro13 (7 GB) can only
-  run 2-3 jobs, which makes a build take days.  A build host with 32 GB
-  and 16 or more cores is the realistic minimum.  Under Rosetta on the Mac
-  it is not practical.
-- **Cadence**: Chrome moved to a new major version every two weeks (from
-  153), with security fixes in between.  The browser has to be rebuilt
-  and shipped every week or two: the "continuously built" goal
-  (docs/updates.md) at its hardest.
+- **Build time**: by far the largest package, and every new version is a
+  full rebuild.  On the Fly machine's 16 CPUs, an estimated 4-6 hours,
+  about $5.
+- **Cadence**: Chrome moves to a new major version every two weeks (from
+  153), with security fixes in between: a rebuild every week or two.
 - **Size**: about 300 MB installed.
-
-## Defaults without patches
-
-Chromium reads policies, JSON files that set or lock its settings, from
-`/etc/chromium/policies/{managed,recommended}/`.  *Recommended* policies
-are defaults the user can still change.  These cover much of Shields at
-no cost:
-
-| Setting | Policy |
-| --- | --- |
-| Block third-party cookies | `BlockThirdPartyCookies` |
-| Upgrade to HTTPS | `HttpsOnlyMode` / `HttpsUpgradesEnabled` |
-| Hide the local IP from WebRTC | `WebRtcIPHandling` |
-| No sign-in or sync | `BrowserSignin`, `SyncDisabled` |
-| No usage reports | `MetricsReportingEnabled` |
-
-Two small patches go with them:
-
-- The policy directory moves to `/usr/share/buna-browser/policies`: vendor
-  defaults belong in the signed /usr, and /etc stays the machine's own.
-- Brave Search becomes the first engine for every country.  The search
-  policies (`DefaultSearchProvider*`) can only be enforced, not
-  recommended, and an enforced one shows "Managed by your organization".
-
-## Shields: three ways to block ads
-
-| | How | Blocks | Our work |
-| --- | --- | --- | --- |
-| A | adblock-rust inside the browser, as Brave does | requests, cosmetic filters, scriptlets: everything uBlock Origin's lists say | a hook in the network service, CSS injection in pages, the per-site switch and panel, list updates |
-| B | Chromium's own `subresource_filter`, fed with EasyList (Bromite's and Cromite's way) | requests only, no cosmetic filtering | one patch and a list converter (`ruleset_converter`, in Chromium) |
-| C | uBlock Origin Lite preinstalled | requests, some cosmetic filtering, within Manifest V3's limits | none: a file in `/usr/share/buna-browser/extensions/` |
-
-Full uBlock Origin is not an option: it needs Manifest V2, which Chromium
-removed (around 150-151).  Cromite's patches are GPL-3: reading them is
-fine, copying them makes the browser GPL-3.
-
-Chosen: **A, from the start.**  It is what Shields is, and C's Manifest V3
-limits would only be a stopgap.  adblock-rust is Rust, which Chromium
-already knows how to build (its crates are vendored and built by GN).
-Filter lists ship in the image and are refreshed with every browser
-release (every two weeks anyway), so nothing is fetched from a third
-party's server by default.
 
 ## Phases
 
-0. **Prerequisites.**  A build host big enough (see above).  `rust-src`
-   and compiler-rt in the toolchain; LLVM bumped if Chromium needs it;
-   Node.js, NSS, NSPR, at-spi2-core.
-1. **Plain Chromium on Hyprland.**  base/chromium.bst, Wayland only.  Test
-   in QEMU (virtio-gpu): it starts, loads a page over HTTPS, lays out an
-   Arabic page right to left, plays sound.
-2. **Buna Browser.**  Name and icon, Brave Search, the policies above, no
-   Google services.  Not shipped yet: without Shields it is just Chromium.
-3. **Shields.**  adblock-rust built into the browser: requests blocked in
-   the network service, cosmetic filters and scriptlets injected into
-   pages, EasyList, EasyPrivacy and uBlock Origin's lists in the image, the
-   per-site switch and panel in the address bar.  Then shipped to desktop
-   machines.
+0. **Prerequisites.**  NSS, NSPR, at-spi2-core built; LLVM 23 with
+   compiler-rt, Node 24, bindgen building.
+1. **Chromium on Hyprland**, with Buna's changes (base/chromium.bst).
+   Test in QEMU (virtio-gpu): it starts, loads a page over HTTPS, lays out
+   an Arabic page right to left, plays sound; Shields block a known ad.
+2. **Buna Browser in the desktop extension** (base/buna-browser.bst):
+   launcher, desktop entry, icons, defaults; rebranding of the browser's
+   own name and logos inside it.
+3. **Shields, the rest**: scriptlets, re-hiding on page changes, the
+   Shields panel.
 4. **Fingerprinting protection**, a few of Brave's protections at a time.
 
 ## Open points
 
+- The browser still calls itself Chromium inside (about page, menus):
+  rebranding its strings keeps Chromium's Arabic translations only if
+  their message ids are recomputed (as Brave's tooling does).
+- The Arabic spelling of "Buna" for the desktop entry.
+- The icon is the Buna logo; a browser icon of its own is not designed.
 - Shields: whether to have an element picker ("block this on the page"),
   and whether users can add their own filter lists.
-- Its own system extension (`browser`) or part of `desktop`.  Its own
-  fits better: it is large and updates far more often than the rest.
-- GTK 3 headers for the GTK integration, or no GTK and the portal's file
-  chooser (needs xdg-desktop-portal and a back end that has one).
 - Sound (phase 1 test): ALSA reaches PipeWire through the pipewire-alsa
   plugin, which needs the system's alsa-lib (1.2.15 or newer symbols).
   Google's prebuilt Chromium on the test machine was silent until its

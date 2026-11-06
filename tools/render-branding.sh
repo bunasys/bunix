@@ -19,3 +19,13 @@ rm -f "$transparent"
 # 24-bit BMP is what the stub reads.  Needs ImageMagick.
 magick files/plymouth/bunix/watermark.png -background black -flatten \
   -type truecolor BMP3:files/branding/splash.bmp
+
+# Buna Browser's icons (base/buna-browser.bst): the boot splash's picture
+# (the logo without its white background), centred on a transparent square,
+# at the sizes desktops ask for.  Made from the PNG, not the SVG:
+# ImageMagick's own SVG renderer loses the logo's gradients.
+mkdir -p files/buna-browser/install/icons
+for size in 16 24 32 48 64 128 256; do
+  magick files/plymouth/bunix/watermark.png -background none -resize ${size}x${size} \
+    -gravity center -extent ${size}x${size} files/buna-browser/install/icons/$size.png
+done

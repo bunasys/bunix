@@ -2,8 +2,8 @@ kind: stack
 description: |
   What the desktop extension is made from: the graphical system
   (docs/desktop.md, phase 3; docs/schematics.md, "Desktop or console").
-  The drivers (Mesa, libinput, seatd, ALSA), Hyprland, GTK 4, Ghostty and
-  the desktop's fonts.
+  The drivers (Mesa, libinput, seatd, ALSA), Hyprland, GTK 4, Ghostty,
+  Buna Browser (docs/browser.md) and the desktop's fonts.
   sysext/desktop-tree.bst keeps only what the root file system does not
   have.
 
@@ -13,6 +13,7 @@ depends:
 - base/pipewire.bst
 - base/wireplumber.bst
 - base/ghostty.bst
+- base/buna-browser.bst
 - base/buna-login.bst
 - base/greetd.bst
 - base/cage.bst

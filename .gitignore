@@ -2,3 +2,4 @@
 # the Secure Boot signing key: private
 keys/
 out/
+files/buna-browser/shields/target/

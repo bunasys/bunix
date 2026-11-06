@@ -1,0 +1,15 @@
+{
+  "signin": {
+    "allowed": false
+  },
+  "webrtc": {
+    "ip_handling_policy": "default_public_interface_only"
+  },
+  "browser": {
+    "check_default_browser": false
+  },
+  "distribution": {
+    "skip_first_run_ui": true,
+    "suppress_first_run_default_browser_prompt": true
+  }
+}
