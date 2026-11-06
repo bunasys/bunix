@@ -3,7 +3,7 @@
 # own boot entry, mounts its XBOOTLDR on /boot and the shared ESP on /efi,
 # and systemd-boot lists only bunix (no Windows entry: auto-entries no).
 
-systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep IMAGE_VERSION /etc/os-release
+systemctl is-system-running; systemctl --failed --no-legend --no-pager; grep IMAGE_VERSION /etc/os-release; hostnamectl hostname
 findmnt -n -o TARGET,SOURCE,FSTYPE / /usr /efi /boot 2>&1 | cut -c1-100
 lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE,MOUNTPOINTS /dev/vda
 efibootmgr | grep -E 'BootCurrent|BootOrder|^Boot0'

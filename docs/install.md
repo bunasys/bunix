@@ -69,6 +69,9 @@ asks:
   `/var/lib/extensions/desktop.raw.v/` and turns its sysupdate feature on,
   so the first boot shows the login screen and updates bring the
   extension's next versions.  A console install leaves both out.
+- **The computer's name**, written to `/etc/hostname`: one DNS label,
+  starting with a letter.  networkd sends it to the DHCP server, so the
+  router lists the machine by it.
 - **Your name, user name and password.**  The account is created on the
   new root file system: first the system's own accounts, as the first boot
   would make them (`systemd-sysusers --root`, from the live system's

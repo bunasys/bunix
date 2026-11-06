@@ -17,7 +17,7 @@ efibootmgr -q -c -d /dev/vda -p 1 -L 'Windows Boot Manager' -l '\EFI\Microsoft\B
 # the menus, without answering the second question
 printf '1\n' | bunix-install; echo "exit $status"
 # a console install (2), for the user "tester"
-printf '1\n4\n2\nTest User\ntester\nsecret\nsecret\nyes\n' | bunix-install; echo "install exit $status"
+printf '1\n4\n2\ntest-pc\nTest User\ntester\nsecret\nsecret\nyes\n' | bunix-install; echo "install exit $status"
 # the accounts: tester in wheel, root's password locked; then root's empty
 # password again, so dual-boot.txt gets console-shell's root shell
 mkdir -p /mnt/root; mount /dev/disk/by-partlabel/root /mnt/root; grep -E '^(root|tester):' /mnt/root/etc/passwd; grep '^wheel:' /mnt/root/etc/group; awk -F: '$1 == "root" || $1 == "tester" { print $1, substr($2, 1, 4) }' /mnt/root/etc/shadow; ls /mnt/root/var/lib/extensions 2>&1; usermod --prefix /mnt/root --password '' root; umount /mnt/root

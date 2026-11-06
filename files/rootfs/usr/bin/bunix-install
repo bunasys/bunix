@@ -32,9 +32,9 @@
 # console asks for a login instead of opening root's shell.
 #
 # Questions are read from standard input, so a test can answer them (disk,
-# place, desktop or console, name, user name, password twice, confirmation;
-# tools/boot-checks/install-*.txt answer them in this order):
-#   printf '1\n2\n1\nSara\nsara\nsecret\nsecret\nyes\n' | bunix-install
+# place, desktop or console, host name, name, user name, password twice,
+# confirmation; tools/boot-checks/install-*.txt answer them in this order):
+#   printf '1\n2\n1\nsara-laptop\nSara\nsara\nsecret\nsecret\nyes\n' | bunix-install
 set -euo pipefail
 # so that a failed $(ask ...) inside a function stops the script too
 shopt -s inherit_errexit
@@ -269,6 +269,18 @@ if [ "$system" = desktop ] && [ ! -e "$desktop_image" ]; then
 fi
 
 echo
+host_name=$(ask "This computer's name, on the network (like \"sara-laptop\"):")
+host_name=${host_name,,}
+# One DNS label (hostname(7)): networkd sends it to the DHCP server, whose
+# DNS may answer for it.  A letter first, as RFC 952 has it: "1234" would
+# be read as an IPv4 address.
+valid_host_name='^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$'
+[[ "$host_name" =~ $valid_host_name ]] ||
+  die "a computer's name is letters, digits and '-', at most 63, starting with a letter and not ending with '-': $host_name"
+# systemd takes it for "no name set"
+[ "$host_name" != localhost ] || die "\"localhost\" is every computer's name for itself"
+
+echo
 echo "Your account.  It can run administrator commands (run0); root itself"
 echo "cannot log in."
 full_name=$(ask "Your name:")
@@ -407,6 +419,10 @@ ln -s usr/lib "$WORK"/root/lib
 ln -s usr/lib/x86_64-linux-gnu "$WORK"/root/lib64
 
 # --- the system and its user, on the new root ---------------------------
+
+# Before the first boot, whose tmpfiles copy the factory name ("bunix")
+# only when /etc/hostname is missing
+echo "$host_name" > "$WORK"/root/etc/hostname
 
 echo "Creating your account..."
 # The system's own accounts first, so that wheel exists to join: made as
