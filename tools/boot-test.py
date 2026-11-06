@@ -11,7 +11,8 @@ same disk again, as a reboot would.  Under UEFI the firmware's variables
 
 BOOT_DISK=<file> attaches a disk image to an ISO run (bunix-install's
 target): create <outdir>/disk.raw, install to it from the ISO, then boot it
-with a disk run of the same <outdir>.
+with a disk run of the same <outdir>.  BOOT_USB=1 attaches the ISO as a USB
+stick instead of a CD.
 
 Boots the ISO's default GRUB entry, waits for boot to finish, then types each
 check on the VM's keyboard -- the screen console (tty1) runs root's fish on
@@ -23,7 +24,7 @@ Exits non-zero if a check did not finish.
 
 BOOT_KEYS=<text> is typed on the screen after boot, before the checks: a
 password at a desktop install's login screen, say.  "\\n" is Enter,
-"<meta_l-q>" a QEMU key name (lower case), "<sleep_10>" a pause.  The
+"<meta_l-ret>" a QEMU key name (lower case), "<sleep_10>" a pause.  The
 screenshot follows BOOT_KEYS_WAIT seconds later (default 20).
 
 BOOT_MEMORY sets the VM's memory (default 1G), BOOT_NIC its network card
@@ -60,6 +61,9 @@ OVMF_CANDIDATES = [
 
 iso, firmware, outdir = sys.argv[1], sys.argv[2], sys.argv[3]
 boots_disk = iso.endswith(".raw")
+boots_usb = bool(os.environ.get("BOOT_USB"))
+if boots_disk and boots_usb:
+    sys.exit("BOOT_USB is for ISO runs; this is a disk run")
 if os.environ.get("BOOT_CHECKS"):
     lines = open(os.environ["BOOT_CHECKS"]).read().splitlines()
     CHECKS = [line for line in lines if line.strip() and not line.startswith("#")]
@@ -81,10 +85,16 @@ if boots_disk:
         subprocess.run(["cp", "--sparse=always", iso, disk], check=True)
         os.truncate(disk, 8 * 1024**3)
     qemu_args += ["-drive", f"if=virtio,format=raw,file={disk}"]
+elif boots_usb:
+    # as a USB stick, which shows the ISO twice: the whole stick and a
+    # partition at the same place
+    qemu_args += ["-device", "qemu-xhci",
+                  "-drive", f"if=none,id=stick,format=raw,readonly=on,file={iso}",
+                  "-device", "usb-storage,drive=stick,bootindex=0"]
 else:
     qemu_args += ["-cdrom", iso, "-boot", "d"]
-    if os.environ.get("BOOT_DISK"):
-        qemu_args += ["-drive", f"if=virtio,format=raw,file={os.environ['BOOT_DISK']}"]
+if os.environ.get("BOOT_DISK") and not boots_disk:
+    qemu_args += ["-drive", f"if=virtio,format=raw,file={os.environ['BOOT_DISK']}"]
 if os.access("/dev/kvm", os.R_OK | os.W_OK):
     qemu_args += ["-accel", "kvm", "-cpu", "host"]
 else:
@@ -153,8 +163,8 @@ def monitor_command(command):
 
 
 def type_keys(text):
-    """BOOT_KEYS: text, with "<name>" for QEMU's key names (<meta_l-q> is
-    Super+Q) and "<sleep_N>" for a pause of N seconds, for what the keys
+    """BOOT_KEYS: text, with "<name>" for QEMU's key names (<meta_l-ret> is
+    Super+Return) and "<sleep_N>" for a pause of N seconds, for what the keys
     before it started."""
     for token in re.findall(r"<[a-z0-9_-]+>|[^<]+|<", text):
         sleep = re.fullmatch(r"<sleep_(\d+)>", token)

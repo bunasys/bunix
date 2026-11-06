@@ -105,7 +105,7 @@ device_of_partuuid() {
 }
 
 cleanup() {
-  for dir in "$WORK"/esp "$WORK"/boot "$WORK"/root "$WORK"/medium; do
+  for dir in "$WORK"/esp "$WORK"/boot "$WORK"/root; do
     mountpoint -q "$dir" && umount "$dir"
   done
   return 0
@@ -118,12 +118,15 @@ trap cleanup EXIT
 grep -qw bunix.live /proc/cmdline || die "bunix is installed already: bunix-install runs on the live ISO"
 
 # The release to install comes from the boot medium (system/iso.bst puts it
-# in install/), the files the live system's own /usr is mounted from.
-mkdir -p "$WORK"/medium "$WORK"/esp "$WORK"/boot "$WORK"/root
-[ -e /dev/disk/by-label/BUNIX ] || die "cannot find the boot medium (label BUNIX)"
-medium_device=$(readlink -f /dev/disk/by-label/BUNIX)
-mountpoint -q "$WORK"/medium || mount -o ro "$medium_device" "$WORK"/medium
-files=$WORK/medium/install
+# in install/), the files the live system's own /usr is mounted from.  Its
+# initrd mounted the medium already (files/live/usr/lib/bunix/live-usr) and
+# left it mounted.  Mounting it again fails on a USB stick: the stick and its
+# partition are both the medium, and the kernel mounts only one.
+medium=/run/bunix/medium
+mountpoint -q "$medium" || die "the boot medium is not mounted at $medium"
+medium_device=$(readlink -f "$(findmnt -no SOURCE "$medium")")
+files=$medium/install
+mkdir -p "$WORK"/esp "$WORK"/boot "$WORK"/root
 uki=$(ls "$files"/bunix_*.efi)
 release=$(basename "$uki" .efi)
 release=${release#bunix_}
@@ -144,7 +147,8 @@ echo
 # --- the disk -----------------------------------------------------------
 
 # The medium itself, or the disk it is a partition of, is not a choice
-medium_disk=$(lsblk -ndpo PKNAME "$medium_device")
+# (walking up through any loop or device-mapper layers, as on a Ventoy stick)
+medium_disk=$(lsblk -nslpo NAME,TYPE "$medium_device" | awk '$2 == "disk" { disk = $1 } END { print disk }')
 medium_disk=${medium_disk:-$medium_device}
 disks=()
 while read -r name type; do

@@ -91,6 +91,14 @@ root has no password hash at all, as on the live ISO).
   holds systemd-boot under that name too (system/esp.bst).
 - efivarfs files report a size of 0; uutils `od -j` cannot skip into them,
   so the installer reads the Secure Boot variable through a pipe.
+- On a USB stick the medium shows twice, the whole stick and a partition
+  at the same place (xorriso's `-partition_offset`), both labelled BUNIX,
+  and the kernel mounts only one of them.  The live initrd mounts one at
+  `/run/bunix/medium`; the installer used to mount the label again and
+  failed ("Can't open blockdev") when the label pointed at the other.  It
+  now reads the medium where the initrd mounted it (0.2.1).  A CD has one
+  device, so the QEMU tests, which used one, never saw it: `BOOT_USB=1`
+  attaches the ISO as a USB stick.
 
 ## Limits
 
