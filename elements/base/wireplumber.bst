@@ -39,3 +39,10 @@ config:
       mkdir -p $units/pipewire.service.wants
       ln -s ../wireplumber.service $units/pipewire.service.wants/wireplumber.service
       ln -s wireplumber.service $units/pipewire-session-manager.service
+      # PipeWire, and so this, start with each user's session, not on the
+      # first program that asks for sound: then PipeWire has no output
+      # until this adds the card a moment later, and a browser that found
+      # none stays silent.  (Here rather than in base/pipewire.bst, which
+      # Chromium builds against: a change there rebuilds Chromium.)
+      mkdir -p $units/default.target.wants
+      ln -s ../pipewire.service $units/default.target.wants/pipewire.service
