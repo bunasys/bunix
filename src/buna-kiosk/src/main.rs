@@ -9,7 +9,6 @@
 mod aq;
 
 use std::collections::HashMap;
-use std::ffi::{c_int, c_ulong};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -17,6 +16,11 @@ use aq::{Aquamarine, Event};
 
 /// The login screen's canvas, oklch(0.965 0.006 80) (src/buna-login/src/style.css)
 const CANVAS: u32 = 0xf6f3ef;
+
+/// A screen that could not be turned on or drawn is tried again after this,
+/// then after twice as long each time, up to RETRY_LONGEST.
+const RETRY_FIRST: Duration = Duration::from_secs(1);
+const RETRY_LONGEST: Duration = Duration::from_secs(30);
 
 // evdev key codes (linux/input-event-codes.h)
 const KEY_LEFTCTRL: u32 = 29;
@@ -27,21 +31,6 @@ const KEY_F1: u32 = 59;
 const KEY_F10: u32 = 68;
 const KEY_F11: u32 = 87;
 const KEY_F12: u32 = 88;
-
-#[repr(C)]
-struct PollFd {
-    fd: c_int,
-    events: i16,
-    revents: i16,
-}
-const POLLIN: i16 = 0x1;
-const POLLERR: i16 = 0x8;
-const POLLHUP: i16 = 0x10;
-const POLLNVAL: i16 = 0x20;
-
-unsafe extern "C" {
-    fn poll(fds: *mut PollFd, count: c_ulong, timeout_ms: c_int) -> c_int;
-}
 
 /// The VT a function key selects with Ctrl+Alt held, if it is one.
 fn vt_of_function_key(code: u32) -> Option<u32> {
@@ -88,14 +77,29 @@ impl Modifiers {
 struct Screen {
     /// Its mode is to be set (new, lost its mode, or back from another VT).
     needs_mode: bool,
-    /// The next frame must draw it.
+    /// It is to be drawn.
     dirty: bool,
+    /// The last try failed (logged once, until it works again).
+    failing: bool,
+}
+
+impl Screen {
+    fn pending(&self) -> bool {
+        self.needs_mode || self.dirty
+    }
+}
+
+/// When to try the failing screens again.
+struct Retry {
+    at: Option<Instant>,
+    delay: Duration,
 }
 
 struct Compositor {
     aquamarine: Aquamarine,
     screens: HashMap<u32, Screen>,
     modifiers: Modifiers,
+    retry: Retry,
 }
 
 impl Compositor {
@@ -110,37 +114,50 @@ impl Compositor {
         for output in outputs {
             self.update_screen(output);
         }
+
+        // Screens that failed are tried again later, on a timer that backs
+        // off: a commit that keeps failing must not spin a CPU
+        let any_pending = self.screens.values().any(|screen| screen.pending());
+        if !any_pending {
+            self.retry = Retry { at: None, delay: RETRY_FIRST };
+        } else if self.retry.at.is_none() {
+            self.retry.at = Some(Instant::now() + self.retry.delay);
+            self.retry.delay = (self.retry.delay * 2).min(RETRY_LONGEST);
+        }
     }
 
     fn update_screen(&mut self, output: u32) {
         let Some(mut screen) = self.screens.get(&output).copied() else { return };
         let name = self.aquamarine.output_name(output);
+
         if screen.needs_mode {
-            let Some((width, height)) = self.aquamarine.enable_output(output) else {
-                eprintln!("buna-kiosk: cannot turn on {name}");
-                return;
-            };
-            eprintln!("buna-kiosk: {name}: {width}x{height}");
-            screen.needs_mode = false;
-            screen.dirty = true;
+            match self.aquamarine.enable_output(output) {
+                Some((width, height)) => {
+                    eprintln!("buna-kiosk: {name}: {width}x{height}");
+                    screen.needs_mode = false;
+                    screen.dirty = true;
+                }
+                None if !screen.failing => eprintln!("buna-kiosk: cannot turn on {name}; trying again"),
+                None => {}
+            }
         }
-        // A failed fill stays dirty, and asks for a frame to try again on
-        if screen.dirty {
+        let can_draw = screen.dirty && !screen.needs_mode;
+        if can_draw {
             let filled = self.aquamarine.fill_output(output, CANVAS);
             if filled {
                 screen.dirty = false;
-            } else {
-                eprintln!("buna-kiosk: drawing on {name} failed; trying again on the next frame");
-                self.aquamarine.schedule_frame(output);
+            } else if !screen.failing {
+                eprintln!("buna-kiosk: drawing on {name} failed; trying again");
             }
         }
+        screen.failing = screen.pending();
         self.screens.insert(output, screen);
     }
 
     fn handle(&mut self, event: Event) {
         match event {
             Event::NewOutput(output) => {
-                self.screens.insert(output, Screen { needs_mode: true, dirty: true });
+                self.screens.insert(output, Screen { needs_mode: true, dirty: true, failing: false });
             }
             Event::OutputGone(output) => {
                 self.screens.remove(&output);
@@ -179,6 +196,27 @@ impl Compositor {
         }
         self.update();
     }
+
+    /// Runs until the deadline (None: forever), or until aquamarine breaks.
+    fn run(&mut self, deadline: Option<Instant>) -> Result<(), String> {
+        self.handle_events();
+        loop {
+            let now = Instant::now();
+            if deadline.is_some_and(|deadline| now >= deadline) {
+                return Ok(());
+            }
+            let retry_due = self.retry.at.is_some_and(|at| now >= at);
+            if retry_due {
+                self.retry.at = None;
+                self.update();
+            }
+
+            let wake_at = [deadline, self.retry.at].into_iter().flatten().min();
+            let timeout = wake_at.map(|at| at.saturating_duration_since(Instant::now()));
+            self.aquamarine.wait(timeout)?;
+            self.handle_events();
+        }
+    }
 }
 
 fn parse_exit_after(args: &[String]) -> Result<Option<Duration>, String> {
@@ -190,13 +228,6 @@ fn parse_exit_after(args: &[String]) -> Result<Option<Duration>, String> {
         }
         _ => Err("usage: buna-kiosk [--exit-after SECONDS]".to_string()),
     }
-}
-
-/// poll()'s timeout until the deadline: -1 (none) without one.
-fn timeout_ms(deadline: Option<Instant>) -> c_int {
-    let Some(deadline) = deadline else { return -1 };
-    let left = deadline.saturating_duration_since(Instant::now());
-    left.as_millis().min(c_int::MAX as u128) as c_int
 }
 
 fn main() -> ExitCode {
@@ -214,49 +245,21 @@ fn main() -> ExitCode {
         eprintln!("buna-kiosk: cannot open the screens (no DRM device, or no seat)");
         return ExitCode::FAILURE;
     };
-    let mut compositor = Compositor { aquamarine, screens: HashMap::new(), modifiers: Modifiers::default() };
-    if !compositor.aquamarine.start() {
+    if !aquamarine.start() {
         eprintln!("buna-kiosk: aquamarine did not start");
         return ExitCode::FAILURE;
     }
-    compositor.handle_events();
-
-    loop {
-        let deadline_passed = deadline.is_some_and(|deadline| Instant::now() >= deadline);
-        if deadline_passed {
-            // Exits without destroying aquamarine's backend, which would turn
-            // the screens off (docs/kiosk.md, "Leaving the screen lit")
-            std::process::exit(0);
-        }
-
-        let mut fds: Vec<PollFd> = compositor
-            .aquamarine
-            .poll_fds()
-            .into_iter()
-            .map(|fd| PollFd { fd, events: POLLIN, revents: 0 })
-            .collect();
-        let ready = unsafe { poll(fds.as_mut_ptr(), fds.len() as c_ulong, timeout_ms(deadline)) };
-        if ready < 0 {
-            let error = std::io::Error::last_os_error();
-            if error.kind() == std::io::ErrorKind::Interrupted {
-                continue;
-            }
-            eprintln!("buna-kiosk: poll: {error}");
-            return ExitCode::FAILURE;
-        }
-
-        for fd in &fds {
-            // A hung-up or broken fd (seatd gone, say) would wake poll() at
-            // once, forever: exit, and let greetd or systemd start a new one
-            let is_broken = fd.revents & (POLLERR | POLLHUP | POLLNVAL) != 0;
-            if is_broken {
-                eprintln!("buna-kiosk: fd {} broke (poll revents {:#x})", fd.fd, fd.revents);
-                return ExitCode::FAILURE;
-            }
-            if fd.revents & POLLIN != 0 {
-                compositor.aquamarine.dispatch(fd.fd);
-                compositor.handle_events();
-            }
+    let mut compositor = Compositor {
+        aquamarine,
+        screens: HashMap::new(),
+        modifiers: Modifiers::default(),
+        retry: Retry { at: None, delay: RETRY_FIRST },
+    };
+    match compositor.run(deadline) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(message) => {
+            eprintln!("buna-kiosk: {message}");
+            ExitCode::FAILURE
         }
     }
 }

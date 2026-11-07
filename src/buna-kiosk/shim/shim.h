@@ -53,8 +53,6 @@ const char* aq_output_name(aq_kiosk* kiosk, uint32_t output);
 /* Phase 1's whole renderer: fills the next buffer with one colour
  * (0xRRGGBB) through a CPU mapping, and commits it. */
 bool aq_output_fill(aq_kiosk* kiosk, uint32_t output, uint32_t rgb);
-/* Asks aquamarine for an AQ_EVENT_OUTPUT_FRAME on the output. */
-void aq_output_schedule_frame(aq_kiosk* kiosk, uint32_t output);
 
 bool aq_session_active(aq_kiosk* kiosk);
 bool aq_switch_vt(aq_kiosk* kiosk, uint32_t vt);

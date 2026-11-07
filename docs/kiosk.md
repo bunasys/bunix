@@ -157,7 +157,8 @@ shutting down"), and the boot as it is now depends on it: the login
 screen stays on screen until Hyprland draws over it.  So buna-kiosk, when
 the app has exited, closes its clients and exits the process without
 destroying the backend: the kernel drops DRM master with the CRTCs still
-lit, as after cage.  This is tested in phase 1.
+lit, as after cage.  Phase 1 could not show it in QEMU (Status, above):
+checked again with the greetd hand-over in phase 4.
 
 ### The Wayland server
 

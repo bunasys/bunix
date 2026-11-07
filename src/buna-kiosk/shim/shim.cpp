@@ -276,16 +276,6 @@ bool aq_output_fill(aq_kiosk* kiosk, uint32_t id, uint32_t rgb) {
     }
 }
 
-void aq_output_schedule_frame(aq_kiosk* kiosk, uint32_t id) {
-    try {
-        auto* output = kiosk->find(id);
-        if (output)
-            output->scheduleFrame(Aquamarine::IOutput::AQ_SCHEDULE_NEEDS_FRAME);
-    } catch (...) {
-        reportException("aq_output_schedule_frame");
-    }
-}
-
 bool aq_session_active(aq_kiosk* kiosk) {
     return kiosk->hasSession() ? kiosk->backend->session->active : true;
 }
