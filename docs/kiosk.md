@@ -1,7 +1,23 @@
 # buna-kiosk: our own kiosk compositor
 
-Status: design (2026-11-06), reviewed; nothing built.  Today the login
-screen runs in cage (base/cage.bst, on wlroots).
+Status: phase 1 built (2026-11-07, src/buna-kiosk, base/buna-kiosk.bst).
+Today the login screen still runs in cage (base/cage.bst, on wlroots).
+
+Phase 1, tested in QEMU on a desktop install (greetd masked for the boot,
+the kiosk started as root with `LIBSEAT_BACKEND=builtin`):
+
+- it takes the screen and fills it with the login canvas (#f6f3ef);
+- Ctrl+Alt+F2 shows the root console on VT 2, Ctrl+Alt+F1 comes back and
+  draws again;
+- **not yet shown: the picture staying after it exits.**  The screen goes
+  black: with no other DRM client left, the kernel's fbdev emulation
+  likely gives the screen back to the console.  cage could not be
+  compared in the same test (without greetd, buna-login quits at once).
+  To check in the greetd hand-over (phase 4) and on the testbed.
+- aquamarine logs EGL errors on QEMU's standard VGA ("no renderer"), as it
+  does under Hyprland there; they are harmless.
+- greetd is upheld by the desktop extension: stopping it restarts it at
+  once, so tests mask it first (`systemctl mask --runtime greetd`).
 
 ## The goal
 
@@ -198,7 +214,7 @@ a copy) later, if ever.
   and `XKB_DEFAULT_OPTIONS` as with cage (greetd's config: `us,ara`,
   Alt+Shift); the layout group goes to the app in `wl_keyboard.modifiers`.
   Reset when the seat session comes back, so Ctrl+Alt from Ctrl+Alt+F2
-  are not stuck.  Ctrl+Alt+F1..F6 switch VTs through the session.
+  are not stuck.  Ctrl+Alt+F1..F12 switch VTs through the session.
 - **Touch** goes to the app as `wl_touch`, with `frame` events, on the
   output that shows it (libinput's output name for the touch screen; a
   touch screen on a black output does nothing).  Touch hides the cursor
