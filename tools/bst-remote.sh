@@ -57,12 +57,25 @@ fi
 PACKAGES='buildstream==2.8.1 buildstream-plugins==2.8.0 buildstream-plugins-community[git,cargo2,pypi]==2.4.0 requests'
 
 "${SSH[@]}" "$HOST" "mkdir -p src && { [ -x $VENV/bin/bst ] || { python3 -m venv $VENV && $VENV/bin/pip install -q $PACKAGES; }; }"
+# A build running there reads ~/src/bunix, which the copy below replaces
+# under it.  ([b]: the pattern must not match the shell running this check)
+if "${SSH[@]}" "$HOST" 'pgrep -f "[b]in/bst " > /dev/null'; then
+  echo "bst is running on $HOST; its build reads the copy of the project that this would replace." >&2
+  echo "Run this when it has finished." >&2
+  exit 1
+fi
 # only the executable bit of the modes matters (and a symlink's mode cannot
 # be set on Linux, which some rsync versions treat as an error)
 rsync -rlt --executability --delete -e "${SSH[*]}" "${EXCLUDE[@]}" ./ "$HOST:src/bunix/"
 
+# BUNIX_BUILD_BST_SSH_OPTS: ssh options for the session that runs bst only,
+# split on spaces (tools/bst-fly.sh forwards the shared cache there)
+BST_SSH=("${SSH[@]}")
+if [ -n "${BUNIX_BUILD_BST_SSH_OPTS:-}" ]; then
+  BST_SSH+=($BUNIX_BUILD_BST_SSH_OPTS)
+fi
 status=0
-"${SSH[@]}" "$HOST" "cd src/bunix && $RUN$VENV/bin/bst --builders $BUILDERS --max-jobs $MAX_JOBS $(printf '%q ' "$@")" || status=$?
+"${BST_SSH[@]}" "$HOST" "cd src/bunix && $RUN$VENV/bin/bst --builders $BUILDERS --max-jobs $MAX_JOBS $(printf '%q ' "$@")" || status=$?
 
 # `bst source track` writes the refs it found into the element files on the
 # host; bring them back.  --update keeps files edited here in the meantime.

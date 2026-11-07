@@ -8,13 +8,17 @@
 // first).  `persistent` keeps its index across restarts.  The block counts
 // and attempt limits are Buildbarn's example values (bb-deployments).
 local dir = '/srv/ci/bst-cache/cas/';
+// install.sh reads this line, to allocate the file and to see a change
+local blocksBytes = 140 * 1024 * 1024 * 1024;
+// Puts only through 7982 (README.md, "Who can put artifacts in it")
+local access = import 'access.libsonnet';
 
 {
-  grpcServers: [{
-    // only this host; other machines come in through SSH tunnels (README.md)
-    listenAddresses: ['127.0.0.1:7982'],
-    authenticationPolicy: { allow: {} },
-  }],
+  // only this host; other machines come in through SSH tunnels (README.md)
+  grpcServers: [
+    access.server('127.0.0.1:7982', 'read-write'),
+    access.server('127.0.0.1:7984', 'pull'),
+  ],
   maximumMessageSizeBytes: 16 * 1024 * 1024,
   contentAddressableStorage: {
     backend: {
@@ -30,9 +34,9 @@ local dir = '/srv/ci/bst-cache/cas/';
         currentBlocks: 24,
         newBlocks: 3,
         blocksOnBlockDevice: {
-          // the size install.sh allocates up front (README.md, "Disk space")
+          // allocated up front by install.sh (README.md, "Disk space")
           source: {
-            file: { path: dir + 'blocks', sizeBytes: 140 * 1024 * 1024 * 1024 },
+            file: { path: dir + 'blocks', sizeBytes: blocksBytes },
           },
           spareBlocks: 3,
         },
@@ -43,7 +47,7 @@ local dir = '/srv/ci/bst-cache/cas/';
       },
     },
     getAuthorizer: { allow: {} },
-    putAuthorizer: { allow: {} },
+    putAuthorizer: access.readWriteOnly,
     findMissingAuthorizer: { allow: {} },
   },
 }

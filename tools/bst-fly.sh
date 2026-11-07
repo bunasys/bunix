@@ -30,10 +30,11 @@ fi
 # The proxy carries SSH over Fly's private network: the machine has no
 # public address.  Our sshd is on 2022 (22 is Fly's own SSH server).
 flyctl proxy "$PORT:2022" --app "$APP" > /dev/null 2>&1 &
-proxy=$!
-# (|| true: under set -e a failing kill would become the exit status, and
-# the proxy is gone already when another one holds the port)
-trap 'kill $proxy 2> /dev/null || true' EXIT
+# Everything started in the background ends with this script.  (|| true:
+# under set -e a failing kill would become the exit status, and the proxy is
+# gone already when another one holds the port)
+background_pids=$!
+trap 'kill $background_pids 2> /dev/null || true' EXIT
 reachable=no
 for _ in $(seq 1 30); do
   if ssh $SSH_OPTS -o BatchMode=yes -o ConnectTimeout=5 root@localhost true 2> /dev/null; then
@@ -54,47 +55,65 @@ if [ "${1:-}" = ssh ]; then
 fi
 
 # The shared cache on the build host (tools/cache-server/README.md).  This
-# Mac forwards its two ports from there, on 17981 and 17982 here (so a tunnel
-# made by hand on 7981 does not clash), and the ssh sessions to the machine
-# forward them on, back to 7981 and 7982 there.  When this Mac cannot reach
-# the build host, bst uses only the machine's own cache.
+# run forwards two of its ports from there to this Mac, on a pair of free
+# local ports, and the ssh session that runs bst forwards them on to the
+# machine, to 7981 and 7982 there.  When this Mac cannot reach the build host,
+# bst uses only the machine's own cache.
 #
-# The machine only pulls, except for `tools/bst-fly.sh artifact push`: what
-# it builds enters the cache that releases are made from only when we push
-# it, and a tunnel lost during a long build (this Mac asleep) cannot stop the
-# build with a failed push.
+# The machine gets the cache's pull-only ports, except for `tools/bst-fly.sh
+# artifact push ...`: what it builds enters the cache that releases are made
+# from only when we push it, whatever is done on the machine, and a tunnel
+# lost during a long build (this Mac asleep) cannot stop the build with a
+# failed push.
 CACHE_HOST=${BUNIX_CACHE_HOST:-pro13.home.arpa}
-cache_reachable() { nc -z 127.0.0.1 17981 2> /dev/null; }
-if ! cache_reachable; then
-  # (a tunnel already open, from another run, is reused)
-  ssh -N -o ExitOnForwardFailure=yes -o BatchMode=yes -o ConnectTimeout=5 \
-    -o ServerAliveInterval=30 \
-    -L 17981:127.0.0.1:7981 -L 17982:127.0.0.1:7982 "$CACHE_HOST" 2> /dev/null &
-  cache_tunnel=$!
-  # (replaces the trap above: both background processes end with this script)
-  trap 'kill $proxy $cache_tunnel 2> /dev/null || true' EXIT
-  for _ in $(seq 1 10); do
-    if cache_reachable || ! kill -0 $cache_tunnel 2> /dev/null; then break; fi
-    sleep 1
-  done
+push=false
+cache_index=7983 cache_storage=7984
+if [ "${1:-} ${2:-}" = "artifact push" ]; then
+  push=true
+  cache_index=7981 cache_storage=7982
 fi
 
-is_push=no
-if [ "${1:-} ${2:-}" = "artifact push" ]; then is_push=yes; fi
-CACHE_OPTS=""
-if cache_reachable; then
+port_in_use() { nc -z 127.0.0.1 "$1" 2> /dev/null; }
+index_port=17981
+while port_in_use $index_port || port_in_use $((index_port + 1)); do
+  index_port=$((index_port + 2))
+done
+storage_port=$((index_port + 1))
+ssh -N -o ExitOnForwardFailure=yes -o BatchMode=yes -o ConnectTimeout=5 \
+  -o ServerAliveInterval=30 \
+  -L $index_port:127.0.0.1:$cache_index -L $storage_port:127.0.0.1:$cache_storage "$CACHE_HOST" 2> /dev/null &
+cache_tunnel=$!
+background_pids="$background_pids $cache_tunnel"
+for _ in $(seq 1 10); do
+  if port_in_use $index_port || ! kill -0 $cache_tunnel 2> /dev/null; then break; fi
+  sleep 1
+done
+
+CACHE_TUNNEL_SSH_OPTS=""
+if port_in_use $index_port; then
   # A forward left by a session that died is still held for a few minutes
-  # by sshd; fail then, rather than talk to it
-  CACHE_OPTS="-o ExitOnForwardFailure=yes -R 7981:127.0.0.1:17981 -R 7982:127.0.0.1:17982"
-  push=false
-  if [ $is_push = yes ]; then push=true; fi
-  sed "s/push: true/push: $push/" tools/cache-server/buildstream.conf |
-    ssh $SSH_OPTS root@localhost 'mkdir -p ~/.config && cat > ~/.config/buildstream.conf'
+  # by sshd: fail then, rather than talk to it
+  CACHE_TUNNEL_SSH_OPTS="-o ExitOnForwardFailure=yes -R 7981:127.0.0.1:$index_port -R 7982:127.0.0.1:$storage_port"
+  # The same servers as the build host's tools/cache-server/buildstream.conf,
+  # with push set for this run
+  ssh $SSH_OPTS root@localhost 'mkdir -p ~/.config && cat > ~/.config/buildstream.conf' <<EOF
+artifacts:
+  servers:
+  - url: http://127.0.0.1:7981
+    type: index
+    push: $push
+  - url: http://127.0.0.1:7982
+    type: storage
+    push: $push
+EOF
+elif [ $push = true ]; then
+  echo "cannot push: the shared cache on $CACHE_HOST is not reachable" >&2
+  exit 1
 else
   echo "the shared cache on $CACHE_HOST is not reachable: using the machine's own cache only" >&2
   ssh $SSH_OPTS root@localhost 'rm -f ~/.config/buildstream.conf'
 fi
 
 # No keys: nothing built here is signed (releases are made on pro13)
-BUNIX_BUILD_HOST=root@localhost BUNIX_BUILD_SSH_OPTS="$SSH_OPTS $CACHE_OPTS" BUNIX_BUILD_KEYS=no \
-  tools/bst-remote.sh "$@"
+BUNIX_BUILD_HOST=root@localhost BUNIX_BUILD_SSH_OPTS="$SSH_OPTS" BUNIX_BUILD_KEYS=no \
+  BUNIX_BUILD_BST_SSH_OPTS="$CACHE_TUNNEL_SSH_OPTS" tools/bst-remote.sh "$@"

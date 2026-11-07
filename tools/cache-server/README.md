@@ -6,10 +6,10 @@ elsewhere.  It replaces copying caches with `tools/cache-sync.sh`.
 
 It is Buildbarn, the cache server BuildStream documents:
 
-| Service | Port | What it holds |
-| --- | --- | --- |
-| `bb_remote_asset` (`asset.jsonnet`) | 7981 | the index: artifact names → content |
-| `bb_storage` (`storage.jsonnet`) | 7982 | the content, 140 GiB, least recently used goes first |
+| Service | Read-write port | Pull-only port | What it holds |
+| --- | --- | --- | --- |
+| `bb_remote_asset` (`asset.jsonnet`) | 7981 | 7983 | the index: artifact names → content |
+| `bb_storage` (`storage.jsonnet`) | 7982 | 7984 | the content, 140 GiB, least recently used goes first |
 
 A port is set in `asset.jsonnet` or `storage.jsonnet`, `buildstream.conf`
 and `tools/bst-fly.sh`; changing one means changing all of them.
@@ -25,9 +25,14 @@ reaches them:
 - **The CI VMs** on pro13 cannot reach the host's loopback: passt runs with
   `--no-map-gw`, and `ci-vm-firewall` blocks private and loopback addresses.
 - **The Fly machine** reaches the cache through SSH tunnels from this Mac
-  (`tools/bst-fly.sh`), and only pulls.  What it builds enters the cache
-  only when we push it: `tools/bst-fly.sh artifact push <elements>`.  That
-  trusts whoever can log in to the Fly machine, as copying its cache did.
+  (`tools/bst-fly.sh`), to the pull-only ports: whatever is done there,
+  nothing it builds enters the cache until we push it, with
+  `tools/bst-fly.sh artifact push <elements>`, which alone tunnels the
+  read-write ports.  While such a push runs, root on the machine could push
+  too.
+
+The services label each request with the port it came in on, and accept
+writes only with the read-write label (`access.libsonnet`).
 
 ## Disk space
 
@@ -51,9 +56,9 @@ keeps the cached data, unless the store's size changed.
 ## From another machine
 
 `tools/bst-fly.sh` does this for the Fly machine on every run.  By hand, for
-a machine you are logged in to: forward the ports, and give its BuildStream
-`buildstream.conf` with `push: false`:
+a machine you are logged in to: forward the pull-only ports to 7981 and 7982
+there, and give its BuildStream `buildstream.conf` with `push: false`:
 
 ```
-ssh -N -L 7981:127.0.0.1:7981 -L 7982:127.0.0.1:7982 pro13.home.arpa
+ssh -N -L 7981:127.0.0.1:7983 -L 7982:127.0.0.1:7984 pro13.home.arpa
 ```

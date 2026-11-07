@@ -22,9 +22,11 @@ STORAGE_SHA256=c59e1d9778fa963076c1fc6976bab9a4fdafd4c54c85b894f2fde23edf72e046
 ASSET_URL=https://github.com/buildbarn/bb-remote-asset/releases/download/20261029T132537Z-678eaf4/bb_remote_asset.linux_amd64
 ASSET_SHA256=1c42b1e2c0246b72410bb5b0764fe7363a2ca6de1c7ba4e256ef7108c5b69c40
 
-# The store's size: storage.jsonnet's blocks file, allocated up front so the
-# CI VMs on the same disk know what is left (README.md, "Disk space")
-STORE_GIB=140
+# The stores' sizes, from the one place they are set: each .jsonnet file's
+# `local blocksBytes = ...;` line
+blocks_bytes() { echo $(( $(sed -n 's/^local blocksBytes = \(.*\);$/\1/p' "$1") )); }
+STORE_BYTES=$(blocks_bytes storage.jsonnet)
+ASSET_BYTES=$(blocks_bytes asset.jsonnet)
 
 # ([b]: the pattern must not match the shell running this check)
 if ssh "$HOST" 'pgrep -f "[b]in/bst " > /dev/null'; then
@@ -34,12 +36,14 @@ fi
 
 STAGING=.cache/bst-cache-install   # in the host user's home
 ssh "$HOST" "rm -rf $STAGING && mkdir -p $STAGING"
-scp -q storage.jsonnet asset.jsonnet bb-storage.service bb-remote-asset.service buildstream.conf \
+scp -q storage.jsonnet asset.jsonnet access.libsonnet bb-storage.service bb-remote-asset.service buildstream.conf \
   "$HOST:$STAGING/"
 
-ssh "$HOST" bash -s -- "$STAGING" "$STORE_GIB" "$STORAGE_URL" "$STORAGE_SHA256" "$ASSET_URL" "$ASSET_SHA256" <<'EOF'
+ssh "$HOST" bash -s -- "$STAGING" "$STORE_BYTES" "$ASSET_BYTES" \
+  "$STORAGE_URL" "$STORAGE_SHA256" "$ASSET_URL" "$ASSET_SHA256" <<'EOF'
 set -euo pipefail
-staging=$1 store_gib=$2 storage_url=$3 storage_sha256=$4 asset_url=$5 asset_sha256=$6
+staging=$1 store_bytes=$2 asset_bytes=$3
+storage_url=$4 storage_sha256=$5 asset_url=$6 asset_sha256=$7
 data=/srv/ci/bst-cache
 cd ~/"$staging"
 
@@ -52,27 +56,44 @@ fetch "$storage_url" "$storage_sha256" bb_storage
 fetch "$asset_url" "$asset_sha256" bb_remote_asset
 
 getent passwd bst-cache > /dev/null ||
-  sudo useradd --system --no-create-home --home-dir "$data" --shell /usr/bin/nologin bst-cache
-sudo systemctl stop bb-remote-asset.service bb-storage.service 2> /dev/null || true
+  sudo useradd --system --no-create-home --home-dir "$data" --shell "$(command -v nologin)" bst-cache
 
-# A store whose size changed cannot be read back: start it, and the index of
-# what was in it, empty
-store_bytes=$((store_gib * 1024 * 1024 * 1024))
-blocks=$data/cas/blocks
+# A store whose size changed cannot be read back: then the cache starts
+# empty, the index of what was in it too
+store=$data/cas/blocks
+asset=$data/asset/blocks
+size_of() { if sudo test -f "$1"; then sudo stat -c %s "$1"; else echo none; fi; }
+store_now=$(size_of "$store")
+asset_now=$(size_of "$asset")
 size_changed=no
-if sudo test -f "$blocks" && [ "$(sudo stat -c %s "$blocks")" != $store_bytes ]; then
-  size_changed=yes
+if [ "$store_now" != none ] && [ "$store_now" != "$store_bytes" ]; then size_changed=yes; fi
+if [ "$asset_now" != none ] && [ "$asset_now" != "$asset_bytes" ]; then size_changed=yes; fi
+
+# Room for the store, checked before anything is stopped or wiped: what is
+# free, plus what a wiped store gives back
+sudo mkdir -p "$data"
+free_bytes=$(df --output=avail -B1 "$data" | tail -n 1)
+needed_bytes=$store_bytes
+if [ "$store_now" != none ] && [ $size_changed = no ]; then needed_bytes=0; fi
+if [ "$store_now" != none ] && [ $size_changed = yes ]; then
+  free_bytes=$((free_bytes + $(sudo du -B1 -s "$store" | cut -f1)))
 fi
+if [ "$free_bytes" -lt "$needed_bytes" ]; then
+  echo "not enough room in $data for the store ($needed_bytes bytes): nothing changed" >&2
+  exit 1
+fi
+
+sudo systemctl stop bb-remote-asset.service bb-storage.service 2> /dev/null || true
 if [ $size_changed = yes ]; then
   echo "the store's size changed: starting the cache empty"
   sudo rm -rf "$data/cas" "$data/asset"
 fi
 sudo install -d -o bst-cache -g bst-cache "$data" \
   "$data/cas" "$data/cas/state" "$data/asset" "$data/asset/state"
-sudo -u bst-cache fallocate -l $store_bytes "$blocks"
+sudo -u bst-cache fallocate -l "$store_bytes" "$store"
 
 sudo install -d /etc/bst-cache
-sudo install -m 644 storage.jsonnet asset.jsonnet /etc/bst-cache/
+sudo install -m 644 storage.jsonnet asset.jsonnet access.libsonnet /etc/bst-cache/
 sudo install -m 644 bb-storage.service bb-remote-asset.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable bb-storage.service bb-remote-asset.service

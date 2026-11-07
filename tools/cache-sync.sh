@@ -3,6 +3,10 @@
 # cache, so the build host uses those packages instead of building them again
 # (LLVM alone takes it 2.5 hours, with its CI VMs beside it).
 #
+# Superseded by the shared cache on the build host (tools/cache-server),
+# which the build host and the Fly machine use; kept for the test machine,
+# which is not connected to it.
+#
 #   tools/cache-sync.sh
 #
 # Why plain copying works: BuildStream's cache keys come only from the

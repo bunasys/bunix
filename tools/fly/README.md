@@ -56,7 +56,9 @@ flyctl machine update <id> --app bunix-build --vm-size shared-cpu-2x --vm-memory
 
 `tools/bst-fly.sh` connects the machine to the shared cache on pro13
 (tools/cache-server/README.md) when pro13 is reachable: the machine pulls
-what pro13 built and pushes what it builds, so nothing is copied by hand.
+what pro13 built, so nothing is copied by hand.  It gets the cache's
+pull-only ports: what it builds goes into the cache only when pushed, with
+`tools/bst-fly.sh artifact push <elements>`.
 
 ## Filling the cache from the testbed (before the shared cache)
 
