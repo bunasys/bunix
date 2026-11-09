@@ -48,7 +48,11 @@ config:
     cd %{install-root}/usr
     rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
            share/man share/info share/doc share/bash-completion share/zsh \
-           share/wayland share/wayland-protocols
+           share/wayland share/wayland-protocols share/vulkan
+    # Qt's tools for building Qt programs (moc, qmlcachegen, ...) and what
+    # they read; Qt programs need only its libraries, plugins and qml
+    rm -rf lib/*/qt6/bin lib/*/qt6/libexec lib/*/qt6/mkspecs \
+           lib/*/qt6/metatypes lib/*/qt6/modules lib/*/qt6/sbom
     # translations: Arabic only, as system/rootfs.bst's locales step.  GTK
     # lays its windows out right to left from its own Arabic translation.
     find share/locale -mindepth 1 -maxdepth 1 ! -name 'ar*' -exec rm -rf {} +

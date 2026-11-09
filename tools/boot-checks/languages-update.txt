@@ -1,4 +1,4 @@
-# Checks for tools/boot-test.py on the live ISO (BOOT_MEMORY=4G: the
+# Checks for tools/boot-test.py on the live system (BOOT_MEMORY=4G: the
 # extensions land in RAM): fetch the gcc, rust and swift extensions with
 # systemd-sysupdate from tools/serve-updates.py (serving the directory that
 # holds <release>/), merge them, and build a program in each language.

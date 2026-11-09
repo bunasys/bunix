@@ -2,12 +2,12 @@
 
 A release is a GitHub release of `bunasys/bunix`, tagged `v<version>`.
 Installed systems fetch it with systemd-sysupdate from
-`releases/latest/download/`; the live ISO fetches its extensions from
+`releases/latest/download/`; the live image fetches its extensions from
 `releases/download/v<version>/`.  Every release holds
 
 | File | What it is |
 | --- | --- |
-| `bunix-x86_64.iso` | the live system and installer (`system/iso.bst`) |
+| `bunix-x86_64-live.img` | the live system and installer, for a USB stick (`system/live.bst`; up to 0.2.2 `bunix-x86_64.iso`) |
 | `bunix_<version>.usr-x86-64*.raw` | the three partitions of a `/usr` slot: erofs, dm-verity hash tree, signed root hash (`system/usr.bst`) |
 | `bunix_<version>.efi` | the signed kernel image that boots it (`system/uki.bst`) |
 | `gcc_`, `rust_`, `swift_`, `devtools_`, `desktop_<version>.raw` | the system extensions (`sysext/*.bst`) |
@@ -34,7 +34,7 @@ sysupdate installs only a version newer than the running one.
 **2. Build** everything a release contains:
 
 ```
-tools/bst-remote.sh build system/uki.bst system/usr.bst system/iso.bst \
+tools/bst-remote.sh build system/uki.bst system/usr.bst system/live.bst \
   sysext/gcc.bst sysext/rust.bst sysext/swift.bst sysext/devtools.bst \
   sysext/desktop.bst
 ```
@@ -52,30 +52,30 @@ It checks the built files out on the build host, writes `SHA256SUMS`
 (valid for 30 days, `BUNIX_MANIFEST_DAYS`) and signs it with
 `keys/release.key`.
 
-**4. Fetch the ISO** and put everything in one directory:
+**4. Fetch the live image** and put everything in one directory:
 
 ```
 v=0.1.3
-ssh pro13.home.arpa "cd src/bunix && rm -rf ~/bt-out/iso &&
-  ~/.local/share/bunix-bst/bin/bst artifact checkout system/iso.bst --directory ~/bt-out/iso"
+ssh pro13.home.arpa "cd src/bunix && rm -rf ~/bt-out/live &&
+  ~/.local/share/bunix-bst/bin/bst artifact checkout system/live.bst --directory ~/bt-out/live"
 mkdir -p out/release-$v
-scp pro13.home.arpa:bt-out/iso/bunix-x86_64.iso out/release-$v/
+scp pro13.home.arpa:bt-out/live/bunix-x86_64-live.img out/release-$v/
 cp out/updates/$v/* out/release-$v/
 ```
 
 **5. Test** in QEMU on the build host (`scp` `tools/boot-test.py`,
 `tools/serve-updates.py` and `tools/boot-checks/*.txt` to `/tmp` there):
 
-- The new ISO boots, with checks for the splash:
-  `BOOT_CHECKS=/tmp/splash.txt python3 /tmp/boot-test.py bunix-x86_64.iso uefi ~/bt-iso`
-- The update path that machines take: install the *previous* release's ISO
-  next to a stand-in Windows, boot it, update it to the new release from a
-  local server, boot again.
+- The new live image boots, with checks for the splash:
+  `BOOT_CHECKS=/tmp/splash.txt python3 /tmp/boot-test.py bunix-x86_64-live.img uefi ~/bt-live`
+- The update path that machines take: install the *previous* release's
+  live image next to a stand-in Windows, boot it, update it to the new
+  release from a local server, boot again.
 
   ```
   mkdir -p ~/bt-upd && truncate -s 24G ~/bt-upd/disk.raw
   BOOT_DISK=~/bt-upd/disk.raw BOOT_CHECKS=/tmp/install-windows.txt \
-    python3 /tmp/boot-test.py previous.iso uefi ~/bt-upd
+    python3 /tmp/boot-test.py previous-live.img uefi ~/bt-upd
   BOOT_CHECKS=/tmp/dual-boot.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
 
   mkdir -p ~/upd-serve && ln -s ~/bunix-publish/$v ~/upd-serve/latest
@@ -84,8 +84,10 @@ cp out/updates/$v/* out/release-$v/
   BOOT_CHECKS=/tmp/after-update.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
   ```
 
-  install-windows.txt answers the installer of the ISO it comes with: for a
-  previous ISO from before 0.2 (no account questions), take that release's
+  `previous-live.img` is the previous release's live image; up to 0.2.2
+  that is `bunix-x86_64.iso`, which boot-test.py boots as a CD.
+  install-windows.txt answers the installer of the image it comes with: for
+  a previous release from before 0.2 (no account questions), take that release's
   copy from git (`git show v<previous>:tools/boot-checks/install-windows.txt`).
 
   `serial.log` in the output directory must show `update exit 0`, then

@@ -7,7 +7,7 @@
 #
 # (`updatectl enable gcc` would write that file, but systemd 261's update
 # service sees no update target while every transfer of the system belongs to
-# a disabled feature -- as on the live ISO -- and answers "Invalid target".)
+# a disabled feature -- as on the live system -- and answers "Invalid target".)
 [Feature]
 Description=GCC (gcc, g++, binutils, headers, make, cmake, meson)
 Enabled=false

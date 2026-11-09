@@ -194,7 +194,7 @@ config:
     mkdir -p efi boot
     # (BuildStream's artifacts keep no file modes but the executable bit;
     # only /usr leaves this element, and a system's root -- a new partition,
-    # or memory on the live ISO -- is made at boot, with its modes)
+    # or memory on the live system -- is made at boot, with its modes)
     [ -e usr/bin/init ] || ln -s ../lib/systemd/systemd usr/bin/init
 
   - |
@@ -335,7 +335,7 @@ config:
     # /usr/share/factory/etc: the configuration admins may edit is copied
     # (C: only when missing, so local edits survive updates); the CA bundle
     # is linked (L), so updates of /usr bring new certificates.  Users and
-    # the machine ID are made at boot, not copied.  The live ISO keeps /etc
+    # the machine ID are made at boot, not copied.  The live system keeps /etc
     # as it is.
     cd %{install-root}
     mkdir -p usr/share/factory

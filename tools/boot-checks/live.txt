@@ -1,4 +1,4 @@
-# Checks for tools/boot-test.py on the live ISO: /usr comes from the medium
+# Checks for tools/boot-test.py on the live system: /usr comes from the medium
 # (files/live), the root is memory, the GPU's driver loads in the initrd
 # (early KMS), and the TPM pieces stay quiet on a machine without a TPM.
 

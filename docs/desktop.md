@@ -13,7 +13,9 @@ install:
 - no wired network: a simple screen to join a Wi-Fi network;
 - a graphical installer: disk, time zone, host name, root password, a
   normal user;
-- Hyprland as the compositor, usable by touch;
+- niri as the compositor, with DMS (Dux Modular Shell) as the desktop
+  shell and its login screen (0.3.0; Hyprland until then, and still a
+  session to pick at login);
 - a normal user next to root, who runs admin tasks through run0 + polkit;
 - one command, `buna`, for the system's own jobs:
 
@@ -43,7 +45,7 @@ buna ext enable|disable <name>
 | Boot splash | Plymouth, a bunix theme with the Buna logo |
 | Kernel drivers | loadable modules (kmod), signed |
 | Admin access | run0 + polkit |
-| Compositor | Hyprland |
+| Compositor and shell | niri with DMS, a Quickshell (Qt/QML) shell; its login screen is dms-greeter, under greetd (`elements/desktop/`) |
 | Graphics on the system | the `desktop` system extension, chosen at install: *Desktop or console?* (docs/schematics.md) |
 | `buna` and its screens | Rust + GTK4/libadwaita (gtk4-rs) |
 | Languages | Arabic and English from day 0: right-to-left layouts, Arabic fonts and keyboard |
@@ -215,8 +217,8 @@ installed system.
    - The initrd asks for the PIN or passphrase on the boot splash
      (Plymouth), in Arabic or English.
 
-7. **The installed desktop.**  A login screen, Hyprland session for the
-   user, `buna update` as a graphical notification.
+7. **The installed desktop.**  A login screen, a niri session with DMS
+   for the user (0.3.0), `buna update` as a graphical notification.
 
 ## Open points
 

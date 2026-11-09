@@ -26,7 +26,7 @@ import re
 import subprocess
 import sys
 
-RELEASE_TARGETS = ["system/uki.bst", "system/usr.bst", "system/iso.bst",
+RELEASE_TARGETS = ["system/uki.bst", "system/usr.bst", "system/live.bst",
                    "sysext/gcc.bst", "sysext/rust.bst", "sysext/swift.bst",
                    "sysext/devtools.bst", "sysext/desktop.bst"]
 BIGGEST_JOBS_SHOWN = 8

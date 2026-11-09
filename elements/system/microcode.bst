@@ -4,7 +4,7 @@ description: |
   amd-ucode), as the kernel loads it at its very start: an uncompressed
   cpio archive holding kernel/x86/microcode/GenuineIntel.bin and
   AuthenticAMD.bin.  The UKIs carry it (ukify --microcode, system/uki.bst
-  and system/iso.bst); systemd-stub hands it to the kernel before the
+  and system/live.bst); systemd-stub hands it to the kernel before the
   initrd.  The firmware's own microcode is often years old, and the
   kernel's mitigations for several CPU flaws (MDS, SRBDS, GDS, MMIO stale
   data) depend on current microcode.

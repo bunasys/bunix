@@ -1,0 +1,17 @@
+# Checks for tools/boot-test.py on the live system with a blank disk attached
+# (BOOT_DISK=<outdir>/disk.raw, 24 GB): lay out an earlier Linux around a
+# stand-in Windows partition, then let bunix-install replace "the Linux
+# system".  The Linux partitions are deleted, bunix goes into the larger
+# freed stretch (swap + home, after Windows), the root partition's stretch
+# before Windows stays free, and Windows is unchanged byte for byte.
+# The root shell is fish.
+
+printf 'label: gpt\nsize=100MiB, type=uefi\nsize=6GiB, type=linux, name="fedora-root"\nsize=2GiB, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="Windows"\nsize=1GiB, type=swap\nsize=12GiB, type=933AC7E1-2EB4-4F13-B844-0E14E2AEF915, name="home"\n' | sfdisk -q /dev/vda; udevadm settle; mkfs.vfat -F 32 /dev/vda1 >/dev/null; mkfs.ext4 -q /dev/vda2; mkswap /dev/vda4 >/dev/null; mkfs.ext4 -q /dev/vda5; head -c 16M /dev/urandom > /dev/vda3; head -c 16M /dev/vda3 | sha256sum > /root/windows.sha256
+lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE /dev/vda
+# the menu, and the number of the "replace the Linux system" choice in it
+printf '1\n' | bunix-install 2>&1 | string match -r '^\s+\d+\) .*'; set choice (printf '1\n' | bunix-install 2>&1 | string match -r '^\s+(\d+)\) replace the Linux system')[2]; echo "choice $choice"
+printf "1\n$choice\n2\nreplace-pc\nTest User\ntester\nsecret\nsecret\n/dev/vda\n" | bunix-install; echo "install exit $status"
+sfdisk -d /dev/vda; lsblk -o NAME,SIZE,PARTTYPENAME,PARTLABEL,FSTYPE /dev/vda; sfdisk -F /dev/vda | tail -3
+if test (head -c 16M /dev/disk/by-partlabel/Windows | sha256sum) = (cat /root/windows.sha256); echo "Windows unchanged"; else; echo "Windows CHANGED"; end
+# bunix's systemd-boot settings, with bunix as the default; the firmware's order
+mkdir -p /mnt/esp; mount /dev/vda1 /mnt/esp; ls /mnt/esp/loader; cat /mnt/esp/loader/loader.conf; umount /mnt/esp; efibootmgr | grep -E 'BootOrder|bunix'

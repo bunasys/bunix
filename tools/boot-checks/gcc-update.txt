@@ -1,5 +1,5 @@
 # Checks for tools/boot-test.py (BOOT_CHECKS=...): fetch the gcc extension
-# with systemd-sysupdate and build a program with it, on the booted ISO.
+# with systemd-sysupdate and build a program with it, on the booted live system.
 #
 # Expects update directories on the QEMU host, served on port 8000 by
 # tools/serve-updates.py (QEMU's user network reaches the host as 10.0.2.2):

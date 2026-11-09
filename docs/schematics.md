@@ -159,18 +159,18 @@ KMS: native resolution, the boot splash), udev's hwdb, the admin tools, the
 text installer.
 
 ```
-                       live ISO        console install   desktop install
+                       live system     console install   desktop install
 base /usr + UKI        from the stick  yes               yes
 desktop extension      from the stick  no                yes
 boots to               the installer   multi-user        graphical
 ```
 
-- The ISO carries `desktop_<release>.raw` next to the `/usr` image, and the
+- The live image carries `desktop_<release>.raw` next to the `/usr` image, and the
   live system merges it from the stick, checked by its dm-verity signature
   like every extension, before the graphical installer starts.  When
   graphics fail, the text installer is the fallback.
 - The installer asks *Desktop or console?*: the use schematic.  For
-  `desktop` it copies the extension from the ISO into
+  `desktop` it copies the extension from the stick into
   `/var/lib/extensions/desktop.raw.v/` (no network needed), enables the
   feature, so that updates fetch it with each new `/usr`, and links
   `default.target` to `graphical.target`.  For `console`, neither.
@@ -225,7 +225,7 @@ Two checks run at build time, as BuildStream test elements:
 1. The schematic and machine files, and `buna schematic show|set` for the
    existing features (`gcc`, `rust`, `swift`, `devtools`, `desktop`): the
    `desktop`, `console` and `developer` schematics.  The `desktop`
-   extension is built in phase 3 of docs/desktop.md; the ISO carrying it and
+   extension is built in phase 3 of docs/desktop.md; the live image carrying it and
    the installer's question come with phase 6 there.
 2. UKI add-ons: build, sign and install them; `KernelAddons=`.
 3. Split `system/firmware.bst` into `firmware-<vendor>` extensions; the

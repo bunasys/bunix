@@ -1,6 +1,6 @@
 #!/bin/sh
 # The console (console-shell@.service): root's shell straight away while
-# root has never had a password -- the live ISO, or a fresh disk image,
+# root has never had a password -- the live system, or a fresh disk image,
 # where nobody could log in otherwise (bunix-install locks root's password
 # and makes an account) -- and a login prompt in every other case.
 # "Never had one": the field holds no hash at all ('', '*', '!*', or

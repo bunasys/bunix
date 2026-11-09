@@ -7,9 +7,10 @@ extensions.
 
 ## Two ways onto a disk
 
-- **`bunix-install`**, on the live ISO (`files/install/bunix-install`): into
-  free space, into an existing partition it deletes, or onto a whole disk.
-  This is the way to dual-boot with Windows.
+- **`bunix-install`**, on the live image (`files/rootfs/usr/bin/bunix-install`): into
+  free space, into an existing partition it deletes, in place of an earlier
+  bunix or another Linux system, or onto a whole disk. This is the way to
+  dual-boot with Windows.
 - **`bunix-x86_64.raw`** (`system/disk.bst`), written to a whole disk. Its
   root partition is created on first boot.
 
@@ -21,7 +22,8 @@ way (docs/updates.md).
 1. In Windows, shrink C: in Disk Management to leave free space: at least
    about 12 GB, 30 GB or more to be comfortable. bunix-install does not
    resize file systems.
-2. Boot the ISO and run `bunix-install`. It lists the disks, then the places
+2. Write `bunix-x86_64-live.img` to a USB stick, boot it and run
+   `bunix-install`. It lists the disks, then the places
    on the chosen disk (free stretches, partitions, the whole disk) and marks
    the ones too small. Deleting a partition or erasing a disk has to be
    confirmed by typing its name.
@@ -81,7 +83,7 @@ asks:
 
 Root gets a random password, locked: nobody logs in as root, and the
 console shows a login prompt (console-shell opens root's shell only while
-root has no password hash at all, as on the live ISO).
+root has no password hash at all, as on the live system).
 
 ## Found on real hardware
 
@@ -91,14 +93,13 @@ root has no password hash at all, as on the live ISO).
   holds systemd-boot under that name too (system/esp.bst).
 - efivarfs files report a size of 0; uutils `od -j` cannot skip into them,
   so the installer reads the Secure Boot variable through a pipe.
-- On a USB stick the medium shows twice, the whole stick and a partition
-  at the same place (xorriso's `-partition_offset`), both labelled BUNIX,
-  and the kernel mounts only one of them.  The live initrd mounts one at
-  `/run/bunix/medium`; the installer used to mount the label again and
-  failed ("Can't open blockdev") when the label pointed at the other.  It
-  now reads the medium where the initrd mounted it (0.2.1).  A CD has one
-  device, so the QEMU tests, which used one, never saw it: `BOOT_USB=1`
-  attaches the ISO as a USB stick.
+- On a USB stick the ISO (up to 0.2.2) showed twice, the whole stick and a
+  partition at the same place (xorriso's `-partition_offset`), both
+  labelled BUNIX, and the kernel mounts only one of them.  The installer
+  used to mount the label again and failed ("Can't open blockdev") when the
+  label pointed at the other.  It now reads the medium where the live
+  initrd mounted it, `/run/bunix/medium` (0.2.1).  The live image that
+  replaced the ISO is a plain GPT disk, where BUNIX is one partition.
 
 ## Limits
 
@@ -107,8 +108,24 @@ root has no password hash at all, as on the live ISO).
   to a second disk works, with its own ESP.
 - **One bunix per disk.** The initrd and systemd-boot take the first root,
   XBOOTLDR and `/usr` partitions they find, so the installer refuses a disk
-  that already has one, unless it is the partition being replaced or the
-  whole disk is erased.
+  that already has one, unless it is being replaced or the whole disk is
+  erased.
+- **Replacing a system is a guess.** The installer offers "the earlier
+  bunix" (the root, XBOOTLDR and `/usr` partitions, when a `/usr` partition
+  is named `bunix_<version>` or `_empty`) and "the Linux system" (every
+  partition of a Linux type: root, home, swap, LVM, RAID, LUKS...), on GPT
+  disks. It reads only the partition table, so two Linux systems on one
+  disk look like one. Before deleting anything it lists each partition and
+  warns about encrypted, LVM and RAID partitions (which may reach over
+  other disks), partitions whose space it will not use, and other systems'
+  boot files and firmware entries that stay; the disk's name must be typed
+  to go on. Partitions in use (mounted, swap on, unlocked) stop it. On a
+  shared ESP an old systemd-boot's `loader/loader.conf` is kept as
+  `loader.conf.before-bunix` and replaced by bunix's, with `default
+  bunix_*`, so that old entries do not become systemd-boot's default; a
+  `bootctl set-default` choice is removed. The installer's last words name
+  the entry the firmware starts first, which after a replaced Linux may be
+  that system's own.
 - **Secure Boot.** On the first boot shim stops in MokManager: choose
   "Enroll key from disk", then `EFI/bunix/bunix.cer`. (mokutil, which would
   queue the key from the installer, needs keyutils and libcrypt; not built
@@ -122,11 +139,11 @@ root has no password hash at all, as on the live ISO).
 ```
 truncate -s 24G out/dual/disk.raw
 BOOT_DISK=out/dual/disk.raw BOOT_CHECKS=tools/boot-checks/install-windows.txt BOOT_MEMORY=2G \
-  tools/boot-test.py bunix-x86_64.iso uefi out/dual
+  tools/boot-test.py bunix-x86_64-live.img uefi out/dual
 BOOT_CHECKS=tools/boot-checks/dual-boot.txt tools/boot-test.py any.raw uefi out/dual
 ```
 
-The first run makes the "Windows" disk on the live ISO and installs into its
+The first run makes the "Windows" disk on the live system and installs into its
 free space; the second boots it through the "bunix" entry and checks
 `/boot` (XBOOTLDR), `/efi` (the shared ESP) and that systemd-boot lists
 only bunix.  The first run is a console install; it gives root an empty
@@ -139,6 +156,15 @@ screenshots show the login screen:
 ```
 truncate -s 24G out/desktop/disk.raw
 BOOT_DISK=out/desktop/disk.raw BOOT_CHECKS=tools/boot-checks/install-desktop.txt BOOT_MEMORY=2G \
-  tools/boot-test.py bunix-x86_64.iso uefi out/desktop
+  tools/boot-test.py bunix-x86_64-live.img uefi out/desktop
 BOOT_CHECKS=/dev/null BOOT_WAIT=90 tools/boot-test.py any.raw uefi out/desktop
+```
+
+Replacing an earlier Linux: the check lays one out around a stand-in
+Windows partition, replaces it, and checks that Windows is unchanged:
+
+```
+truncate -s 24G out/replace/disk.raw
+BOOT_DISK=out/replace/disk.raw BOOT_CHECKS=tools/boot-checks/install-replace.txt BOOT_MEMORY=2G \
+  tools/boot-test.py bunix-x86_64-live.img uefi out/replace
 ```

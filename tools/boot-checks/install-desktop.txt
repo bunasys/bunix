@@ -1,4 +1,4 @@
-# Checks for tools/boot-test.py on the live ISO with a blank disk attached
+# Checks for tools/boot-test.py on the live system with a blank disk attached
 # (BOOT_DISK=<outdir>/disk.raw): a desktop install to the whole disk, for
 # the user "sara".  Then boot the disk with no checks (BOOT_CHECKS=/dev/null):
 # its screenshots should show the login screen, asking Sara for her password.

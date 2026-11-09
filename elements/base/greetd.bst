@@ -3,11 +3,11 @@ description: |
   greetd -- the login manager: on tty1 it runs a greeter as the
   unprivileged "greeter" user, takes the user name and password the
   greeter sends it, checks them with PAM, and starts the user's session
-  (Hyprland) as that user, in a logind session of its own.  Part of the
-  desktop extension, so its configuration is /usr/share/greetd/config.toml
-  (an extension carries no /etc), which the greeter's package provides
-  (base/buna-login.bst); its unit replaces the console shell on tty1 once
-  merged.  Without agreety, greetd's text greeter: the console login on
+  (niri, or Hyprland) as that user, in a logind session of its own.  Part
+  of the desktop extension, so its configuration is
+  /usr/share/greetd/config.toml (an extension carries no /etc), which the
+  greeter's package provides (desktop/dms-greeter.bst); its unit replaces
+  the console shell on tty1 once merged.  Without agreety, greetd's text greeter: the console login on
   tty2 to tty6 is the fallback.
 
 build-depends:
@@ -279,7 +279,7 @@ config:
   - |
     # The user greetd runs the greeter as.  Which greeter, and its command,
     # is the greeter's package's choice: /usr/share/greetd/config.toml
-    # comes from base/buna-login.bst.
+    # comes from desktop/dms-greeter.bst.
     mkdir -p %{install-root}/usr/lib/sysusers.d
     echo 'u greeter - "greetd greeter" /var/lib/greetd' > %{install-root}/usr/lib/sysusers.d/greetd.conf
 
@@ -296,6 +296,7 @@ config:
     account   include   system-login
     password  include   system-login
     session   include   system-login
+    session   required  pam_env.so conffile=/usr/lib/greetd/pam_env.conf readenv=0
     PAM
     cat > $pam/greetd-greeter <<'PAM'
     # bunix: the greeter's own session (greetd's "greeter" user, no password)
@@ -303,7 +304,14 @@ config:
     account   required  pam_permit.so
     password  required  pam_deny.so
     session   include   system-login
+    session   required  pam_env.so conffile=/usr/lib/greetd/pam_env.conf readenv=0
     PAM
+    # PATH for the greeter and the sessions it starts: greetd passes them
+    # only PAM's variables (and /etc/profile's, which bunix has not), and
+    # programs that look commands up themselves (dms-greeter finds niri-session
+    # with Go's exec.LookPath) find nothing without it
+    install -d %{install-root}/usr/lib/greetd
+    echo 'PATH DEFAULT=/usr/bin' > %{install-root}/usr/lib/greetd/pam_env.conf
 
   - |
     # The unit, upheld by multi-user.target (docs/desktop.md, "Units in an
@@ -323,7 +331,7 @@ config:
     # frame stays instead of the console (it runs seconds before greetd,
     # which only starts once the extension is merged).  greetd's own quit
     # covers a restart.  The font cache is rebuilt before the greeter's
-    # first GTK start needs it.
+    # first start needs it.
     units=%{install-root}/usr/lib/systemd/system
     mkdir -p $units/multi-user.target.d $units/plymouth-quit.service.d
     cat > $units/plymouth-quit.service.d/greetd.conf <<'UNIT'

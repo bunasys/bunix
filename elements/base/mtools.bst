@@ -1,5 +1,5 @@
 kind: autotools
-description: mtools -- copies files into the ISO's FAT EFI system partition image
+description: mtools -- mcopy, which systemd-repart uses to fill FAT partitions (the ESPs of system/live.bst and system/disk.bst)
 
 build-depends:
 - bootstrap/build-env.bst

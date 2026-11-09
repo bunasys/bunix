@@ -4,7 +4,7 @@
 # (90-uki.transfer).  The source file names carry the partition UUIDs
 # (@u), which systemd-repart derived from the root hash: the UKI's
 # usrhash= finds its /usr by them, so after a rollback an older UKI still
-# mounts its own /usr.  The live ISO has no slots; system/iso.bst leaves
+# mounts its own /usr.  The live system has no slots; system/live.bst leaves
 # these files out.
 [Transfer]
 ProtectVersion=%A

@@ -1,15 +1,19 @@
 #!/bin/bash
-# bunix-install: install bunix from the live ISO onto a disk, next to what
+# bunix-install: install bunix from the live image onto a disk, next to what
 # is already on it (Windows, say), into one of
 #
 #   - a stretch of free space (make it first: shrink Windows' C: in Disk
 #     Management -- this tool does not resize file systems)
 #   - an existing partition, which it deletes
+#   - an earlier bunix or another Linux system, whose partitions it deletes
+#     (a guess from the partition table, shown in full before anything is
+#     deleted)
 #   - a whole disk, which it erases
 #
 # Nothing outside the chosen space is written, except the disk's EFI system
-# partition (ESP), where it adds the directory EFI/bunix/, and a firmware
-# boot entry "bunix".  When the machine already boots Windows, Windows stays
+# partition (ESP), where it adds the directory EFI/bunix/ (and, replacing a
+# system, puts bunix's loader/loader.conf in place of the old one), and a
+# firmware boot entry "bunix".  When the machine already boots Windows, Windows stays
 # the default; pick bunix from the firmware's boot menu.  systemd-boot lists
 # Windows too when the two share an ESP.
 #
@@ -61,6 +65,8 @@ TYPE_ROOT=4f68bce3-e8cd-4db1-96e7-fbcaf984b709
 MiB=$((1024 * 1024))
 WORK=/run/bunix-install
 SECURE_BOOT_VAR=/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
+# systemd-boot's default entry, when `bootctl set-default` chose one
+LOADER_ENTRY_DEFAULT_VAR=/sys/firmware/efi/efivars/LoaderEntryDefault-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
 
 die() { echo "bunix-install: $*" >&2; exit 1; }
 
@@ -93,6 +99,16 @@ ask_secret() {
 
 new_uuid() { cat /proc/sys/kernel/random/uuid; }
 
+# Whether a name is among the rest of the arguments
+is_one_of() {
+  local name=$1; shift
+  local other
+  for other in "$@"; do
+    [ "$other" = "$name" ] && return 0
+  done
+  return 1
+}
+
 # A partition's device, once udev has created its link
 device_of_partuuid() {
   local link=/dev/disk/by-partuuid/$1
@@ -114,14 +130,13 @@ trap cleanup EXIT
 
 [ "$(id -u)" = 0 ] || die "run as root"
 [ -d /sys/firmware/efi ] || die "this machine did not boot with UEFI; bunix boots with UEFI only"
-# It is in every /usr, but installs only from the live ISO it booted
-grep -qw bunix.live /proc/cmdline || die "bunix is installed already: bunix-install runs on the live ISO"
+# It is in every /usr, but installs only from the live image it booted
+grep -qw bunix.live /proc/cmdline || die "bunix is installed already: bunix-install runs on the live system"
 
-# The release to install comes from the boot medium (system/iso.bst puts it
+# The release to install comes from the boot medium (system/live.bst puts it
 # in install/), the files the live system's own /usr is mounted from.  Its
 # initrd mounted the medium already (files/live/usr/lib/bunix/live-usr) and
-# left it mounted.  Mounting it again fails on a USB stick: the stick and its
-# partition are both the medium, and the kernel mounts only one.
+# left it mounted.
 medium=/run/bunix/medium
 mountpoint -q "$medium" || die "the boot medium is not mounted at $medium"
 medium_device=$(readlink -f "$(findmnt -no SOURCE "$medium")")
@@ -172,18 +187,46 @@ disk=${disks[$index]}
 
 # --- the place on it ----------------------------------------------------
 
-# Each place is "kind start end device description": start and end in
-# bytes, device the partition to replace (or "-").
+# Each place is "kind start end partitions description": start and end in
+# bytes, partitions those to delete, comma-separated (or "-").
 sector_size=$(blockdev --getss "$disk")
 places=()
 
+# A partition's place on the disk, in bytes: "start end" (sysfs counts in
+# 512-byte units, whatever the disk's sector size)
+extent_of() {
+  local sysfs
+  sysfs=/sys/class/block/$(basename "$1")
+  local start=$(( $(cat "$sysfs"/start) * 512 ))
+  echo "$start $(( start + $(cat "$sysfs"/size) * 512 ))"
+}
+
+# One line about a partition, for the lists the person chooses from
+describe_partition() {
+  local size type_name label fs
+  size=$(lsblk -ndo SIZE "$1" | tr -d ' ')
+  type_name=$(lsblk -ndo PARTTYPENAME "$1")
+  label=$(lsblk -ndo PARTLABEL "$1")
+  fs=$(lsblk -ndo FSTYPE "$1")
+  echo "$1  $size, $type_name, \"$label\"${fs:+, $fs}"
+}
+
 esp=""
+# Every partition on the disk, ESPs included: what stays in place when a
+# system is replaced
+partitions=()
 # Partitions of the types bunix boots by.  The initrd and systemd-boot take
 # the first of each type they find on the disk, so another one -- an older
 # bunix, say -- has to go first.
 discoverable=()
+# Every partition of a Linux type (lsblk names them "Linux ...": root, /usr,
+# home, swap, LVM, RAID, LUKS, XBOOTLDR), the discoverable ones included
+linux_partitions=()
+# The releases an earlier bunix's /usr slots are named after
+bunix_releases=()
 while read -r name type; do
   [ "$type" = part ] || continue
+  partitions+=("$name")
   part_type=$(lsblk -ndo PARTTYPE "$name")
   if [ "$part_type" = "$TYPE_ESP" ]; then
     esp=$name
@@ -193,13 +236,96 @@ while read -r name type; do
     "$TYPE_ROOT"|"$TYPE_XBOOTLDR"|"$TYPE_USR"|"$TYPE_USR_VERITY"|"$TYPE_USR_VERITY_SIG")
       discoverable+=("$name") ;;
   esac
-  sysfs=/sys/class/block/$(basename "$name")
-  start=$(( $(cat "$sysfs"/start) * 512 ))
-  end=$(( start + $(cat "$sysfs"/size) * 512 ))
-  size=$(lsblk -ndo SIZE "$name" | tr -d ' ')
-  what="$size, $(lsblk -ndo PARTTYPENAME "$name"), \"$(lsblk -ndo PARTLABEL "$name")\""
-  places+=("partition $start $end $name replace $name ($what)")
+  type_name=$(lsblk -ndo PARTTYPENAME "$name")
+  case $type_name in
+    Linux*) linux_partitions+=("$name") ;;
+  esac
+  if [ "$part_type" = "$TYPE_USR" ]; then
+    label=$(lsblk -ndo PARTLABEL "$name")
+    case $label in
+      bunix_*) bunix_releases+=("${label#bunix_}") ;;
+    esac
+  fi
+  read -r start end < <(extent_of "$name")
+  places+=("partition $start $end $name replace $(describe_partition "$name")")
 done < <(lsblk -nrpo NAME,TYPE "$disk")
+
+# --- earlier systems on it ----------------------------------------------
+
+# A best guess from the partition table alone: no file system is mounted or
+# read.  An earlier bunix is the discoverable partitions, when a /usr slot
+# is named after a bunix release; other Linux partitions may be one system
+# or several.  Offered on GPT disks only, which bunix-install adds its
+# partitions to.
+
+# The free stretch, in bytes, that deleting the given partitions leaves.
+# Around each of them, free space reaches back to the nearest partition
+# that stays before it and on to the nearest one after it; the largest such
+# stretch wins.  Prints "start end".
+freed_space() {
+  local table first_usable end_usable
+  table=$(sfdisk -d "$disk")
+  first_usable=$(( $(sed -n 's/^first-lba: //p' <<< "$table") * sector_size ))
+  end_usable=$(( ($(sed -n 's/^last-lba: //p' <<< "$table") + 1) * sector_size ))
+
+  local best_start=0 best_end=0
+  local deleted deleted_start deleted_end kept kept_start kept_end
+  for deleted in "$@"; do
+    read -r deleted_start deleted_end < <(extent_of "$deleted")
+    local gap_start=$first_usable gap_end=$end_usable
+    for kept in "${partitions[@]}"; do
+      is_one_of "$kept" "$@" && continue
+      read -r kept_start kept_end < <(extent_of "$kept")
+      if [ "$kept_end" -le "$deleted_start" ] && [ "$kept_end" -gt "$gap_start" ]; then
+        gap_start=$kept_end
+      fi
+      if [ "$kept_start" -ge "$deleted_end" ] && [ "$kept_start" -lt "$gap_end" ]; then
+        gap_end=$kept_start
+      fi
+    done
+    if [ $(( gap_end - gap_start )) -gt $(( best_end - best_start )) ]; then
+      best_start=$gap_start
+      best_end=$gap_end
+    fi
+  done
+  echo "$best_start $best_end"
+}
+
+# A choice that replaces an earlier system, with the partitions it deletes:
+# "earlier start end p1,p2,... description"
+add_earlier_place() {
+  local description=$1; shift
+  local start end
+  read -r start end < <(freed_space "$@")
+  local bytes=0 name part_start part_end
+  for name in "$@"; do
+    read -r part_start part_end < <(extent_of "$name")
+    bytes=$(( bytes + part_end - part_start ))
+  done
+  local joined
+  joined=$(printf '%s,' "$@")
+  places+=("earlier $start $end ${joined%,} replace $description: $# partitions, $(numfmt --to=iec "$bytes")")
+}
+
+has_gpt=no
+if [ "$(lsblk -ndo PTTYPE "$disk")" = gpt ]; then
+  has_gpt=yes
+fi
+has_other_linux=no
+for name in "${linux_partitions[@]}"; do
+  is_one_of "$name" "${discoverable[@]}" || has_other_linux=yes
+done
+if [ "$has_gpt" = yes ] && [ ${#linux_partitions[@]} -gt 0 ]; then
+  if [ ${#bunix_releases[@]} -gt 0 ]; then
+    newest_bunix=$(printf '%s\n' "${bunix_releases[@]}" | sort -V | tail -1)
+    add_earlier_place "the earlier bunix $newest_bunix" "${discoverable[@]}"
+    if [ "$has_other_linux" = yes ]; then
+      add_earlier_place "the earlier bunix $newest_bunix and the other Linux partitions" "${linux_partitions[@]}"
+    fi
+  else
+    add_earlier_place "the Linux system" "${linux_partitions[@]}"
+  fi
+fi
 
 if sfdisk -d "$disk" >/dev/null 2>&1; then
   # sfdisk -F lists free stretches as "start end sectors size", in sectors
@@ -237,21 +363,50 @@ for i in "${!places[@]}"; do
   printf '  %d) %s%s\n' $((i + 1)) "$description" "$too_small"
 done
 index=$(ask_number "Which?" ${#places[@]})
-read -r kind start end partition description <<< "${places[$index]}"
+read -r kind start end delete_field description <<< "${places[$index]}"
 fits "$kind" "$start" "$end" || die "not enough space there"
+to_delete=()
+if [ "$delete_field" != - ]; then
+  read -r -a to_delete <<< "${delete_field//,/ }"
+fi
 if [ "$kind" != disk ]; then
   for name in "${discoverable[@]}"; do
-    [ "$name" = "$partition" ] && continue
+    is_one_of "$name" "${to_delete[@]}" && continue
     die "$disk already has a root, XBOOTLDR or /usr partition ($name), from an
-earlier bunix perhaps; delete those first, or install to the whole disk"
+earlier bunix perhaps; replace it (one of the choices), or install to the
+whole disk"
   done
 fi
+# The live system leaves the disks alone, but the person may have mounted
+# one, turned a swap partition on, or unlocked an encrypted one (its
+# holder, the mapped device, keeps wipefs out)
+for name in "${to_delete[@]}"; do
+  in_use=$(lsblk -no MOUNTPOINTS "$name" | tr -d '\n')
+  [ -z "$in_use" ] || die "$name is in use ($in_use): unmount it, or turn its swap off, first"
+  holders=$(ls /sys/class/block/"$(basename "$name")"/holders | tr '\n' ' ')
+  [ -z "$holders" ] || die "$name is open as $holders: close it first (cryptsetup close, dmsetup remove)"
+done
 
 # A shared ESP needs room for bunix's few MiB of boot files.  Checked now,
-# before anything on the disk changes.
+# before anything on the disk changes.  Also read, for the warnings when a
+# system is replaced: other systems' boot loaders, and another
+# systemd-boot's settings, which bunix's systemd-boot would read too.
+esp_other_loaders=""
+esp_loader_settings=""
+has_loader_conf=no
 if [ -n "$esp" ] && [ "$kind" != disk ]; then
   mount "$esp" "$WORK"/esp
   esp_free_mib=$(df --output=avail -B1M "$WORK"/esp | tail -1 | tr -d ' ')
+  for dir in "$WORK"/esp/EFI/*/; do
+    [ -d "$dir" ] || continue
+    dir_name=$(basename "$dir")
+    case ${dir_name,,} in boot|microsoft|bunix) continue ;; esac
+    esp_other_loaders+="$dir_name "
+  done
+  if [ -e "$WORK"/esp/loader/loader.conf ]; then
+    has_loader_conf=yes
+    esp_loader_settings=$(grep -E '^(default|timeout)' "$WORK"/esp/loader/loader.conf | tr '\n' ' ' || true)
+  fi
   umount "$WORK"/esp
   [ "$esp_free_mib" -ge 8 ] || die "the ESP ($esp) has only $esp_free_mib MiB free; bunix needs 8"
 fi
@@ -262,7 +417,7 @@ fi
 # later would leave the disk half installed
 echo
 echo "Install:"
-echo "  1) the desktop: Hyprland, with a login screen"
+echo "  1) the desktop: niri with DMS, with a login screen"
 echo "  2) the console only: text, no graphics"
 systems=(desktop console)
 index=$(ask_number "Which?" ${#systems[@]})
@@ -327,10 +482,67 @@ case $kind in
     end=$(( (last + 1) * sector_size ))
     ;;
   partition)
-    confirm=$(ask "DELETE $partition and everything on it? Type its name ($partition) to go on:")
-    [ "$confirm" = "$partition" ] || die "cancelled"
-    wipefs -q -a "$partition"
-    sfdisk -q --delete "$disk" "$(cat /sys/class/block/"$(basename "$partition")"/partition)"
+    confirm=$(ask "DELETE $delete_field and everything on it? Type its name ($delete_field) to go on:")
+    [ "$confirm" = "$delete_field" ] || die "cancelled"
+    wipefs -q -a "$delete_field"
+    sfdisk -q --delete "$disk" "$(cat /sys/class/block/"$(basename "$delete_field")"/partition)"
+    ;;
+  earlier)
+    echo
+    echo "These partitions on $disk are DELETED, with everything on them:"
+    for name in "${to_delete[@]}"; do
+      echo "  $(describe_partition "$name")"
+    done
+    echo
+    echo "Check this list.  It is a guess from the partition table: bunix-install"
+    echo "goes by the partitions' types and names and does not look inside them."
+    echo "  - Your files on them are lost, /home included.  Back them up first."
+    for name in "${to_delete[@]}"; do
+      case $(lsblk -ndo FSTYPE "$name") in
+        crypto_LUKS) echo "  - $name is encrypted: what is in it cannot be seen." ;;
+        LVM2_member) echo "  - $name holds LVM volumes; a volume group can reach over other"
+                     echo "    disks, whose volumes then stop working too." ;;
+        linux_raid_member) echo "  - $name is part of a RAID array, which may reach over other disks." ;;
+      esac
+    done
+    for name in "${to_delete[@]}"; do
+      read -r part_start _ < <(extent_of "$name")
+      is_inside=no
+      if [ "$part_start" -ge "$start" ] && [ "$part_start" -lt "$end" ]; then
+        is_inside=yes
+      fi
+      [ "$is_inside" = yes ] && continue
+      echo "  - $name is elsewhere on the disk: bunix goes into the largest freed"
+      echo "    stretch ($(( (end - start) / MiB )) MiB), and $name's space stays free."
+    done
+    if [ "$has_loader_conf" = yes ]; then
+      echo "  - The ESP has systemd-boot settings (loader/loader.conf:"
+      echo "    ${esp_loader_settings:-no default}), which may start the old system."
+      echo "    They are kept as loader/loader.conf.before-bunix, and bunix's, with"
+      echo "    bunix as the default, take their place."
+    fi
+    if [ -e "$LOADER_ENTRY_DEFAULT_VAR" ]; then
+      echo "  - A default boot entry set with 'bootctl set-default' is removed."
+    fi
+    if [ -n "$esp_other_loaders" ]; then
+      echo "  - The ESP ($esp) stays, and so do other systems' boot files in it"
+      echo "    (EFI/: $esp_other_loaders) and their firmware boot entries, which"
+      echo "    may then start nothing, or be what the firmware starts first.  Remove"
+      echo "    them yourself if they are the old system's (efibootmgr -b <entry> -B)."
+    fi
+    echo
+    confirm=$(ask "DELETE these ${#to_delete[@]} partitions? Type the disk's name ($disk) to go on:")
+    [ "$confirm" = "$disk" ] || die "cancelled"
+    # the numbers first: a partition wiped and then found busy would stop
+    # the script with the table unchanged
+    numbers=()
+    for name in "${to_delete[@]}"; do
+      numbers+=("$(cat /sys/class/block/"$(basename "$name")"/partition)")
+    done
+    for name in "${to_delete[@]}"; do
+      wipefs -q -a "$name"
+    done
+    sfdisk -q --delete "$disk" "${numbers[@]}"
     ;;
   free)
     confirm=$(ask "Install into this free space? [yes/no]")
@@ -407,7 +619,22 @@ else
   rm -rf "$WORK"/esp/EFI/bunix
   mkdir -p "$WORK"/esp/EFI "$WORK"/esp/loader
   cp -r "$esp_files"/EFI/bunix "$WORK"/esp/EFI/
-  [ -e "$WORK"/esp/loader/loader.conf ] || cp "$esp_files"/loader/loader.conf "$WORK"/esp/loader/
+  loader_conf=$WORK/esp/loader/loader.conf
+  if [ "$kind" = earlier ]; then
+    # A replaced system's systemd-boot settings, or its entries, which sort
+    # before bunix's, would start the old system: bunix's settings take
+    # their place, with bunix's kernel images as the default (the
+    # confirmation said so)
+    if [ -e "$loader_conf" ]; then
+      mv "$loader_conf" "$loader_conf".before-bunix
+    fi
+    { cat "$esp_files"/loader/loader.conf; echo 'default bunix_*'; } > "$loader_conf"
+    if [ -e "$LOADER_ENTRY_DEFAULT_VAR" ]; then
+      bootctl set-default ''
+    fi
+  elif [ ! -e "$loader_conf" ]; then
+    cp "$esp_files"/loader/loader.conf "$loader_conf"
+  fi
 fi
 
 echo "Creating the root file system..."
@@ -493,14 +720,21 @@ if [ "$has_windows" = yes ]; then
   efibootmgr -q --bootorder "${boot_order:+$boot_order,}$bunix_entry"
 fi
 
+# What the firmware starts first now: Windows, or, after a replaced Linux,
+# perhaps that system's own entry
+first_entry=$(efibootmgr | sed -n 's/^BootOrder: \([0-9A-F]\{4\}\).*/\1/p')
+first_label=$(efibootmgr | sed -n "s/^Boot$first_entry\*\{0,1\} //p" | cut -f1)
+
 # --- done ---------------------------------------------------------------
 
 echo
 echo "bunix $release is installed on $disk (boot entry Boot$bunix_entry)."
 echo "Log in as \"$user_name\"."
+if [ "$first_entry" != "$bunix_entry" ]; then
+  echo "The firmware starts \"$first_label\" first: to start bunix, choose"
+  echo "\"bunix\" in its boot menu (a key like F12, F11 or Esc at power-on)."
+fi
 if [ "$has_windows" = yes ]; then
-  echo "Windows stays the default: to start bunix, choose \"bunix\" in the"
-  echo "firmware's boot menu (a key like F12, F11 or Esc at power-on)."
   echo "Windows keeps the hardware clock in local time, bunix in UTC; to"
   echo "make them agree, run 'timedatectl set-local-rtc 1' in bunix."
 fi

@@ -15,9 +15,10 @@ nothing from the build machine can leak in.
 ## Using a release
 
 Releases are on this repository's [releases page](https://github.com/bunasys/bunix/releases):
-`bunix-x86_64.iso` is the live system and installer (UEFI, Secure Boot);
-the other files are the updates installed systems fetch.  Write the ISO to
-a USB stick, boot it, and run `bunix-install` (docs/install.md).
+`bunix-x86_64-live.img` is the live system and installer (UEFI, Secure
+Boot); the other files are the updates installed systems fetch.  Write it
+to a USB stick (`dd`, Fedora Media Writer, Rufus in DD mode), boot it, and
+run `bunix-install` (docs/install.md).
 
 Updating an installed system (A/B, with automatic rollback; every file is
 checked against the signed manifest and its dm-verity signature):
@@ -126,6 +127,14 @@ trade-off seed.bst makes for gcc.
 build them (perl, pkgconf, cmake, meson, ninja, gperf, Jinja2). `base.bst`
 lists the packages; `tests/base.bst` runs each of their programs once.
 
+`elements/desktop/` holds packages only the desktop has: the DMS shell and
+its login screen, niri, Quickshell and Qt, AccountsService, and what builds
+them.  They reach a system only through the desktop extension
+(`sysext/desktop-content.bst`), never `base.bst`.  Older desktop packages
+(Hyprland, GTK 4, Ghostty, Buna Browser) are still in `elements/base/`; a
+console install does not get them either, since it is the lists, not the
+folders, that decide.
+
 Every system element builds in `bootstrap/build-env.bst` (the stage-3 root
 and the final toolchain), listed first in its build-depends, and declares the
 libraries and tools it uses beyond that. Nothing else is in its sandbox, so
@@ -156,7 +165,7 @@ tests/rootfs.bst     stages the root file system alone at / and checks it with
                      its own shell and loader: libraries, UAPI.9 layout, programs
 system/esp.bst       the ESP's boot files: shim, signed systemd-boot, bunix.cer
 system/shim.bst      Debian's Microsoft-signed shim and MokManager
-system/iso.bst       bunix-x86_64.iso (UEFI only): a signed live UKI whose
+system/live.bst      bunix-x86_64-live.img (UEFI only): a signed live UKI whose
                      initrd mounts /usr from the medium (files/live)
 system/initrd.bst    the installed system's initrd, from the rootfs's own files
 system/usr.bst       the rootfs's /usr as a /usr slot: erofs, dm-verity, signature
@@ -168,24 +177,25 @@ system/disk.bst      bunix-x86_64.raw: an installable disk with two /usr slots
 system updates itself with systemd-sysupdate, A/B, with automatic rollback
 (docs/updates.md, step 2):
 
-- `bunix-install` on the live ISO installs into free space, into a partition
+- `bunix-install` on the live system installs into free space, into a partition
   it replaces, or onto a whole disk, next to Windows if it is there
   (docs/install.md).
 - `bunix-x86_64.raw` is written to a whole disk; it creates its root
   partition on first boot.
 
-The ISO boots on UEFI machines, with Secure Boot on (no BIOS boot), from a CD or written
-raw to a USB stick. It boots the same signed /usr image that `bunix-install`
-writes to disk, read from the medium, with the root file system in memory.
+The live image boots on UEFI machines, with Secure Boot on (no BIOS boot),
+written raw to a USB stick (no CD boot). It boots the same signed /usr image
+that `bunix-install` writes to disk, read from the medium, with the root
+file system in memory.
 Build it and fetch it:
 
 ```
-tools/bst-remote.sh build system/iso.bst
-ssh pro13.home.arpa 'cd src/bunix && ~/.local/share/bunix-bst/bin/bst artifact checkout system/iso.bst --directory ~/bunix-iso'
-scp pro13.home.arpa:bunix-iso/bunix-x86_64.iso .
+tools/bst-remote.sh build system/live.bst
+ssh pro13.home.arpa 'cd src/bunix && ~/.local/share/bunix-bst/bin/bst artifact checkout system/live.bst --directory ~/bunix-live'
+scp pro13.home.arpa:bunix-live/bunix-x86_64-live.img .
 ```
 
-`tools/boot-test.py <iso> <uefi|bios> <outdir>` boots it in QEMU (with KVM
+`tools/boot-test.py <live.img> <uefi|bios> <outdir>` boots it in QEMU (with KVM
 when available), types a set of checks on the console (network up, DNS,
 HTTPS, the tools start) and saves their output and screenshots.
 
@@ -194,7 +204,7 @@ per job, so a leak of one does not give away the others:
 
 | Key | Signs | Trusted by |
 | --- | --- | --- |
-| `secureboot.key/.crt` ("bunix Secure Boot signing key") | systemd-boot and the kernel images (`system/esp.bst`, `system/uki.bst`, `system/iso.bst`) | shim, once enrolled with MokManager |
+| `secureboot.key/.crt` ("bunix Secure Boot signing key") | systemd-boot and the kernel images (`system/esp.bst`, `system/uki.bst`, `system/live.bst`) | shim, once enrolled with MokManager |
 | `verity.key/.crt` | extension images' dm-verity root hashes (`sysext/gcc.bst`, `rust.bst`, `swift.bst`, `devtools.bst`, `desktop.bst`) | the kernel: `files/linux/verity.crt` is built in |
 | `release.key` (OpenPGP) | update manifests (`tools/publish.sh`) | sysupdate: `files/rootfs/usr/lib/systemd/import-pubring.pgp` |
 
@@ -233,7 +243,7 @@ what PCs and laptops use, is in `/usr/lib/firmware` (`system/firmware.bst`).
 * **Artifacts keep no file modes but the executable bit.** BuildStream's
   content-addressed store records whether a file is executable and nothing
   else, so `/tmp`'s 1777 or `/etc/shadow`'s 0640 cannot live in an artifact;
-  `system/iso.bst` sets them when it packs the image. A file of mode 0000
+  `system/live.bst` sets them when it packs the image. A file of mode 0000
   (systemd-sysusers writes the shadow files that way) cannot even be stored.
 
 * **Rosetta and new system calls.** The build container is x86_64 under

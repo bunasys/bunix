@@ -3,6 +3,18 @@
 Small problems seen on real installs, to fix when there is time.  Newest
 first; remove an entry when it is fixed.
 
+## DMS on niri, first tests in QEMU (2026-11-09, 0.3.0)
+
+- **No usable GPU, no desktop.**  niri renders only through a GPU with a
+  render node: on a machine Mesa has no driver for (NVIDIA: bunix builds
+  no nouveau) or in a VM without 3D, the login screen stays black, where
+  cage (buna-login) drew in software.  Test VMs need `-device
+  virtio-vga-gl -display egl-headless` (QEMU's GL modules); QEMU's
+  screendump cannot capture that screen, VNC can.
+- **No on-screen keyboard** on the login screen, which buna-login had.
+- **Hyprland is still a session** at the login screen, without DMS, until
+  it is removed.
+
 ## Buna Browser, first test in QEMU (2026-11-07)
 
 - **The first-run screen still shows** ("The browser that gets more done",

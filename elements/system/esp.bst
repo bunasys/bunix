@@ -1,7 +1,7 @@
 kind: manual
 description: |
   The installed system's boot files for the EFI system partition, signed:
-  what system/disk.bst puts on its ESP and bunix-install (on the ISO) copies
+  what system/disk.bst puts on its ESP and bunix-install (on the live image) copies
   to the ESP of the disk it installs to.  Installed under /usr/lib/bunix/esp:
 
     EFI/bunix/shimx64.efi, mmx64.efi

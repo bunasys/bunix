@@ -1,4 +1,4 @@
-# Checks for tools/boot-test.py on the live ISO with a blank disk attached
+# Checks for tools/boot-test.py on the live system with a blank disk attached
 # (BOOT_DISK=<outdir>/disk.raw, 24 GB): lay the disk out like a Windows PC,
 # install bunix into its free space (a console install), and check that
 # nothing of "Windows" changed.  Then boot the disk with

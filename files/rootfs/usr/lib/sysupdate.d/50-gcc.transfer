@@ -2,8 +2,8 @@
 # extension built for another release would not match this system's C
 # library.  Being part of the same update target, it moves in lock-step
 # with /usr (10-usr.transfer): sysupdate installs the same version of both.
-# The live ISO, which has no /usr to update, fetches the one for its own
-# release instead (system/iso.bst points Path= at that release).
+# The live system, which has no /usr to update, fetches the one for its own
+# release instead (system/live.bst points Path= at that release).
 #
 # The file is named gcc_<version>.raw: sysext takes the extension's name
 # from the file name up to the first "_" (and then reads

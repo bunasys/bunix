@@ -1,22 +1,30 @@
 #!/usr/bin/env python3
-"""Boot the bunix ISO in QEMU, headless, and run checks on the booted system.
+"""Boot bunix in QEMU, headless, and run checks on the booted system.
 
-usage: tools/boot-test.py <iso|disk.raw> <uefi|bios> <outdir>
+usage: tools/boot-test.py <live.img|disk.raw|old.iso> <uefi|bios> <outdir>
+
+
+The file's extension says how it is attached:
+  .img  the live image (system/live.bst), as a read-only USB stick
+  .raw  an installed disk (system/disk.bst, or one bunix-install wrote) --
+        disk images are always .raw
+  .iso  a live ISO of 0.2.2 or before, as a CD -- for the update test,
+        which installs the previous release; BOOT_USB=1 attaches it as a
+        USB stick instead
 
 A .raw disk image (system/disk.bst) is booted from a working copy,
 <outdir>/disk.raw, grown to 8 GB so its first boot has room for the root
 partition.  The copy is kept: running again with the same <outdir> boots the
 same disk again, as a reboot would.  Under UEFI the firmware's variables
-(boot entries) are kept in <outdir> as well, for ISO and disk runs alike.
+(boot entries) are kept in <outdir> as well, for live and disk runs alike.
 
-BOOT_DISK=<file> attaches a disk image to an ISO run (bunix-install's
-target): create <outdir>/disk.raw, install to it from the ISO, then boot it
-with a disk run of the same <outdir>.  BOOT_USB=1 attaches the ISO as a USB
-stick instead of a CD.
+BOOT_DISK=<file> attaches a disk image to a live run (bunix-install's
+target): create <outdir>/disk.raw, install to it from the live system, then
+boot it with a disk run of the same <outdir>.
 
-Boots the ISO's default GRUB entry, waits for boot to finish, then types each
+Boots the default boot entry, waits for boot to finish, then types each
 check on the VM's keyboard -- the screen console (tty1) runs root's fish on
-the live ISO and on a disk whose root has no password -- with the output
+the live system and on a disk whose root has no password -- with the output
 redirected to the serial port, which this script reads.  Writes serial.log
 (the checks' output) and screenshots as PNG to <outdir>: every 3 s for the
 first 15 s (the boot splash), after boot, after BOOT_KEYS, at the end.
@@ -59,11 +67,16 @@ OVMF_CANDIDATES = [
     "/opt/homebrew/share/qemu/edk2-x86_64-code.fd",    # Homebrew
 ]
 
-iso, firmware, outdir = sys.argv[1], sys.argv[2], sys.argv[3]
-boots_disk = iso.endswith(".raw")
-boots_usb = bool(os.environ.get("BOOT_USB"))
-if boots_disk and boots_usb:
-    sys.exit("BOOT_USB is for ISO runs; this is a disk run")
+image, firmware, outdir = sys.argv[1], sys.argv[2], sys.argv[3]
+is_live_image = image.endswith(".img")
+boots_disk = image.endswith(".raw")
+is_old_iso = image.endswith(".iso")
+if not (is_live_image or boots_disk or is_old_iso):
+    sys.exit(f"{image}: expected a .img, .raw or .iso file")
+wants_usb = bool(os.environ.get("BOOT_USB"))
+if wants_usb and not is_old_iso:
+    sys.exit("BOOT_USB is for an old .iso; a .img is a USB stick already")
+boots_usb = is_live_image or wants_usb
 if os.environ.get("BOOT_CHECKS"):
     lines = open(os.environ["BOOT_CHECKS"]).read().splitlines()
     CHECKS = [line for line in lines if line.strip() and not line.startswith("#")]
@@ -82,17 +95,15 @@ qemu_args = ["qemu-system-x86_64", "-machine", "q35", "-smp", "2", "-m", os.envi
 if boots_disk:
     disk = os.path.join(outdir, "disk.raw")
     if not os.path.exists(disk):
-        subprocess.run(["cp", "--sparse=always", iso, disk], check=True)
+        subprocess.run(["cp", "--sparse=always", image, disk], check=True)
         os.truncate(disk, 8 * 1024**3)
     qemu_args += ["-drive", f"if=virtio,format=raw,file={disk}"]
 elif boots_usb:
-    # as a USB stick, which shows the ISO twice: the whole stick and a
-    # partition at the same place
     qemu_args += ["-device", "qemu-xhci",
-                  "-drive", f"if=none,id=stick,format=raw,readonly=on,file={iso}",
+                  "-drive", f"if=none,id=stick,format=raw,readonly=on,file={image}",
                   "-device", "usb-storage,drive=stick,bootindex=0"]
 else:
-    qemu_args += ["-cdrom", iso, "-boot", "d"]
+    qemu_args += ["-cdrom", image, "-boot", "d"]
 if os.environ.get("BOOT_DISK") and not boots_disk:
     qemu_args += ["-drive", f"if=virtio,format=raw,file={os.environ['BOOT_DISK']}"]
 if os.access("/dev/kvm", os.R_OK | os.W_OK):

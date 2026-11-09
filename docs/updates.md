@@ -100,7 +100,7 @@ SHA256SUMS                              -> verifies each download
 A sysext is a disk image with a `usr/` tree and
 `usr/lib/extension-release.d/extension-release.gcc`.  `systemd-sysext merge`
 overlays it on /usr read-only; `unmerge` removes it without a trace.  On the
-RAM-only live ISO the image goes to `/var/lib/extensions` and lasts until
+RAM-only live system the image goes to `/var/lib/extensions` and lasts until
 reboot; on an installed system it persists.
 
 On a running bunix:
@@ -114,7 +114,7 @@ systemd-sysext refresh                         # merge: cc, make, ... appear
 
 (`updatectl enable gcc` would write the same drop-in, but systemd 261's
 update service sees no update target while all of a system's transfers
-belong to disabled features, as on the live ISO.)
+belong to disabled features, as on the live system.)
 
 Build side:
 
@@ -228,8 +228,8 @@ Updates: `/usr/lib/sysupdate.d/10-usr`, `11-usr-verity`, `12-usr-verity-sig`
 (the UKI, written last, with `TriesLeft=3`), from
 `https://github.com/bunasys/bunix/releases/latest/download/`.  The gcc
 extension (`50-gcc`) is in the same target, so it moves in lock-step.
-`tools/publish.sh` publishes all of it per release.  The live ISO has no
-slots: `system/iso.bst` drops the OS transfers and points gcc at its own
+`tools/publish.sh` publishes all of it per release.  The live system has no
+slots: `system/live.bst` drops the OS transfers and points gcc at its own
 release.
 
 Tested in QEMU/KVM (UEFI, Secure Boot off; `tools/boot-test.py` boots a
@@ -313,7 +313,7 @@ a patch carried forever against every systemd release.
 ## Open points
 
 * Settled: the files are GitHub releases of `bunasys/bunix`
-  (`releases/latest/download/`; the live ISO's extensions at
+  (`releases/latest/download/`; the live system's extensions at
   `releases/download/v%A/`).  Secure Boot (shim + MOK, systemd-boot
   verifying UKIs through shim) and updates work on real hardware
   (2026-11-03, releases 0.1.0 to 0.1.2).

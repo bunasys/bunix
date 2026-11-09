@@ -13,7 +13,7 @@ rsvg-convert --height 256 --keep-aspect-ratio \
   "$transparent" -o files/plymouth/bunix/watermark.png
 rm -f "$transparent"
 
-# The boot image's splash (system/uki.bst, system/iso.bst): systemd's boot
+# The boot image's splash (system/uki.bst, system/live.bst): systemd's boot
 # stub draws it, unscaled and centred, before the kernel starts -- the same
 # picture and place as Plymouth's, so the hand-over does not show.  A plain
 # 24-bit BMP is what the stub reads.  Needs ImageMagick.

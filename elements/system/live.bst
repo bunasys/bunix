@@ -1,11 +1,16 @@
 kind: manual
 description: |
-  bunix-x86_64.iso: the live system, for UEFI machines -- with Secure Boot
-  on -- from a CD or written raw to a USB stick.  It boots the installed
-  system's initrd, which mounts the release's signed /usr from the medium
-  (the files bunix-install writes to disk, in install/) and an empty root
-  file system in memory, filled from /usr as an installed system's first
-  boot is (files/live).
+  bunix-x86_64-live.img: the live system, for UEFI machines -- with Secure
+  Boot on -- written raw to a USB stick.  It boots the installed system's initrd, which mounts the
+  release's signed /usr from the stick (the files bunix-install writes to
+  disk, in install/) and an empty root file system in memory, filled from
+  /usr as an installed system's first boot is (files/live).
+
+  A GPT disk image made by systemd-repart, as system/disk.bst:
+    ESP    vfat   shim, systemd-boot, the live UKI (EFI/Linux/)
+    BUNIX  erofs  install/: this release's /usr files, UKI, ESP files and
+                  desktop extension; /usr is mounted from these files
+  No ISO 9660, so no CD boot.
 
   The same boot chain as an installed system, each stage verifying the next:
     firmware --(Microsoft UEFI CA)--> shim          (system/shim.bst)
@@ -22,10 +27,12 @@ build-depends:
 - bootstrap/build-env.bst
 - base/zstd.bst
 - base/cpio.bst
-- base/xorriso.bst
-- base/mtools.bst
+# mkfs.vfat, mcopy and mkfs.erofs, which systemd-repart runs
 - base/dosfstools.bst
-# ukify, the EFI stub and systemd-sbsign (which brings the openssl tool)
+- base/mtools.bst
+- base/erofs-utils.bst
+# ukify, the EFI stub, systemd-sbsign (which brings the openssl tool) and
+# systemd-repart
 - base/systemd.bst
 - base/python-pefile.bst
 - system/linux.bst
@@ -141,38 +148,47 @@ config:
       --output=bunix-live.efi
 
   - |
-    # The EFI partition, which UEFI firmware boots: system/esp.bst's files
-    # for a disk of bunix's own (shim as the default loader, which starts
-    # systemd-boot as grubx64.efi next to it) and the live UKI, which
-    # systemd-boot finds in EFI/Linux/.  Sized to its contents.
-    mkdir -p esp/EFI/BOOT esp/EFI/Linux
-    cp -a /usr/lib/bunix/esp/. esp/
-    cp esp/EFI/bunix/systemd-bootx64.efi esp/EFI/BOOT/grubx64.efi
-    cp esp/EFI/bunix/bunix.cer esp/bunix.cer
-    cp bunix-live.efi esp/EFI/Linux/
-    size_kib=$(( $(du -sk esp | cut -f1) + 8192 ))
-    mkfs.fat -C -n BUNIX_EFI efi.img $size_kib
-    mcopy -s -i efi.img esp/* ::/
-    mdir -/ -i efi.img ::
+    # The two partitions' files.  On the ESP, shim is the default loader
+    # (EFI/BOOT/BOOTX64.EFI) and starts grubx64.efi next to it, here
+    # systemd-boot, which finds the live UKI in EFI/Linux/.  Without
+    # fallback (fbx64.efi): it would add a firmware boot entry for the
+    # stick, which a live medium has no business leaving behind.
+    # install/esp is what bunix-install copies to the target disk's ESP.
+    mkdir -p tree/esp/EFI/BOOT tree/esp/EFI/Linux tree/data/install
+    cp -a /usr/lib/bunix/esp/. tree/esp/
+    rm tree/esp/EFI/BOOT/fbx64.efi
+    cp tree/esp/EFI/bunix/systemd-bootx64.efi tree/esp/EFI/BOOT/grubx64.efi
+    cp tree/esp/EFI/bunix/bunix.cer tree/esp/bunix.cer
+    cp bunix-live.efi tree/esp/EFI/Linux/
+    cp /usr-partitions/*.raw /uki/*.efi /desktop/*.raw tree/data/install/
+    cp -a /usr/lib/bunix/esp tree/data/install/esp
 
   - |
-    # The ISO 9660 file system: this release's /usr, UKI and ESP files,
-    # which the live system mounts /usr from and bunix-install installs,
-    # and the desktop extension
-    mkdir -p iso/install
-    cp /usr-partitions/*.raw /uki/*.efi /desktop/*.raw iso/install/
-    cp -a /usr/lib/bunix/esp iso/install/esp
-    cp esp/bunix.cer iso/
-
-  - |
-    # UEFI only: the EFI partition is appended to the image as a GPT
-    # partition (for a USB stick) and is also the El Torito boot image (for
-    # a CD)
-    xorriso -as mkisofs -R -r -J -joliet-long -V BUNIX \
-      -partition_offset 16 \
-      -append_partition 2 0xef efi.img -appended_part_as_gpt \
-      -e --interval:appended_partition_2:all:: -no-emul-boot \
-      iso -o bunix-x86_64.iso
+    # The ESP is sized from its files' apparent size (du -b: the build
+    # host's file system may compress), as vfat cannot be minimized; repart
+    # still rounds it up (260 MiB with systemd 261).  BUNIX is erofs without
+    # compression -- the images in it are compressed already.  files/live
+    # finds it by its GPT partition name (Label=): the erofs repart makes
+    # carries no file-system label.  AddValidateFS=no: as system/usr.bst,
+    # the build sandbox cannot store its extended attribute.
+    mkdir -p live.d tmp
+    esp_bytes=$(du -sb tree/esp | cut -f1)
+    esp_size=$(( esp_bytes / 1048576 + 8 ))M
+    printf '%s\n' '[Partition]' 'Type=esp' 'Format=vfat' 'Label=BUNIX_EFI' \
+      'CopyFiles=/esp:/' "SizeMinBytes=$esp_size" "SizeMaxBytes=$esp_size" \
+      > live.d/00-esp.conf
+    printf '%s\n' '[Partition]' 'Type=linux-generic' 'Format=erofs' 'Label=BUNIX' \
+      'CopyFiles=/data:/' 'Minimize=best' 'ReadOnly=yes' 'AddValidateFS=no' \
+      > live.d/10-bunix.conf
+    # Offline, with TMPDIR in the build directory: the sandbox has no loop
+    # devices and no writable /tmp.  A fixed seed: the same UUIDs on every
+    # build, for a reproducible image.
+    export TMPDIR=$PWD/tmp
+    /usr/bin/systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
+      --definitions=live.d --copy-source=$PWD/tree \
+      --seed=5b0e2c71-9d4a-4f63-8e1b-a7c2d9f04e36 \
+      bunix-x86_64-live.img
+    ls -l bunix-x86_64-live.img
 
   install-commands:
-  - install -D -m 0644 bunix-x86_64.iso %{install-root}/bunix-x86_64.iso
+  - install -D -m 0644 bunix-x86_64-live.img %{install-root}/bunix-x86_64-live.img

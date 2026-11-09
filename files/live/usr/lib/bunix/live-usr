@@ -3,7 +3,8 @@
 # same signed /usr image bunix-install writes to disk, read from the boot
 # medium instead of copied into memory.
 #
-#   1. mount the boot medium (the ISO 9660 file system, label BUNIX)
+#   1. mount the boot medium: the live image's erofs partition, the GPT
+#      partition named BUNIX (system/live.bst)
 #   2. attach install/'s three /usr files -- erofs data, dm-verity hash tree,
 #      signature -- as /dev/mapper/usr; the kernel checks the root hash's
 #      signature (dm_verity.require_signatures=1) and every block as it is
@@ -20,7 +21,7 @@ usrhash=$(sed -n 's/.*bunix\.usrhash=\([0-9a-f]*\).*/\1/p' /proc/cmdline)
 [ -n "$usrhash" ] || { echo "no bunix.usrhash= on the kernel command line" >&2; exit 1; }
 
 mkdir -p "$medium"
-mountpoint -q "$medium" || mount -o ro /dev/disk/by-label/BUNIX "$medium"
+mountpoint -q "$medium" || mount -o ro /dev/disk/by-partlabel/BUNIX "$medium"
 
 data=$(ls "$medium"/install/bunix_*.usr-x86-64.*.raw)
 hash_tree=$(ls "$medium"/install/bunix_*.usr-x86-64-verity.*.raw)

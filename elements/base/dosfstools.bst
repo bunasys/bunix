@@ -1,5 +1,5 @@
 kind: autotools
-description: dosfstools -- mkfs.fat makes the EFI system partitions of the ISO and the disk image
+description: dosfstools -- mkfs.fat makes the EFI system partitions of the live and disk images
 
 build-depends:
 - bootstrap/build-env.bst

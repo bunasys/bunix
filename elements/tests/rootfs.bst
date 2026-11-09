@@ -139,7 +139,7 @@ config:
     # no link to a unit that is not there
     dangling=$(find /usr/lib/systemd/system -xtype l)
     [ -z "$dangling" ] || { echo "dangling unit links: $dangling"; exit 1; }
-    # the installer, which runs only on the live ISO
+    # the installer, which runs only on the live system
     test -x /usr/bin/bunix-install
 
   - |
