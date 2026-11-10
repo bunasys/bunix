@@ -20,6 +20,19 @@ Boot); the other files are the updates installed systems fetch.  Write it
 to a USB stick (`dd`, Fedora Media Writer, Rufus in DD mode), boot it, and
 run `bunix-install` (docs/install.md).
 
+With `dd` on Linux, where `/dev/sdX` is the stick (`lsblk` shows which;
+everything on it is erased):
+
+```
+dd if=bunix-x86_64-live.img of=/dev/sdX bs=4M oflag=direct conv=fsync status=progress
+```
+
+`oflag=direct` makes the progress show the stick's real speed, instead of
+reaching the end at once and then waiting minutes for the kernel's cache.
+
+On macOS, write to the raw device (`/dev/rdiskN`, after
+`diskutil unmountDisk /dev/diskN`), with `bs=4m`.
+
 Updating an installed system (A/B, with automatic rollback; every file is
 checked against the signed manifest and its dm-verity signature):
 

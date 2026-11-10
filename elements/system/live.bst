@@ -166,16 +166,21 @@ config:
   - |
     # The ESP is sized from its files' apparent size (du -b: the build
     # host's file system may compress), as vfat cannot be minimized; repart
-    # still rounds it up (260 MiB with systemd 261).  BUNIX is erofs without
-    # compression -- the images in it are compressed already.  files/live
-    # finds it by its GPT partition name (Label=): the erofs repart makes
-    # carries no file-system label.  AddValidateFS=no: as system/usr.bst,
-    # the build sandbox cannot store its extended attribute.
+    # still rounds it up to its ESP minimum: 260 MiB for a file system with
+    # 4K sectors (its default), 100 MiB for 512-byte ones.
+    # FileSystemSectorSize=512, since a USB stick's sectors are 512 bytes:
+    # it saves 160 MiB of zeros that dd would write to every stick.
+    # BUNIX is erofs without compression -- the images in it are compressed
+    # already.  files/live finds it by its GPT partition name (Label=): the
+    # erofs repart makes carries no file-system label.  AddValidateFS=no:
+    # as system/usr.bst, the build sandbox cannot store its extended
+    # attribute.
     mkdir -p live.d tmp
     esp_bytes=$(du -sb tree/esp | cut -f1)
     esp_size=$(( esp_bytes / 1048576 + 8 ))M
     printf '%s\n' '[Partition]' 'Type=esp' 'Format=vfat' 'Label=BUNIX_EFI' \
-      'CopyFiles=/esp:/' "SizeMinBytes=$esp_size" "SizeMaxBytes=$esp_size" \
+      'CopyFiles=/esp:/' 'FileSystemSectorSize=512' \
+      "SizeMinBytes=$esp_size" "SizeMaxBytes=$esp_size" \
       > live.d/00-esp.conf
     printf '%s\n' '[Partition]' 'Type=linux-generic' 'Format=erofs' 'Label=BUNIX' \
       'CopyFiles=/data:/' 'Minimize=best' 'ReadOnly=yes' 'AddValidateFS=no' \
