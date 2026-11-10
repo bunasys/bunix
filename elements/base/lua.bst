@@ -1,7 +1,7 @@
 kind: manual
 description: |
-  Lua 5.5 -- Hyprland's scripting.  Upstream builds only a static library
-  and has no pkg-config file: this builds liblua5.5.so from the same
+  Lua 5.5 -- WirePlumber's scripting.  Upstream builds only a static
+  library and has no pkg-config file: this builds liblua5.5.so from the same
   objects and writes lua5.5.pc (the name Debian and Arch use).  Without
   the lua and luac programs.
 

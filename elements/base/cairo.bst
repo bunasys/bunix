@@ -1,8 +1,7 @@
 kind: meson
 description: |
-  cairo -- 2D vector drawing (pango, GTK, Hyprland's decorations and
-  error messages).  Image surfaces, FreeType and Fontconfig fonts, PNG;
-  no X11.
+  cairo -- 2D vector drawing (pango, GTK, niri, librsvg).  Image
+  surfaces, FreeType and Fontconfig fonts, PNG; no X11.
 
 build-depends:
 - bootstrap/build-env.bst

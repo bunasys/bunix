@@ -7,13 +7,10 @@ first; remove an entry when it is fixed.
 
 - **No usable GPU, no desktop.**  niri renders only through a GPU with a
   render node: on a machine Mesa has no driver for (NVIDIA: bunix builds
-  no nouveau) or in a VM without 3D, the login screen stays black, where
-  cage (buna-login) drew in software.  Test VMs need `-device
-  virtio-vga-gl -display egl-headless` (QEMU's GL modules); QEMU's
-  screendump cannot capture that screen, VNC can.
-- **No on-screen keyboard** on the login screen, which buna-login had.
-- **Hyprland is still a session** at the login screen, without DMS, until
-  it is removed.
+  no nouveau) or in a VM without 3D, the login screen stays black.
+  Test VMs need `-device virtio-vga-gl -display egl-headless` (QEMU's GL
+  modules); QEMU's screendump cannot capture that screen, VNC can.
+- **No on-screen keyboard** on the login screen.
 
 ## Buna Browser, first test in QEMU (2026-11-07)
 
@@ -39,12 +36,6 @@ first; remove an entry when it is fixed.
 
 ## Seen in QEMU
 
-- **An empty Hyprland config after a power cut.** Hyprland writes a new
-  user's `~/.config/hypr/hyprland.lua` at the first login without syncing
-  it; cutting the power right after (as tools/boot-test.py does when it
-  stops the VM) leaves an empty file, and every later session has no key
-  bindings.  Fix: write the default config ourselves (or sync it) when the
-  account is made.
 - **alsa-restore loops on machines without sound cards**: "Sound card
   volumes skipped" every 10 seconds in the journal, and "not starting since
   we tried this too often".  The unit is upheld by multi-user.target.

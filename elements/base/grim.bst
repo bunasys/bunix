@@ -1,7 +1,7 @@
 kind: meson
 description: |
-  grim -- takes screenshots on Wayland (`grim shot.png`; Hyprland grants
-  it the screen through wlr-screencopy): for people at the desktop, and
+  grim -- takes screenshots on Wayland (`grim shot.png`; niri grants it
+  the screen through wlr-screencopy): for people at the desktop, and
   for checking bunix's own screens as they really render.
 
 build-depends:

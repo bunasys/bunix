@@ -1,9 +1,8 @@
 kind: meson
 description: |
-  librsvg -- renders SVG with cairo: cursor themes (hyprcursor), images
-  (hyprgraphics), and GTK's SVG icons through its gdk-pixbuf loader.
-  Written in Rust; its crates are pinned below (bst source track).
-  Without introspection, rsvg-convert and AVIF images.
+  librsvg -- renders SVG with cairo: GTK's SVG icons, through its
+  gdk-pixbuf loader.  Written in Rust; its crates are pinned below (bst
+  source track).  Without introspection, rsvg-convert and AVIF images.
 
 build-depends:
 - bootstrap/build-env.bst

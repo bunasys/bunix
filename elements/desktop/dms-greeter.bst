@@ -295,17 +295,10 @@ config:
   # say).  Run before greetd starts the greeter, after greetd's own sysusers
   # makes the user: the boot's tmpfiles run before this extension is merged.
   # Not fatal ("-"): the greeter starts without its cache.
-  # Niri, with DMS, is the session picked until someone picks another: the
-  # greeter would take the first it finds (Hyprland), so its memory starts
-  # out as niri's.  `f` writes it, owned by the greeter, only when there is
-  # none.
   - |
     install -d %{install-root}%{prefix}/lib/tmpfiles.d
     cat > %{install-root}%{prefix}/lib/tmpfiles.d/dms-greeter.conf <<'CONF'
     d /var/cache/dms-greeter 2770 greeter greeter -
-    d /var/cache/dms-greeter/.local 0750 greeter greeter -
-    d /var/cache/dms-greeter/.local/state 0750 greeter greeter -
-    f /var/cache/dms-greeter/.local/state/memory.json 0644 greeter greeter - {"lastSessionDesktopId": "niri.desktop"}
     CONF
     dropin=%{install-root}%{prefix}/lib/systemd/system/greetd.service.d
     install -d $dropin

@@ -13,9 +13,10 @@ description: |
   (desktop/dms.bst); niri does not know about it.
 
   Linked with its own, static libdisplay-info 0.3: its Rust binding takes
-  only versions below 0.4, and base/libdisplay-info.bst is 0.4 (for
-  aquamarine and wlroots).  Arch keeps 0.3 for the same reason.  This goes
-  when the binding takes 0.4.
+  only versions below 0.4 (Arch keeps 0.3 for the same reason), and
+  nothing else in bunix uses libdisplay-info.  It moves to
+  base/libdisplay-info.bst when the binding takes 0.4 or something else
+  needs it.
 
 build-depends:
 - bootstrap/build-env.bst
@@ -1971,7 +1972,7 @@ sources:
     sha: f75c23a64ef8f40f13a6989991e643554d9bef1d682a281160cf0c1bc389c5e9
 environment:
   # the binding finds the static libdisplay-info 0.3 that configure-commands
-  # builds, before the system's 0.4
+  # builds in the build directory
   PKG_CONFIG_PATH: "%{build-root}/display-info/lib/pkgconfig"
 
 config:

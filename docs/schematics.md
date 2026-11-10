@@ -153,10 +153,10 @@ The user can change the proposal before installing.
 
 The graphical system is not in the base image: it is the `desktop` feature,
 a system extension with Mesa and libLLVM, Wayland, libinput, seatd, the
-fonts' libraries, GTK4 and libadwaita, Hyprland and Ghostty.  The base keeps
-what a console needs too: the kernel's GPU drivers and their firmware (early
-KMS: native resolution, the boot splash), udev's hwdb, the admin tools, the
-text installer.
+fonts' libraries, GTK4 and libadwaita, niri with DMS, and Ghostty.  The
+base keeps what a console needs too: the kernel's GPU drivers and their
+firmware (early KMS: native resolution, the boot splash), udev's hwdb, the
+admin tools, the text installer.
 
 ```
                        live system     console install   desktop install

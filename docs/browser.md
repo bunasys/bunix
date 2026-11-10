@@ -15,7 +15,7 @@ privacy defaults:
   blocked, third-party cookies blocked, HTTP upgraded to HTTPS.
   Fingerprinting protection comes later.
 - **No Google services**: no Google sign-in or sync, no usage reports.
-- Wayland only (Hyprland), Arabic and right-to-left from day 0, usable by
+- Wayland only (niri), Arabic and right-to-left from day 0, usable by
   touch.
 
 Out of scope: Brave's Rewards, wallet, VPN, AI assistant and news.
@@ -213,7 +213,7 @@ it replaces, so a new Chromium version that moved it fails loudly there.
 
 0. **Prerequisites.**  NSS, NSPR, at-spi2-core built; LLVM 23 with
    compiler-rt, Node 24, bindgen building.
-1. **Chromium on Hyprland**, with Buna's changes (base/chromium.bst).
+1. **Chromium on Wayland**, with Buna's changes (base/chromium.bst).
    Test in QEMU (virtio-gpu): it starts, loads a page over HTTPS, lays out
    an Arabic page right to left, plays sound; Shields block a known ad.
 2. **Buna Browser in the desktop extension** (base/buna-browser.bst):

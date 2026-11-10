@@ -1,8 +1,8 @@
 kind: autotools
 description: |
-  hwdata -- hardware ID lists.  Only pnp.ids, the display makers' IDs that
-  libdisplay-info and aquamarine name screens with (lspci and lsusb have
-  their own lists).
+  hwdata -- hardware ID lists.  Only pnp.ids, the display makers' IDs
+  that niri's built-in libdisplay-info names screens with; needed only to
+  build niri (lspci and lsusb have their own lists).
 
 build-depends:
 - bootstrap/build-env.bst

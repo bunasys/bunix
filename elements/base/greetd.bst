@@ -3,7 +3,7 @@ description: |
   greetd -- the login manager: on tty1 it runs a greeter as the
   unprivileged "greeter" user, takes the user name and password the
   greeter sends it, checks them with PAM, and starts the user's session
-  (niri, or Hyprland) as that user, in a logind session of its own.  Part
+  (niri, with DMS) as that user, in a logind session of its own.  Part
   of the desktop extension, so its configuration is
   /usr/share/greetd/config.toml (an extension carries no /etc), which the
   greeter's package provides (desktop/dms-greeter.bst); its unit replaces

@@ -1,7 +1,7 @@
 kind: meson
 description: |
   Pango -- lays out text in any script, right to left included, through
-  HarfBuzz and FriBidi, and draws it with cairo (GTK, Hyprland)
+  HarfBuzz and FriBidi, and draws it with cairo (GTK, niri)
 
 build-depends:
 - bootstrap/build-env.bst

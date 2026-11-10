@@ -1,8 +1,7 @@
 kind: cmake
 description: |
-  libjpeg-turbo -- JPEG images (gdk-pixbuf, Hyprland's wallpapers and
-  screenshots).  Without its SIMD code for now, which needs the NASM
-  assembler.
+  libjpeg-turbo -- JPEG images (gdk-pixbuf, Qt, grim's screenshots).
+  Without its SIMD code for now, which needs the NASM assembler.
 
 build-depends:
 - bootstrap/build-env.bst

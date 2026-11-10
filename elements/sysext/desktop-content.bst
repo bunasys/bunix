@@ -3,8 +3,8 @@ description: |
   What the desktop extension is made from: the graphical system
   (docs/desktop.md, phase 3; docs/schematics.md, "Desktop or console").
   The drivers (Mesa, libinput, seatd, ALSA), niri with DMS, the desktop
-  shell, and its login screen; Hyprland, until niri has replaced it; GTK 4,
-  Ghostty, Buna Browser (docs/browser.md) and the desktop's fonts.
+  shell, and its login screen; GTK 4, Ghostty, Buna Browser
+  (docs/browser.md) and the desktop's fonts.
   sysext/desktop-tree.bst keeps only what the root file system does not
   have.
 
@@ -22,7 +22,9 @@ depends:
 - desktop/niri.bst
 - base/grim.bst
 - base/fonts-noto.bst
-- base/hyprland.bst
+# gdk-pixbuf's SVG loader, which GTK draws SVG icons with
+# (sysext/desktop-tree.bst checks it is there)
+- base/librsvg.bst
 - base/mesa.bst
 - base/libinput.bst
 - base/seatd.bst

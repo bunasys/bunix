@@ -144,9 +144,9 @@ lists the packages; `tests/base.bst` runs each of their programs once.
 its login screen, niri, Quickshell and Qt, AccountsService, and what builds
 them.  They reach a system only through the desktop extension
 (`sysext/desktop-content.bst`), never `base.bst`.  Older desktop packages
-(Hyprland, GTK 4, Ghostty, Buna Browser) are still in `elements/base/`; a
-console install does not get them either, since it is the lists, not the
-folders, that decide.
+(GTK 4, Ghostty, Buna Browser) are still in `elements/base/`; a console
+install does not get them either, since it is the lists, not the folders,
+that decide.
 
 Every system element builds in `bootstrap/build-env.bst` (the stage-3 root
 and the final toolchain), listed first in its build-depends, and declares the

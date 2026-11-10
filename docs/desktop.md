@@ -14,8 +14,7 @@ install:
 - a graphical installer: disk, time zone, host name, root password, a
   normal user;
 - niri as the compositor, with DMS (Dux Modular Shell) as the desktop
-  shell and its login screen (0.3.0; Hyprland until then, and still a
-  session to pick at login);
+  shell and its login screen (since 0.3.0);
 - a normal user next to root, who runs admin tasks through run0 + polkit;
 - one command, `buna`, for the system's own jobs:
 
@@ -168,16 +167,15 @@ installed system.
      1.26, wayland-protocols, libinput (mtdev; libwacom with 3c), seatd
      and libseat, pixman, FreeType, Fontconfig; systemd's hwdb (device
      quirks for libinput, names for lsusb).
-   - **3b. Hyprland** and its libraries (hyprutils, hyprlang, hyprcursor,
-     hyprgraphics, aquamarine, libdisplay-info): the first pixels, the
-     compositor's own background, from a console with seatd.
+   - **3b. The compositor.**  niri, with its own static libdisplay-info,
+     and DMS on it: the first pixels, from a console with seatd.
    - **3c. GTK4 and the terminal.**  glib, pango, harfbuzz, fribidi,
      cairo, gdk-pixbuf, graphene, GTK4, libadwaita, gtk4-layer-shell;
      Noto next to the Arabic fonts.  The terminal is Ghostty (libghostty),
      built with Zig 0.17 from Ghostty's release tarball and its pinned
      dependencies -- Zig is a build tool like clang, not part of the
-     system.  The test: Ghostty under Hyprland, and an Arabic window laid
-     out right to left.
+     system.  The test: Ghostty under the compositor, and an Arabic
+     window laid out right to left.
 
 4. **Users.**  polkit (with duktape), run0, logind sessions.  The live ISO
    runs its screens as an unprivileged user; time zone data (tzdata) and
@@ -191,14 +189,14 @@ installed system.
    the text-mode fallback until `buna install` passes the same tests.
 
 6. **The graphical first run.**  The ISO carries the `desktop` extension
-   and the live system merges it from the stick.  It starts Hyprland as a
-   kiosk with one app: welcome, network (Wi-Fi through iwd's D-Bus API when
-   no cable is plugged in), then the installer (desktop or console, disk,
-   encryption, time zone, host name, root password, user), progress,
-   restart.  A desktop install copies the extension from the stick, so it
-   needs no network.  Touch: an on-screen keyboard
-   and Hyprland's touch gestures.  Arabic and English, chosen on the first
-   screen; the Arabic keyboard layout available everywhere.
+   and the live system merges it from the stick.  Planned: it starts
+   niri with one app, full screen: welcome, network (Wi-Fi through iwd's
+   D-Bus API when no cable is plugged in), then the installer (desktop or
+   console, disk, encryption, time zone, host name, root password, user),
+   progress, restart.  A desktop install copies the extension from the
+   stick, so it needs no network.  Touch: an on-screen keyboard and
+   gestures.  Arabic and English, chosen on the first screen; the Arabic
+   keyboard layout available everywhere.
 
    **Encryption** (one more choice, on by default for desktops): the root
    partition -- /etc, /var and /home, everything that is the user's -- is

@@ -1,7 +1,7 @@
 kind: meson
 description: |
   GLib -- the C utility, object (GObject) and I/O (GIO) libraries GTK,
-  pango, Hyprland and libinput's tools build on.  No introspection, no
+  pango, Qt, niri and polkit build on.  No introspection, no
   SELinux, no sysprof.
 
 build-depends:

@@ -1,6 +1,6 @@
 kind: meson
 description: |
-  Wayland -- the protocol between the compositor (Hyprland) and the
+  Wayland -- the protocol between the compositor (niri) and the
   programs it shows: libwayland-client and -server, and wayland-scanner,
   which turns protocol descriptions into C
 
