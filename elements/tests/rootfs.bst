@@ -76,7 +76,7 @@ config:
       "sqv --version" "nawa --version" "updatectl --version" "systemd-sysext --version" \
       "/usr/lib/systemd/systemd-sysupdate --version" "/usr/lib/systemd/systemd-pull --version" \
       "efibootmgr --version" "mkfs.vfat --help" "sfdisk --version" \
-      "ip -V" "ss -V" "bridge -V" "rsync --version" "tar --version" \
+      "ip -V" "ss -V" "bridge -V" "wg --version" "rsync --version" "tar --version" \
       "lspci --version" "lsusb --version" "nvme version" "smartctl --version" \
       "mokutil --version" "cryptsetup --version" "veritysetup --version" \
       "hostnamectl --version" "timedatectl --version" "zdump --version"

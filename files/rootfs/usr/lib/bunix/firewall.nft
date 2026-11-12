@@ -2,7 +2,8 @@
 # bunix's firewall (nftables.service): nothing reaches this machine unless it
 # answers a connection the machine made, or is one of the few things a
 # client needs (ICMP, DHCP, IPv6 autoconfiguration).  Outgoing traffic is
-# not filtered.  Nothing is routed through it.
+# not filtered.  Nothing is routed through it, unless a service adds rules
+# for the forward chain (virtual machines' networks).
 #
 # Opening a port: a file in /etc/nftables.d/ ending in .nft, with rules for
 # the input chain, e.g.
@@ -11,6 +12,8 @@
 #
 # then `systemctl reload nftables`.  /run/nftables.d/ is the same for
 # services: sshd puts its ports there while it runs (sshd-firewall).
+# Rules for the forward chain go in /etc/nftables.d/forward/ and
+# /run/nftables.d/forward/ the same way.
 
 destroy table inet bunix
 
@@ -37,5 +40,8 @@ table inet bunix {
 
 	chain forward {
 		type filter hook forward priority filter; policy drop;
+
+		include "/etc/nftables.d/forward/*.nft"
+		include "/run/nftables.d/forward/*.nft"
 	}
 }

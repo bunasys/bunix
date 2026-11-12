@@ -47,6 +47,7 @@ depends:
 - base/usbutils.bst
 - base/util-linux.bst
 - base/util-linux-login.bst
+- base/wireguard-tools.bst
 - base/uutils-coreutils.bst
 - base/uutils-findutils.bst
 - base/wireless-regdb.bst

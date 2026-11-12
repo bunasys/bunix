@@ -268,6 +268,22 @@ CONFIG_SND_HDA_CODEC_CA0132=m
 CONFIG_USER_NS=y
 CONFIG_FUSE_FS=y
 
+# Virtual machines on this machine (Firecracker, QEMU): KVM for /dev/kvm,
+# tun for the VMs' TAP network devices, and the bridge that joins several
+# VMs' TAPs into one network.  Modules: the CPU's KVM module loads at boot
+# (udev matches the vmx/svm CPU flag), tun when /dev/net/tun is first
+# opened, the bridge when one is created.
+CONFIG_VIRTUALIZATION=y
+CONFIG_KVM=m
+CONFIG_KVM_INTEL=m
+CONFIG_KVM_AMD=m
+CONFIG_TUN=m
+CONFIG_BRIDGE=m
+
+# WireGuard VPN tunnels, set up by systemd-networkd (Kind=wireguard); the
+# module loads when the first one is created
+CONFIG_WIREGUARD=m
+
 # The firewall (files/rootfs/usr/lib/bunix/firewall.nft): nftables, with
 # connection tracking for "replies to this machine's own connections"
 CONFIG_NF_TABLES=y
@@ -277,6 +293,11 @@ CONFIG_NF_TABLES_IPV6=y
 CONFIG_NFT_CT=y
 CONFIG_NFT_REJECT=y
 CONFIG_NFT_LIMIT=y
+# ...and NAT, so virtual machines behind a bridge reach the network
+# through this machine's address (masquerading)
+CONFIG_NF_NAT=y
+CONFIG_NFT_NAT=y
+CONFIG_NFT_MASQ=y
 
 # Swap in memory, compressed with zstd: zram (files/rootfs, zram-swap)
 CONFIG_SWAP=y
@@ -365,7 +386,10 @@ CONFIG_LOCK_DOWN_KERNEL_FORCE_INTEGRITY=y
 CONFIG_SECURITY_YAMA=y
 CONFIG_SECURITY_LANDLOCK=y
 # CONFIG_SECURITY_SELINUX is not set
-CONFIG_LSM="landlock,lockdown,yama"
+# - BPF LSM: security policies as BPF programs; only root loads them
+#   (unprivileged BPF is off)
+CONFIG_BPF_LSM=y
+CONFIG_LSM="landlock,lockdown,yama,bpf"
 # - memory: copies to and from user space checked against object bounds,
 #   string functions checked at compile time, the slab freelist and page
 #   allocator randomised and hardened, new allocations zeroed, a random
@@ -383,6 +407,27 @@ CONFIG_IO_STRICT_DEVMEM=y
 #   interpreted: faster, and the interpreter, a known gadget, is left out
 CONFIG_BPF_JIT=y
 CONFIG_BPF_JIT_ALWAYS_ON=y
+
+# BPF beyond systemd's own use, for tracing and networking tools (bpftrace,
+# libbpf's tools, Cilium-style networking):
+# - BTF, the kernel's types, at /sys/kernel/btf/vmlinux and per module:
+#   BPF programs built once run on any kernel (CO-RE).  pahole makes it
+#   from DWARF, which only exists during the build: bzImage and the
+#   stripped modules keep the BTF, not the DWARF.
+# - the function tracer, for fentry/fexit programs (faster than kprobes)
+# - BPF on network traffic: tc's bpf classifier and action on the clsact
+#   qdisc (sch_ingress), and AF_XDP sockets
+# CONFIG_DEBUG_INFO_NONE is not set
+CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y
+CONFIG_DEBUG_INFO_BTF=y
+CONFIG_DEBUG_INFO_BTF_MODULES=y
+CONFIG_FUNCTION_TRACER=y
+CONFIG_NET_SCHED=y
+CONFIG_NET_CLS_ACT=y
+CONFIG_NET_SCH_INGRESS=m
+CONFIG_NET_CLS_BPF=m
+CONFIG_NET_ACT_BPF=m
+CONFIG_XDP_SOCKETS=y
 
 # Power: Intel's own idle driver, which knows each CPU's deeper C-states
 # (acpi_idle only knows what the firmware lists)

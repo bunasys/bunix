@@ -1,7 +1,9 @@
 kind: manual
 description: |
-  libelf from elfutils -- objtool, which checks and annotates the kernel's
-  object code, reads ELF files with it.  Only the library is built.
+  libelf and libdw from elfutils -- objtool, which checks and annotates the
+  kernel's object code, reads ELF files with libelf; pahole
+  (base/dwarves.bst) reads the kernel's DWARF with libdw to make its BTF.
+  Only the libraries are built, not elfutils' programs.
 
 (@): include/system.yml
 
@@ -26,7 +28,19 @@ config:
   build-commands:
   - make -C lib
   - make -C libelf
+  # libdw is linked from these parts' static archives
+  - |
+    for part in libcpu backends libebl libdwelf libdwfl libdwfl_stacktrace libdw; do
+      make -C $part
+    done
   install-commands:
   - make -C libelf DESTDIR=%{install-root} install
   - install -D -m 0644 config/libelf.pc %{install-root}%{libdir}/pkgconfig/libelf.pc
-  - rm %{install-root}%{libdir}/libelf.a
+  - |
+    for part in libdw libdwfl libdwelf; do
+      make -C $part DESTDIR=%{install-root} install
+    done
+  # (the top-level Makefile installs this one, and it would build the programs)
+  - install -m 0644 version.h %{install-root}%{includedir}/elfutils/version.h
+  - install -m 0644 config/libdw.pc %{install-root}%{libdir}/pkgconfig/libdw.pc
+  - rm -f %{install-root}%{libdir}/libelf.a %{install-root}%{libdir}/libdw.a

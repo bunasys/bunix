@@ -1,0 +1,6 @@
+# Forwarding for the runner VMs (tools/firecracker-runner): out to the
+# internet only.  Jobs may come from a public repository, so the VMs get no
+# path to the home network, any other private address, or each other.
+iifname "fc-tap*" ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10 } drop
+iifname "fc-tap*" accept
+oifname "fc-tap*" ct state established,related accept

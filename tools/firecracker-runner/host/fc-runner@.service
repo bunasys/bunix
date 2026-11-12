@@ -1,0 +1,20 @@
+# GitHub Actions jobs in Firecracker microVMs, one VM per job
+# (tools/firecracker-runner/README.md).  One instance per registered runner:
+# fc-runner@1, fc-runner@2, ..., each with its own VM, tap device and
+# /var/lib/fc-runner/<n>/config.ext4.  Firecracker runs as fc-runner, not
+# root: it needs only /dev/kvm (open to everyone) and its tap device.
+[Unit]
+Description=GitHub Actions runner %i in Firecracker microVMs
+After=network-online.target nftables.service
+Wants=network-online.target
+
+[Service]
+User=fc-runner
+ExecStartPre=+/var/lib/fc-runner/bin/fc-runner-network up %i
+ExecStart=/var/lib/fc-runner/bin/fc-runner-loop %i
+ExecStopPost=+/var/lib/fc-runner/bin/fc-runner-network down %i
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

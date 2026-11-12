@@ -1,0 +1,8 @@
+#!/bin/sh
+# The VM's way out: fcnet (Firecracker's CI image) gave eth0 its address
+# from the MAC; the host's end of the /30 is the address before it.
+set -e
+address=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)
+last=${address##*.}
+gateway=${address%.*}.$((last - 1))
+ip route add default via "$gateway"

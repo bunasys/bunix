@@ -1,0 +1,12 @@
+#!/bin/sh
+# The runner's registration (.runner, .credentials, .credentials_rsaparams)
+# lives on the host and reaches the VM as a read-only drive, so the image
+# itself holds no credentials.
+set -e
+mkdir -p /run/runner-config
+mount -o ro /dev/vdb /run/runner-config
+cp /run/runner-config/.runner /run/runner-config/.credentials \
+   /run/runner-config/.credentials_rsaparams /home/runner/actions-runner/
+chown runner:runner /home/runner/actions-runner/.runner \
+   /home/runner/actions-runner/.credentials /home/runner/actions-runner/.credentials_rsaparams
+umount /run/runner-config
