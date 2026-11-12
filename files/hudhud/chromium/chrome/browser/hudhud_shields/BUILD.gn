@@ -1,0 +1,37 @@
+# Hudhud's Shields (bunix: docs/browser.md, "Shields").
+#
+# A target of their own, so that the browser parts that use them (the
+# network hook in chrome/browser:core, the tab helpers, the Shields button)
+# depend on it, as `gn check` wants, rather than on chrome/browser's sources.
+
+source_set("hudhud_shields") {
+  sources = [
+    # the engine's C interface, copied in from files/hudhud/shields/include
+    # by base/chromium.bst and tools/build-macos.sh
+    "hudhud_shields.h",
+    "shields_engine.cc",
+    "shields_engine.h",
+    "shields_tab_helper.cc",
+    "shields_tab_helper.h",
+    "shields_url_loader_factory.cc",
+    "shields_url_loader_factory.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//content/public/browser",
+    "//url",
+  ]
+
+  deps = [
+    "//chrome/browser/content_settings:content_settings_factory",
+    "//chrome/common",
+    "//components/content_settings/core/browser",
+    "//components/content_settings/core/common",
+    "//mojo/public/cpp/base",
+    "//mojo/public/cpp/bindings",
+    "//net",
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+  ]
+}

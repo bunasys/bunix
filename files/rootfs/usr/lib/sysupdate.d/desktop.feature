@@ -6,5 +6,5 @@
 #   printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/desktop.feature.d/enable.conf
 #   /usr/lib/systemd/systemd-sysupdate update && systemd-sysext refresh
 [Feature]
-Description=Desktop (niri with DMS, GTK4, Ghostty, Buna Browser)
+Description=Desktop (niri with DMS, GTK4, Ghostty, Hudhud)
 Enabled=false

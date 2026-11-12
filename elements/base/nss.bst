@@ -1,6 +1,6 @@
 kind: manual
 description: |
-  NSS -- Mozilla's crypto and certificate library.  Buna Browser
+  NSS -- Mozilla's crypto and certificate library.  Hudhud
   (docs/browser.md) keeps its certificate databases with it (the user's
   own certificates, client certificates); its TLS is Chromium's own
   BoringSSL, and it trusts the roots it brings itself.

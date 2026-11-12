@@ -1,0 +1,19 @@
+"Use secure DNS" on by default (the user's choice), with the operating
+system's DNS server: ungoogled-chromium turns it off (doh-changes.patch);
+Hudhud sets it back to automatic, Chromium's default.
+
+--- a/chrome/browser/net/default_dns_over_https_config_source.cc
++++ b/chrome/browser/net/default_dns_over_https_config_source.cc
+@@ -27,9 +27,11 @@
+   // result in reentrancy and mess up registration between this code and
+   // NetworkService creation.
+   if (set_up_pref_defaults) {
++    // Hudhud: "Use secure DNS" on, with the operating system's DNS server
++    // (automatic, as in Chromium): encrypted when that server supports it
+     local_state->SetDefaultPrefValue(prefs::kDnsOverHttpsMode,
+                                      base::Value(SecureDnsConfig::ModeToString(
+-                                         net::SecureDnsMode::kOff)));
++                                         net::SecureDnsMode::kAutomatic)));
+   }
+ }
+ 

@@ -1,0 +1,37 @@
+# Hudhud's password manager choice (bunix: docs/browser.md, "Password manager").
+
+# The choice itself, for the password manager (which obeys it) and for the
+# profile's prefs (which register it): so few dependencies that both can have
+# it without a dependency cycle.
+source_set("choice") {
+  sources = [
+    "password_manager_choice.cc",
+    "password_manager_choice.h",
+  ]
+  deps = [
+    "//components/pref_registry",
+    "//components/prefs",
+  ]
+}
+
+# chrome://password-manager's side of the choice.
+source_set("page") {
+  sources = [
+    "password_manager_choice_page.cc",
+    "password_manager_choice_page.h",
+  ]
+  deps = [
+    ":choice",
+    "//base",
+    "//chrome/browser/profiles:profile",
+    "//chrome/common",
+    "//components/password_manager/core/common",
+    "//components/prefs",
+    "//content/public/browser",
+    "//extensions/browser",
+    "//extensions/common",
+    "//ui/base",
+    "//ui/base:types",
+    "//url",
+  ]
+}

@@ -1,6 +1,6 @@
 kind: manual
 description: |
-  Rust as Chromium builds with it -- only for building Buna Browser
+  Rust as Chromium builds with it -- only for building Hudhud
   (docs/browser.md), in /usr/lib/chromium-rust.  Not on the running
   system.
 

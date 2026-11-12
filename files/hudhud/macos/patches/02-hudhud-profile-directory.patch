@@ -1,0 +1,15 @@
+Hudhud keeps its profile in ~/Library/Application Support/Hudhud
+(Linux: 06-profile-directory.patch).
+
+--- a/chrome/common/chrome_paths_mac.mm
++++ b/chrome/common/chrome_paths_mac.mm
+@@ -37,7 +37,8 @@
+ #elif BUILDFLAG(GOOGLE_CHROME_BRANDING)
+       product_dir_name = "Google/Chrome";
+ #else
+-      product_dir_name = "Chromium";
++      // Hudhud: its own profile, not Chromium's
++      product_dir_name = "Hudhud";
+ #endif
+     }
+ 

@@ -1,6 +1,6 @@
 kind: cmake
 description: |
-  LLVM 23, clang, lld and compiler-rt -- only for building Buna Browser
+  LLVM 23, clang, lld and compiler-rt -- only for building Hudhud
   (docs/browser.md).  Chromium follows LLVM's development branch and
   needs a newer clang than the system's LLVM 22 (base/llvm.bst), which
   Mesa and Zig are pinned to.  Installed in its own prefix,

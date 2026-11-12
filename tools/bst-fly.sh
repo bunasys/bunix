@@ -3,7 +3,7 @@
 # machine, reach it through `flyctl proxy`, run tools/bst-remote.sh there.
 #
 #   tools/bst-fly.sh build base/chromium.bst
-#   tools/bst-fly.sh artifact push --deps all base/buna-browser.bst   # into the shared cache
+#   tools/bst-fly.sh artifact push --deps all base/hudhud.bst   # into the shared cache
 #   tools/bst-fly.sh ssh                       # a shell on the machine
 #   BUNIX_CACHE_HOST=otherbox tools/bst-fly.sh ...   # the shared cache's host
 #

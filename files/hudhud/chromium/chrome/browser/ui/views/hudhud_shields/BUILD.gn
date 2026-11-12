@@ -1,0 +1,30 @@
+# Hudhud's Shields button (bunix: docs/browser.md, "Shields"), which
+# chrome/browser/ui/views/toolbar adds beside the address bar.
+
+source_set("hudhud_shields") {
+  sources = [
+    "hoopoe_icon.cc",
+    "hoopoe_icon.h",
+    "shields_toolbar_button.cc",
+    "shields_toolbar_button.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//chrome/browser/ui/views/toolbar:toolbar_button",
+    "//ui/views",
+  ]
+
+  deps = [
+    "//base:i18n",
+    "//cc/paint",
+    "//chrome/browser/hudhud_shields",
+    "//chrome/browser/ui/browser_window",
+    "//components/tabs:public",
+    "//components/url_formatter",
+    "//skia",
+    "//ui/base",
+    "//ui/gfx",
+    "//ui/gfx/geometry",
+  ]
+}

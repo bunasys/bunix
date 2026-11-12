@@ -1,6 +1,6 @@
 kind: manual
 description: |
-  Go 1.26 -- only for building Buna Browser (docs/browser.md): Dawn,
+  Go 1.26 -- only for building Hudhud (docs/browser.md): Dawn,
   Chromium's WebGPU, generates part of Tint's source (its shader
   compiler) with a Go program while Chromium builds.  It needs only Go's
   standard library.  Compiled from source by the binary Go 1.25 of

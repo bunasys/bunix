@@ -2,7 +2,7 @@
 
 Status (2026-11-06): being built.  Phase 0 (toolchain and libraries)
 built on the Fly machine; Shields' engine built and tested.  Chromium 157
-compiles with Buna's changes and runs (headless, on the Fly machine);
+compiles with Hudhud's changes and runs (headless, on the Fly machine);
 its packaged build and the desktop extension are next.
 
 ## The goal
@@ -20,14 +20,17 @@ privacy defaults:
 
 Out of scope: Brave's Rewards, wallet, VPN, AI assistant and news.
 
-The browser is called **Buna Browser** (Chromium's and Brave's names and
-logos are trademarks).  It is part of the desktop extension.
+The browser is called **Hudhud** (هدهد, the hoopoe: the scout bird of
+Sulayman's story, which goes ahead and comes back with what it found),
+beside Buna Systems' Banan OS and Nawa Agent; named 2026-11-11.  Not
+Chromium or Brave: their names and logos are trademarks.  It is part of
+the desktop extension.
 
 ## Decisions
 
 | Question | Choice |
 | --- | --- |
-| Name | Buna Browser |
+| Name | Hudhud |
 | Build host | a Fly.io machine, 16 CPUs and 48 GB, run only while building (tools/bst-fly.sh, tools/fly/README.md): about $1 an hour, $35 a month for its 200 GB cache volume |
 | H.264 and AAC | yes: `proprietary_codecs = true`, `ffmpeg_branding = "Chrome"` |
 | Ad blocking | adblock-rust built in from the start; no extension in between |
@@ -37,14 +40,14 @@ logos are trademarks).  It is part of the desktop extension.
 
 | Element | What | Rebuilt when |
 | --- | --- | --- |
-| base/chromium.bst | Chromium 157 with Buna's changes, in /usr/lib/buna-browser: hours on the Fly machine | Chromium, a patch, the Shields code or the toolchain changes |
-| base/buna-shields.bst | the Shields engine (libbuna_shields.so) and the filter lists compiled into shields.dat | the lists or the engine change |
-| base/buna-browser.bst | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
+| base/chromium.bst | Chromium 157 with Hudhud's changes, in /usr/lib/hudhud: hours on the Fly machine | Chromium, a patch, the Shields code or the toolchain changes |
+| base/hudhud-shields.bst | the Shields engine (libhudhud_shields.so) and the filter lists compiled into shields.dat | the lists or the engine change |
+| base/hudhud.bst | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
 
 The split matters because BuildStream rebuilds an element from scratch
 when any of its inputs changes: a new filter list must not cost a
 Chromium build.  base/chromium.bst therefore reads only the engine's
-header (files/buna-browser/shields/include), not the engine.
+header (files/hudhud/shields/include), not the engine.
 
 Build tools, only for Chromium: base/llvm-23.bst, base/chromium-rust.bst,
 base/crubit.bst, base/nodejs.bst, base/bindgen.bst, base/go.bst.
@@ -119,7 +122,7 @@ its Manifest V3 version (a stopgap with fixed rule limits); Chromium's own
 `subresource_filter` blocks requests only.  Shields are Brave's engine
 built in:
 
-- **The engine** (files/buna-browser/shields): adblock-rust 0.13 behind a
+- **The engine** (files/hudhud/shields): adblock-rust 0.13 behind a
   small C interface, in a shared library of its own.  Not linked into
   Chromium: Chromium links its own Rust standard library, and two copies
   in one binary clash.  The browser loads it at start
@@ -134,7 +137,7 @@ built in:
   which carries them), uBlock Origin's filters, privacy, unbreak and
   quick-fix lists, and Liste AR for Arabic sites.  Refreshed with each
   browser release; nothing is fetched from anyone's server.
-- **Requests** (chrome/browser/buna_shields/shields_url_loader_factory):
+- **Requests** (chrome/browser/hudhud_shields/shields_url_loader_factory):
   every web page's and worker's requests go through a factory placed in
   front of the network (`WillCreateURLLoaderFactory`, the hook Chromium's
   own extensions use), and so do their redirects.  Blocked requests fail
@@ -148,8 +151,22 @@ built in:
   page's classes and ids are collected (in an isolated world the page
   cannot see) to find the generic rules that match them.
 - **The per-site switch** is Chromium's "ads" content setting, which page
-  info now shows on every site (patch 04): Block (the default) is Shields
+  info now shows on every site (the shields-page-info-switch patch):
+  Block (the default) is Shields
   up, Allow is down.
+- **The Shields button** (chrome/browser/ui/views/hudhud_shields, the
+  shields-button patches), right of the address bar: the hoopoe, with the number of ads
+  and trackers blocked on the page as a badge, grey when Shields are down.
+  Its panel shows the site, the count, the hosts blocked the most and the
+  switch (the same "ads" setting, for the site's origin, as page info);
+  flipping it reloads the page.  Counts are kept per page
+  (shields_tab_helper.cc, also for a new tab's first page, whose frame
+  host outlives the tab's empty first document), so a new page starts at
+  zero; requests from
+  shared and service workers are blocked but not counted.  English and
+  Arabic strings are in the button's own table.
+- Shields are a build target of their own (chrome/browser/hudhud_shields;
+  the shields-build patches add it to Chromium's), so `gn check` holds.
 
 Not yet (phase 3):
 - uBlock Origin's resources: scriptlets (anti-anti-adblock scripts, which
@@ -162,43 +179,176 @@ Not yet (phase 3):
   beats it and the page can find and remove it.
 - Re-hiding as pages change after load; matching off the UI thread;
   WebSockets.
+- Counting requests from shared and service workers.
 - An engine panic aborts the browser (panic = "abort": it must not unwind
   into C++); none is known in adblock-rust 0.13.
 
+## Extensions
+
+Installed from the Chrome Web Store, as in Brave (the user's choice,
+2026-11-12); there is no other store.  ungoogled-chromium breaks the store
+three ways, and Hudhud undoes each on top of it
+(files/hudhud/ungoogled/patches/02-web-store.patch, on both platforms):
+
+- Its domain substitution points the store's addresses and the store
+  page's install API at hosts that do not exist.  The files that hold
+  them, listed in files/hudhud/ungoogled/not-substituted.list, are left
+  out of the substitution (files/hudhud/scripts/prepare-source.sh): the
+  only Google addresses Hudhud may reach.
+- Its patches empty the store installer and stop every update check.
+  The installer comes back; update checks run for extensions only (the
+  component updater stays off), against the store's own update server.
+- The store page gets its own process again, as in Chromium.
+
+What Google learns, and when: visiting the store is visiting a Google
+site.  Installing sends one request (the extension's id, the OS, Hudhud's
+version).  With store extensions installed, Hudhud checks for updates at
+start and once a day, from the user's address, sending what Chromium's
+update protocol carries: the extensions' ids and versions, active-day
+counters (Google counts active installs from them) and install dates; no
+account, no user id.  Hudhud sends none of the separate install, update or
+uninstall event pings and does not say whether the computer is managed.
+Not done (yet): an update proxy like Brave's, which would hide the user's
+address from Google, or stripping the counters from the checks; Google's
+remote "disable as malware" for extensions stays off, as
+ungoogled-chromium has it.
+
+## Password manager
+
+The user chooses who keeps their passwords (2026-11-12), at the top of
+chrome://password-manager's Settings: Hudhud's own password manager (the
+default), 1Password, Bitwarden, Proton Pass, or none
+(chrome/browser/hudhud_password_manager, the password-manager-choice
+patches).
+
+- **The choice** is the profile pref `hudhud.password_manager`:
+  `builtin`, `off`, or an extension's id.  Anything but `builtin` stops
+  Hudhud's own saving and filling: one gate in
+  ChromePasswordManagerClient::IsFillingEnabled, which saving also asks.
+  Passwords already saved stay on the device; choosing `builtin` again
+  uses them, and turns "offer to save" back on.
+- **With an extension chosen** the page shows a card instead of the
+  password list: "Your passwords are in 1Password" and a button that opens
+  the extension's own page, or installs it from the Chrome Web Store, or
+  turns it back on in Extensions.  The card follows installs in other tabs.
+- **The extensions** are a table in password_manager_choice_page.cc: id,
+  name, the page to open (1Password's settings, Bitwarden's vault in a
+  tab, Proton Pass's options).  Another password manager is one more row.
+  All three handle passkeys in the page themselves.
+- English and Arabic strings are in the same file.
+
+Passkeys from macOS (iCloud Keychain, and password managers registered
+with macOS) need Apple's browser passkey entitlement, which only a build
+signed with a Developer ID that Apple granted it can have; the ad hoc
+build has not.  Until then passkeys come from the extensions above.
+
 ## Defaults
 
+- **Secure DNS** on, with the operating system's DNS server ("OS default",
+  Chromium's automatic mode): ungoogled-chromium turns it off, Hudhud
+  turns it back on (files/hudhud/ungoogled/patches/03-secure-dns.patch).
+  Settings offer Cloudflare, Quad9, OpenDNS, CleanBrowsing or any other
+  provider.
 - **Search**: Chromium lists its search engines per country in a data
-  file; files/buna-browser/scripts/brave-search-first.py moves Brave to
+  file; files/hudhud/scripts/brave-search-first.py moves Brave to
   the front of every country's list (the first is the default) when
   Chromium is built.  Done on the data, not as a patch, so it keeps
   working as Google edits the lists.
 - **Recommended policies** (the user can change them), in
-  /usr/share/buna-browser/policies (patch 05: vendor defaults belong in
+  /usr/share/hudhud/policies (the policy-path patch: vendor defaults belong in
   the signed /usr): third-party cookies blocked, HTTPS-First (balanced),
   no usage reports.
-- **First-run preferences** (/usr/lib/buna-browser/initial_preferences):
+- **First-run preferences** (/usr/lib/hudhud/initial_preferences):
   no sign-in, WebRTC shows only the public address, no first-run screens.
   Enforced policies would show "Managed by your organization", so none
   are used.
-- No "Google API keys are missing" bar (patch 07): there are no Google
-  services to miss them.
-- The profile lives in ~/.config/buna-browser (patch 06).
+- No "Google API keys are missing" bar: ungoogled-chromium already has
+  none.
+- The profile lives in ~/.config/hudhud (the profile-directory patch);
+  the launcher moves an earlier Buna Browser profile there once.
 
 ## Patches
 
-files/buna-browser/patches, made from a pristine tree by
-files/buna-browser/patches/make-patches.py: every edit names the exact text
-it replaces, so a new Chromium version that moved it fails loudly there.
+Chromium's source is prepared the same way on Linux (base/chromium.bst)
+and macOS (tools/build-macos.sh), by files/hudhud/scripts/prepare-source.sh:
 
-| Patch | What |
+1. ungoogled-chromium: its pruning of prebuilt binaries, then its patches;
+2. the platform's own patches (macOS: ungoogled-chromium-macos's and
+   files/hudhud/macos/patches; Linux: none);
+3. files/hudhud/ungoogled/patches: Hudhud's changes to ungoogled-chromium's
+   own (the Chrome Web Store, Secure DNS, building without private
+   verification tokens);
+4. Hudhud's code (files/hudhud/chromium) and files/hudhud/patches;
+5. brave-search-first.py and hudhud-name.py (the browser's name in its
+   strings, هدهد in Arabic, translations kept);
+6. ungoogled-chromium's domain substitution, but for
+   files/hudhud/ungoogled/not-substituted.list.
+
+files/hudhud/patches are made by files/hudhud/make-patches.py from a tree
+prepared up to step 3: every edit names the exact text it replaces, so a
+new Chromium that moved it fails loudly there.  A patch's number is its
+place in the generator's list; the docs name patches by name.
+
+| Patch (by name) | What |
 | --- | --- |
-| 01-shields-network | the request blocker in WillCreateURLLoaderFactory |
-| 02-shields-tab-helper | the element hider on every tab |
-| 03-shields-build | Shields' sources in the browser's build |
-| 04-shields-page-info-switch | the per-site switch in page info on every site |
-| 05-policy-path | policies from /usr/share/buna-browser/policies |
-| 06-profile-directory | ~/.config/buna-browser |
-| 07-no-api-keys-infobar | no "Google API keys are missing" bar |
+| shields-network | the request blocker in WillCreateURLLoaderFactory |
+| shields-tab-helper | the element hider on every tab |
+| shields-build, shields-tab-helper-build | Shields' own target in the browser's build |
+| shields-page-info-switch | the per-site switch in page info on every site |
+| shields-button, shields-button-build | the Shields button in the toolbar |
+| policy-path | policies from /usr/share/hudhud/policies (Linux) |
+| profile-directory | ~/.config/hudhud (Linux) |
+| no-web-store-tile | no Web Store tile on the start page |
+| password-manager-choice-* | the password manager choice: the gate, the pref, the page and their builds |
+| no-related-google-services | no "Related Google services" section in Settings, Autofill |
+| native-messaging-from-chrome | helpers registered for Google Chrome (1Password's) work too |
+| safe-storage-name, safe-storage-name-linux | Hudhud's own keychain item and secret |
+
+## Chromium updates
+
+Hudhud follows Chromium's stable releases on ungoogled-chromium's patches
+and lists, without waiting for ungoogled-chromium's own release.  Before
+moving to a release, tools/chromium-update.py compares its source with the
+current one and writes docs/chromium/<version>.md: Google addresses the
+substitution does not cover, new prebuilt binaries, ungoogled-chromium's
+patches that no longer apply, and the commits that name Google services.
+Read it, note the conclusion at its top, then prepare-source.sh on the new
+tree checks Hudhud's own patches.  tools/build-macos.sh refuses a Chromium
+without its report.
+
+## macOS
+
+Hudhud for Apple Silicon Macs, built on a Mac by tools/build-macos.sh
+(decided 2026-11-11), not by BuildStream: BuildStream builds in a Linux
+sandbox, and a macOS app needs Apple's SDK from the Xcode installed there.
+The sources stay pinned: Chromium's tarball, Rust's library source,
+Crubit, bindgen's version and the filter lists come from the elements
+Linux builds with; the rest is pinned in the script.
+
+- **Base**: the same as Linux (Patches), plus ungoogled-chromium-macos,
+  still at 156: what changed for 157 is in files/hudhud/macos/patches and
+  files/hudhud/ungoogled/patches, and the script lists the macOS patches it
+  does without and why.
+- **Toolchain**: ungoogled-chromium-macos's prebuilt LLVM 23 and Node 24;
+  Rust laid out as Chromium's own package, as on Linux (the 2026-09-10
+  nightly with rustc-dev, the library source, Crubit built into it);
+  bindgen from cargo; Chromium's pinned TypeScript (tsgo 7.0.2) from npm;
+  Go and esbuild from Homebrew; the macOS 26 SDK (27's breaks LLVM 23's
+  linker).
+- **The app**: Hudhud.app (macos/patches/03-hudhud-branding.patch: name,
+  bundle id com.bunasys.hudhud, team H575GQ7N4W), the hoopoe icon, its
+  profile in ~/Library/Application Support/Hudhud.
+- **Shields**: the same engine and lists, inside the framework
+  (Libraries/libhudhud_shields.dylib, Resources/shields.dat), where
+  shields_engine.cc looks on macOS.
+- **Signing**: with the Developer ID when HUDHUD_MACOS_SIGN_IDENTITY is
+  given (hardened runtime, library validation), notarized with the
+  notarytool profile hudhud-notary; with its provisioning profile
+  (HUDHUD_MACOS_PROVISIONING_PROFILE), the keychain group of Touch ID
+  passkeys.  Ad hoc otherwise, for this Mac only.
+- **Not yet on macOS**: the recommended policies and first-run
+  preferences (macOS reads them from elsewhere); iCloud Keychain passkeys
+  (Apple's entitlement, requested).
 
 ## What it costs
 
@@ -213,23 +363,28 @@ it replaces, so a new Chromium version that moved it fails loudly there.
 
 0. **Prerequisites.**  NSS, NSPR, at-spi2-core built; LLVM 23 with
    compiler-rt, Node 24, bindgen building.
-1. **Chromium on Wayland**, with Buna's changes (base/chromium.bst).
+1. **Chromium on Wayland**, with Hudhud's changes (base/chromium.bst).
    Test in QEMU (virtio-gpu): it starts, loads a page over HTTPS, lays out
    an Arabic page right to left, plays sound; Shields block a known ad.
-2. **Buna Browser in the desktop extension** (base/buna-browser.bst):
+2. **Hudhud in the desktop extension** (base/hudhud.bst):
    launcher, desktop entry, icons, defaults; rebranding of the browser's
    own name and logos inside it.
-3. **Shields, the rest**: scriptlets, re-hiding on page changes, the
-   Shields panel.
+3. **Shields, the rest**: scriptlets, re-hiding on page changes (the
+   Shields button and panel are done).
 4. **Fingerprinting protection**, a few of Brave's protections at a time.
 
 ## Open points
 
-- The browser still calls itself Chromium inside (about page, menus):
-  rebranding its strings keeps Chromium's Arabic translations only if
-  their message ids are recomputed (as Brave's tooling does).
-- The Arabic spelling of "Buna" for the desktop entry.
-- The icon is the Buna logo; a browser icon of its own is not designed.
+- Done (files/hudhud/scripts/hudhud-name.py, 2026-11-12): the browser
+  calls itself Hudhud in its strings, هدهد in Arabic, with the
+  translations kept.  Left: Hindi and Nepali write Chromium in their own
+  script, chrome://version says "ungoogled-chromium", and the logos inside
+  the browser are Chromium's.
+- The icon (files/hudhud/logo, 2026-11-11): the letter ه as a ring
+  whose stroke ends in a hook turning inward at the lower right, in
+  Flame orange (#F2520B) on an indigo (#15182B) app icon.  Inside the
+  browser the logos are still Chromium's (the same open point as the
+  strings).
 - Shields: whether to have an element picker ("block this on the page"),
   and whether users can add their own filter lists.
 - Sound (phase 1 test): ALSA reaches PipeWire through the pipewire-alsa
