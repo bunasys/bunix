@@ -1,0 +1,185 @@
+Chrome Web Store installs and updates (the user's choice; docs/browser.md,
+"Extensions"), on top of ungoogled-chromium: its installer comes back
+(inox-patchset 0005 emptied it), extension update checks run while the
+component updater stays off (block-requests.patch), extensions update from
+the store's own server, and the store gets its own process again
+(disable-webstore-urls.patch). Less goes to Google: no separate install,
+update or uninstall event pings, no "managed computer" flag, checks once a
+day. The checks themselves still carry what Chromium's update protocol
+sends: the extensions' ids and versions, active-day counters and install
+dates (docs/browser.md, "Extensions"). The store's addresses stay real
+because files/hudhud/scripts/prepare-source.sh leaves the files in
+files/hudhud/ungoogled/not-substituted.list out of the domain
+substitution.
+
+--- a/extensions/browser/webstore_installer.cc
++++ b/extensions/browser/webstore_installer.cc
+@@ -98,9 +98,13 @@
+ 
+ constexpr base::TimeDelta kTimeRemainingThreshold = base::Seconds(1);
+ 
++// Folder for downloading crx files from the webstore. This is used so that the
++// crx files don't go via the usual downloads folder.
++const base::FilePath::CharType kWebstoreDownloadFolder[] =
++    FILE_PATH_LITERAL("Webstore Downloads");
++
+ base::FilePath* g_download_directory_for_tests = nullptr;
+ 
+-[[maybe_unused]]
+ base::FilePath GetDownloadFilePath(const base::FilePath& download_directory,
+                                    const ExtensionId& id) {
+   // Ensure the download directory exists. TODO(asargent) - make this use
+@@ -477,6 +481,21 @@
+ 
+ void WebstoreInstaller::DownloadCrx(const ExtensionId& extension_id,
+                                     InstallSource source) {
++  download_url_ = GetWebstoreInstallURL(extension_id, source);
++  MaybeAppendAuthUserParameter(approval_->authuser, download_url_);
++
++  base::FilePath user_data_dir =
++      ExtensionsBrowserClient::Get()->GetUserDataDir();
++  base::FilePath download_path = user_data_dir.Append(kWebstoreDownloadFolder);
++
++  base::FilePath download_directory(g_download_directory_for_tests
++                                        ? *g_download_directory_for_tests
++                                        : download_path);
++
++  GetExtensionFileTaskRunner()->PostTaskAndReplyWithResult(
++      FROM_HERE,
++      base::BindOnce(&GetDownloadFilePath, download_directory, extension_id),
++      base::BindOnce(&WebstoreInstaller::StartDownload, this, extension_id));
+ }
+ 
+ // http://crbug.com/40957413
+@@ -631,6 +650,24 @@
+ void WebstoreInstaller::StartCrxInstaller(const DownloadItem& download) {
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+   DCHECK(!crx_installer_.get());
++
++  const InstallApproval* approval = GetAssociatedApproval(download);
++  DCHECK(approval);
++
++  crx_installer_ =
++      ExtensionsBrowserClient::Get()->CreateCrxInstallerFromDownloadItem(
++          browser_context_, download);
++
++  crx_installer_->set_expected_id(approval->extension_id);
++  crx_installer_->set_is_gallery_install(true);
++  crx_installer_->set_allow_silent_install(true);
++  crx_installer_->AddInstallerCallback(base::BindOnce(
++      &WebstoreInstaller::OnInstallerDone, weak_ptr_factory_.GetWeakPtr()));
++  if (approval->withhold_permissions) {
++    crx_installer_->set_withhold_permissions();
++  }
++
++  crx_installer_->InstallCrx(download.GetFullPath());
+ }
+ 
+ void WebstoreInstaller::ReportFailure(const std::string& error,
+--- a/components/update_client/update_checker.cc
++++ b/components/update_client/update_checker.cc
+@@ -30,6 +30,7 @@
+ #include "components/update_client/cancellation.h"
+ #include "components/update_client/component.h"
+ #include "components/update_client/configurator.h"
++#include "components/update_client/update_query_params.h"
+ #include "components/update_client/persisted_data.h"
+ #include "components/update_client/protocol_definition.h"
+ #include "components/update_client/protocol_handler.h"
+@@ -104,7 +105,15 @@
+     scoped_refptr<UpdateContext> context,
+     const base::flat_map<std::string, std::string>& additional_attributes,
+     UpdateCheckCallback update_check_callback) {
+-  return;
++  // ungoogled-chromium stops every update check here.  Hudhud lets the
++  // checks for Chrome Web Store extensions through, so they get updates;
++  // the component updater stays off.
++  const bool is_extension_update =
++      config_->GetProdId() ==
++      UpdateQueryParams::GetProdIdString(UpdateQueryParams::ProdId::CRX);
++  if (!is_extension_update) {
++    return;
++  }
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+ 
+   update_check_callback_ = std::move(update_check_callback);
+--- a/chrome/browser/extensions/chrome_extensions_browser_client.cc
++++ b/chrome/browser/extensions/chrome_extensions_browser_client.cc
+@@ -689,14 +689,15 @@
+ scoped_refptr<update_client::Configurator>
+ ChromeExtensionsBrowserClient::CreateUpdateClientConfigurator(
+     content::BrowserContext* context) {
++  // Hudhud: extensions always update from the Chrome Web Store's own
++  // server.  Without an override they would use the component updater's
++  // address, which ungoogled-chromium rewrites to one that does not resolve.
+   std::optional<GURL> override_url;
+   GURL update_url = extension_urls::GetWebstoreUpdateUrl();
+-  if (update_url != extension_urls::GetDefaultWebstoreUpdateUrl()) {
+-    if (update_url.GetPath() == kCrxUrlPath) {
+-      override_url = update_url.GetWithEmptyPath().Resolve(kJsonUrlPath);
+-    } else {
+-      override_url = update_url;
+-    }
++  if (update_url.GetPath() == kCrxUrlPath) {
++    override_url = update_url.GetWithEmptyPath().Resolve(kJsonUrlPath);
++  } else {
++    override_url = update_url;
+   }
+   return ChromeUpdateClientConfig::Create(context, override_url);
+ }
+--- a/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc
++++ b/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc
+@@ -701,6 +701,12 @@
+ std::vector<url::Origin> ChromeContentBrowserClientExtensionsPart::
+     GetOriginsRequiringDedicatedProcess() {
+   std::vector<url::Origin> list;
++
++  // Require a dedicated process for the webstore origin.  See
++  // https://crbug.com/40094229.
++  list.push_back(url::Origin::Create(extension_urls::GetWebstoreLaunchURL()));
++  list.push_back(
++      url::Origin::Create(extension_urls::GetNewWebstoreLaunchURL()));
+ 
+   return list;
+ }
+--- a/chrome/browser/extensions/updater/chrome_update_client_config.cc
++++ b/chrome/browser/extensions/updater/chrome_update_client_config.cc
+@@ -229,10 +229,9 @@
+ 
+ std::vector<GURL> ChromeUpdateClientConfig::PingUrl() const {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+-  if (url_override_.has_value()) {
+-    return {*url_override_};
+-  }
+-  return impl_.PingUrl();
++  // Hudhud: no install, update or uninstall pings to Google; the update
++  // checks themselves are all extensions need
++  return {};
+ }
+ 
+ std::string ChromeUpdateClientConfig::GetProdId() const {
+@@ -372,7 +371,9 @@
+ std::optional<bool> ChromeUpdateClientConfig::IsMachineExternallyManaged()
+     const {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+-  return impl_.IsMachineExternallyManaged();
++  // Hudhud: update checks do not say whether an organisation manages the
++  // computer
++  return std::nullopt;
+ }
+ 
+ update_client::UpdaterStateProvider
+--- a/chrome/browser/extensions/extension_service.cc
++++ b/chrome/browser/extensions/extension_service.cc
+@@ -264,8 +264,10 @@
+ 
+   if (autoupdate_enabled) {
+     // Initialize and enable the ExtensionUpdater.
++    // Hudhud: once a day rather than every 5 hours, so Google sees the list
++    // of installed Web Store extensions less often
+     updater_->InitAndEnable(
+-        extension_prefs, profile->GetPrefs(), kDefaultUpdateFrequency,
++        extension_prefs, profile->GetPrefs(), base::Hours(24),
+         ExtensionsBrowserClient::Get()->GetExtensionCache(),
+         base::BindRepeating(ChromeExtensionDownloaderFactory::CreateForProfile,
+                             profile));

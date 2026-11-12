@@ -1,7 +1,7 @@
 kind: manual
 description: |
   Go 1.27 -- only for building DMS, the desktop shell (desktop/dms.bst,
-  desktop/dms-greeter.bst), which needs 1.27.  Buna Browser keeps
+  desktop/dms-greeter.bst), which needs 1.27.  Hudhud keeps
   base/go.bst (1.26), so adding DMS does not rebuild Chromium; the two
   become one at the next Chromium update.  Compiled from source by the
   binary Go 1.25 of bootstrap/go-seed.bst.  Not on the running system.

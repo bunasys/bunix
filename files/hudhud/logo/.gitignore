@@ -1,0 +1,9 @@
+# build.py's renders and previews: made again from the SVGs, not kept
+/*.png
+/AppIcon.iconset/
+/linux/
+/app.icns
+/macos-assets/
+__pycache__/
+/_tmp_*
+/board.svg

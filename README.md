@@ -144,7 +144,7 @@ lists the packages; `tests/base.bst` runs each of their programs once.
 its login screen, niri, Quickshell and Qt, AccountsService, and what builds
 them.  They reach a system only through the desktop extension
 (`sysext/desktop-content.bst`), never `base.bst`.  Older desktop packages
-(GTK 4, Ghostty, Buna Browser) are still in `elements/base/`; a console
+(GTK 4, Ghostty, Hudhud) are still in `elements/base/`; a console
 install does not get them either, since it is the lists, not the folders,
 that decide.
 

@@ -12,12 +12,12 @@ first; remove an entry when it is fixed.
   modules); QEMU's screendump cannot capture that screen, VNC can.
 - **No on-screen keyboard** on the login screen.
 
-## Buna Browser, first test in QEMU (2026-11-07)
+## Hudhud, first test in QEMU (2026-11-07)
 
 - **The first-run screen still shows** ("The browser that gets more done",
   "Set Chromium as your default browser"), although initial_preferences
   sets `skip_first_run_ui` and `suppress_first_run_default_browser_prompt`.
-  Check that Chromium reads /usr/lib/buna-browser/initial_preferences, or
+  Check that Chromium reads /usr/lib/hudhud/initial_preferences, or
   whether this newer welcome screen needs a policy or a build flag.  (The
   Chromium name and logo on it are step 2 of docs/browser.md.)
 

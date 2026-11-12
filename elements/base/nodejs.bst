@@ -1,6 +1,6 @@
 kind: manual
 description: |
-  Node.js -- only for building Buna Browser (docs/browser.md): Chromium
+  Node.js -- only for building Hudhud (docs/browser.md): Chromium
   makes its built-in pages and DevTools with it.  Node 24: the major
   version Chromium is built with (it checks the version: base/
   chromium.bst).  Not on the running system.  Node's own copies of

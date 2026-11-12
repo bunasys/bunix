@@ -1,0 +1,27 @@
+[package]
+name = "hudhud-shields"
+version = "0.1.0"
+edition = "2024"
+description = "Hudhud's Shields engine: adblock-rust behind a C interface"
+license = "MPL-2.0"
+
+[lib]
+# A shared library of its own: Chromium links its own Rust standard library,
+# and two copies of it in one binary clash (docs/browser.md, "Shields").
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "hudhud-shields-compile"
+path = "src/bin/compile.rs"
+
+[dependencies]
+# Without "single-thread": the browser loads the engine on a background
+# thread and uses it on another, which needs a thread-safe engine.
+adblock = { version = "=0.13.5", default-features = false, features = ["embedded-domain-resolver", "full-regex-handling"] }
+serde_json = "1"
+
+[profile.release]
+# A panic must not unwind into C++
+panic = "abort"
+lto = true
+codegen-units = 1

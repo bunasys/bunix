@@ -1,7 +1,7 @@
 kind: autotools
 description: |
   NSPR -- the Netscape Portable Runtime, the platform layer NSS is
-  written on (base/nss.bst).  For Buna Browser (docs/browser.md).
+  written on (base/nss.bst).  For Hudhud (docs/browser.md).
 
 build-depends:
 - bootstrap/build-env.bst

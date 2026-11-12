@@ -1,7 +1,7 @@
 kind: manual
 description: |
   Crubit's cc_bindings_from_rs and support library -- only for building
-  Buna Browser (docs/browser.md).  Chromium makes C++ bindings for some of
+  Hudhud (docs/browser.md).  Chromium makes C++ bindings for some of
   its Rust code (Blink's fonts, QR codes, CBOR, ...) with it.  Built
   against Chromium's Rust (base/chromium-rust.bst), since it runs inside
   that rustc, and installed into that toolchain, where Chromium looks

@@ -2,7 +2,7 @@ kind: meson
 description: |
   at-spi2-core -- accessibility on the desktop: the AT-SPI bus that screen
   readers listen on, ATK, and the bridge between them.  Chromium requires
-  it on Linux (Buna Browser, docs/browser.md); GTK 4 speaks AT-SPI
+  it on Linux (Hudhud, docs/browser.md); GTK 4 speaks AT-SPI
   itself.  Wayland only, no X11.
 
 build-depends:

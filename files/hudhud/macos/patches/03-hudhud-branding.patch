@@ -1,0 +1,24 @@
+The app is Hudhud: Hudhud.app, its framework and helpers, its bundle id
+(after ungoogled-chromium-macos's set-bundle-identifier.patch), and the
+Apple team that signs it, which names its keychain groups (Touch ID
+passkeys).  The code's copyright stays with the Chromium authors.
+
+--- a/chrome/app/theme/chromium/BRANDING
++++ b/chrome/app/theme/chromium/BRANDING
+@@ -1,10 +1,10 @@
+ COMPANY_FULLNAME=The Chromium Authors
+ COMPANY_SHORTNAME=The Chromium Authors
+-PRODUCT_FULLNAME=Chromium
+-PRODUCT_SHORTNAME=Chromium
+-PRODUCT_INSTALLER_FULLNAME=Chromium Installer
+-PRODUCT_INSTALLER_SHORTNAME=Chromium Installer
++PRODUCT_FULLNAME=Hudhud
++PRODUCT_SHORTNAME=Hudhud
++PRODUCT_INSTALLER_FULLNAME=Hudhud Installer
++PRODUCT_INSTALLER_SHORTNAME=Hudhud Installer
+ COPYRIGHT=Copyright @LASTCHANGE_YEAR@ The Chromium Authors. All rights reserved.
+-MAC_BUNDLE_ID=io.ungoogled-software.ungoogled-chromium
++MAC_BUNDLE_ID=com.bunasys.hudhud
+ MAC_CREATOR_CODE=Cr24
+-MAC_TEAM_ID=
++MAC_TEAM_ID=H575GQ7N4W
