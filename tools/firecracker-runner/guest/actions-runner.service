@@ -13,7 +13,7 @@ WorkingDirectory=/home/runner/actions-runner
 ExecStartPre=+/usr/local/bin/runner-config
 ExecStart=/home/runner/actions-runner/run.sh
 ExecStopPost=+/usr/bin/systemctl reboot
-Environment=ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/runner-job-done
+Environment=ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/runner-job-done.sh
 TimeoutStopSec=60
 
 [Install]

@@ -18,6 +18,8 @@ ci=https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261111-778a26c0594c-0
 kernel=vmlinux-6.18.62
 kernel_sha256=0ee1eb9074bfe4d90b3a6c0d3ea9c7c7b8c7563e69796fd73e7801db83a67b9f
 ubuntu_sha256=f84ec1241d88414f43c417319fbaa31751d1cf4298f127b004c0bee8d95885c8
+yq_version=4.54.3
+yq_sha256=129534601871538efe0ba4c5e62a34fb1d5f469bcb975c4fddeb467d82974973
 disk_size=40G
 
 fetch() {
@@ -30,6 +32,10 @@ fetch "$ci/ubuntu-24.04.squashfs" ubuntu-24.04.squashfs "$ubuntu_sha256"
 runner_tarball=actions-runner-linux-x64-$runner_version.tar.gz
 fetch "https://github.com/actions/runner/releases/download/v$runner_version/$runner_tarball" \
   "$runner_tarball" "$runner_sha256"
+# mikefarah's yq, which GitHub's own runners have (Ubuntu's yq package is a
+# different program)
+fetch "https://github.com/mikefarah/yq/releases/download/v$yq_version/yq_linux_amd64" \
+  yq "$yq_sha256"
 
 sudo rm -rf root
 mkdir -p root squashfs
@@ -82,7 +88,8 @@ trap - EXIT
 sudo install -m 0644 "$here"/guest/runner-net.service "$here"/guest/actions-runner.service \
   root/etc/systemd/system/
 sudo install -m 0755 "$here"/guest/runner-net "$here"/guest/runner-config \
-  "$here"/guest/runner-job-done root/usr/local/bin/
+  "$here"/guest/runner-job-done.sh root/usr/local/bin/
+sudo install -m 0755 yq root/usr/local/bin/yq
 sudo chroot root systemctl enable runner-net.service actions-runner.service docker.service
 # The VM's DNS: public resolvers, reached through the host's NAT (the home
 # network itself is closed to it, host/fc-runner-forward.nft)
