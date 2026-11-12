@@ -15,6 +15,10 @@ ExecStart=/var/lib/fc-runner/bin/fc-runner-loop %i
 ExecStopPost=+/var/lib/fc-runner/bin/fc-runner-network down %i
 Restart=always
 RestartSec=10
+# Stop signals the loop alone, which shuts its VM down (fc-runner-loop);
+# Firecracker is killed only if the VM has not gone after TimeoutStopSec.
+KillMode=mixed
+TimeoutStopSec=90
 
 [Install]
 WantedBy=multi-user.target

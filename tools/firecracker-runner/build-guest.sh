@@ -87,8 +87,7 @@ trap - EXIT
 
 sudo install -m 0644 "$here"/guest/runner-net.service "$here"/guest/actions-runner.service \
   root/etc/systemd/system/
-sudo install -m 0755 "$here"/guest/runner-net "$here"/guest/runner-config \
-  "$here"/guest/runner-job-done.sh root/usr/local/bin/
+sudo install -m 0755 "$here"/guest/runner-net "$here"/guest/runner-config root/usr/local/bin/
 sudo install -m 0755 yq root/usr/local/bin/yq
 sudo chroot root systemctl enable runner-net.service actions-runner.service docker.service
 # The VM's DNS: public resolvers, reached through the host's NAT (the home

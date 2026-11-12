@@ -1,7 +1,9 @@
 # One job per VM: the runner's registration comes from the read-only
-# config drive (/dev/vdb), the job-completed hook stops the runner shortly
-# after the job, and when the runner stops for any reason the VM reboots,
-# which ends Firecracker; the host then boots a clean copy.
+# config drive (/dev/vdb); --once makes it take one job, report it and
+# exit, and when the runner stops for any reason the VM reboots, which ends
+# Firecracker; the host then boots a clean copy.  (--once, not
+# --ephemeral: an ephemeral runner removes its registration, and a new one
+# would need an admin token on the host.)
 [Unit]
 Description=GitHub Actions runner
 After=runner-net.service
@@ -11,9 +13,8 @@ Requires=runner-net.service
 User=runner
 WorkingDirectory=/home/runner/actions-runner
 ExecStartPre=+/usr/local/bin/runner-config
-ExecStart=/home/runner/actions-runner/run.sh
+ExecStart=/home/runner/actions-runner/run.sh --once
 ExecStopPost=+/usr/bin/systemctl reboot
-Environment=ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/runner-job-done.sh
 TimeoutStopSec=60
 
 [Install]

@@ -5,6 +5,7 @@
 set -e
 index=$1
 dir=/var/lib/fc-runner/$index
+socket=$dir/firecracker.socket
 # fcnet in the guest takes its address from the MAC's last four bytes
 guest_last=$((index * 4 + 2))
 mac=$(printf '06:00:AC:10:00:%02X' "$guest_last")
@@ -28,9 +29,29 @@ cat > "$dir/vm.json" <<JSON
 }
 JSON
 
+# On stop (systemd's SIGTERM), the VM shuts down instead of being killed:
+# Ctrl-Alt-Del reboots the guest, which stops the runner first, and a
+# runner that stops tells GitHub its session is over.  A killed one leaves
+# the session behind, and GitHub gives the next VM's runner no job until it
+# expires, minutes later.
+firecracker_pid=""
+shut_down_vm() {
+  if [ -n "$firecracker_pid" ]; then
+    curl -s --unix-socket "$socket" -X PUT http://localhost/actions \
+      -H 'Content-Type: application/json' -d '{"action_type": "SendCtrlAltDel"}' || true
+    wait "$firecracker_pid" || true
+  fi
+  exit 0
+}
+trap shut_down_vm TERM INT
+
 while true; do
-  rm -f "$dir/rootfs.ext4"
+  rm -f "$dir/rootfs.ext4" "$socket"
   cp --sparse=always /var/lib/fc-runner/rootfs.ext4 "$dir/rootfs.ext4"
-  firecracker --no-api --config-file "$dir/vm.json" || echo "firecracker exited with $?"
+  # (in the background, so the trap runs while the VM does)
+  firecracker --api-sock "$socket" --config-file "$dir/vm.json" &
+  firecracker_pid=$!
+  wait "$firecracker_pid" || echo "firecracker exited with $?"
+  firecracker_pid=""
   sleep 2
 done

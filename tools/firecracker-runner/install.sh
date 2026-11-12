@@ -19,6 +19,12 @@ install -o fc-runner -g fc-runner -m 0644 vmlinux /var/lib/fc-runner/
 cp --sparse=always rootfs.ext4 /var/lib/fc-runner/rootfs.ext4
 chown fc-runner:fc-runner /var/lib/fc-runner/rootfs.ext4
 
+# /dev/net/tun exists only once tun is loaded: the image does not enable
+# systemd-tmpfiles-setup-dev, which would create it for loading on demand
+mkdir -p /etc/modules-load.d
+echo tun > /etc/modules-load.d/fc-runner.conf
+modprobe tun
+
 install -D -m 0644 host/fc-runner-forward.nft /etc/nftables.d/forward/fc-runner.nft
 systemctl reload nftables
 install -m 0644 host/fc-runner@.service /etc/systemd/system/
