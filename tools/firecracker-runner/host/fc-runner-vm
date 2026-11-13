@@ -1,0 +1,153 @@
+#!/bin/sh
+# Instance <n>'s VM, around the Firecracker that fc-runner@<n>.service runs
+# as fc-runner-<n>.  Runs as root, from the service:
+#
+#   prepare <n>        before each VM: its tap device, a fresh copy of the
+#                      disk image, and a registration with GitHub for one job
+#   stop <n> <pid>     on stop: shuts the VM down cleanly
+#   cleanup <n>        after each VM: removes the tap, the disk, and the
+#                      registration if no job used it
+#
+# Addresses: instance <n> has 172.16.0.<4n>/30, the host 4n+1 on fc-tap<n>
+# and the VM 4n+2.  Firecracker's CI image gives the VM its address from
+# its MAC's last four bytes (fcnet), and the VM's route goes to the address
+# before its own (guest/runner-net).
+set -eu
+action=$1
+index=$2
+case $index in
+  '' | *[!0-9]*) echo "fc-runner-vm: instance $index is not a number" >&2; exit 2 ;;
+esac
+if [ "$index" -lt 1 ] || [ "$index" -gt 63 ]; then
+  echo "fc-runner-vm: instance $index: the /24 has room for 1 to 63" >&2
+  exit 2
+fi
+
+user=fc-runner-$index
+dir=/var/lib/fc-runner/$index
+# root's alone: the registration's runner id
+state=/run/fc-runner/$index
+tap=fc-tap$index
+host_address=172.16.0.$((index * 4 + 1))
+mac=$(printf '06:00:AC:10:00:%02X' $((index * 4 + 2)))
+
+# APP_ID, INSTALLATION_ID, ORGANIZATION, RUNNER_GROUP_ID, RUNNER_NAME
+# (README.md); the app's key is /etc/fc-runner/app.pem
+. /etc/fc-runner/github.conf
+
+base64url() {
+  base64 | tr -d '\n=' | tr '+/' '-_'
+}
+
+# The value of a string field in GitHub's JSON, which has no field twice
+json_string() {
+  sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p"
+}
+
+# A token for the app's installation in the organization, good for an hour:
+# a JWT signed with the app's key, exchanged at GitHub
+installation_token() {
+  now=$(date +%s)
+  header=$(printf '{"alg":"RS256","typ":"JWT"}' | base64url)
+  claims=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' $((now - 60)) $((now + 540)) "$APP_ID" | base64url)
+  signature=$(printf '%s.%s' "$header" "$claims" | openssl dgst -sha256 -sign /etc/fc-runner/app.pem | base64url)
+  curl -fsS -X POST -H "Authorization: Bearer $header.$claims.$signature" \
+    -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" | json_string token
+}
+
+prepare() {
+  # $dir is systemd's (StateDirectory)
+  install -d -m 0700 "$state"
+
+  ip link del "$tap" 2> /dev/null || true
+  ip tuntap add dev "$tap" mode tap user "$user"
+  ip addr add "$host_address/30" dev "$tap"
+  ip link set "$tap" up
+
+  # Nothing a job wrote reaches the next one.  (The image is sparse: a plain
+  # copy would write every empty block.)
+  rm -f "$dir/rootfs.ext4"
+  cp --sparse=always /var/lib/fc-runner/rootfs.ext4 "$dir/rootfs.ext4"
+
+  # A just-in-time runner: GitHub gives it one job and then removes it, so a
+  # job that reads the registration gets nothing it can use again
+  token=$(installation_token)
+  name=$RUNNER_NAME-$index-$(date +%s)
+  answer=$(curl -fsS -X POST -H "Authorization: Bearer $token" \
+    -H 'Accept: application/vnd.github+json' \
+    -d "{\"name\":\"$name\",\"runner_group_id\":$RUNNER_GROUP_ID,\"labels\":[\"bunix-firecracker\"],\"work_folder\":\"_work\"}" \
+    "https://api.github.com/orgs/$ORGANIZATION/actions/runners/generate-jitconfig")
+  # the runner's id is the answer's first field, however GitHub lays it out
+  printf '%s' "$answer" | tr -d ' \n' | sed -n 's/^{"runner":{"id":\([0-9]*\),.*/\1/p' > "$state/runner-id"
+  jitconfig=$(printf '%s' "$answer" | json_string encoded_jit_config)
+  if [ ! -s "$state/runner-id" ] || [ -z "$jitconfig" ]; then
+    echo "fc-runner-vm: GitHub gave no registration" >&2
+    exit 1
+  fi
+  rm -rf "$state/drive"
+  mkdir -m 0700 "$state/drive"
+  printf '%s' "$jitconfig" > "$state/drive/jitconfig"
+  rm -f "$dir/registration.ext4"
+  truncate -s 4M "$dir/registration.ext4"
+  mkfs.ext4 -q -d "$state/drive" -F "$dir/registration.ext4"
+  rm -rf "$state/drive"
+  chown "$user:$user" "$dir/rootfs.ext4" "$dir/registration.ext4"
+
+  rm -f "$dir/firecracker.socket"
+  cat > "$dir/vm.json" <<JSON
+{
+  "boot-source": {
+    "kernel_image_path": "/var/lib/fc-runner/vmlinux",
+    "boot_args": "console=ttyS0 reboot=k panic=1 pci=off quiet"
+  },
+  "drives": [
+    { "drive_id": "rootfs", "path_on_host": "$dir/rootfs.ext4",
+      "is_root_device": true, "is_read_only": false },
+    { "drive_id": "registration", "path_on_host": "$dir/registration.ext4",
+      "is_root_device": false, "is_read_only": true }
+  ],
+  "machine-config": { "vcpu_count": 4, "mem_size_mib": 12288 },
+  "network-interfaces": [
+    { "iface_id": "eth0", "guest_mac": "$mac", "host_dev_name": "$tap" }
+  ]
+}
+JSON
+}
+
+# Ctrl-Alt-Del reboots the guest, which stops its runner first: a runner that
+# stops tells GitHub, while a killed one leaves its job hanging until GitHub
+# gives up on it.  The reboot ends Firecracker.
+stop() {
+  pid=${1:-}
+  if [ -z "$pid" ]; then
+    return
+  fi
+  curl -s --unix-socket "$dir/firecracker.socket" -X PUT http://localhost/actions \
+    -H 'Content-Type: application/json' -d '{"action_type": "SendCtrlAltDel"}' || true
+  while kill -0 "$pid" 2> /dev/null; do
+    sleep 1
+  done
+}
+
+cleanup() {
+  # A registration whose job ran is gone already; one no job took would stay
+  # at GitHub as an offline runner
+  if [ -s "$state/runner-id" ]; then
+    runner_id=$(cat "$state/runner-id")
+    token=$(installation_token) || token=""
+    curl -fsS -o /dev/null -X DELETE -H "Authorization: Bearer $token" \
+      -H 'Accept: application/vnd.github+json' \
+      "https://api.github.com/orgs/$ORGANIZATION/actions/runners/$runner_id" 2> /dev/null || true
+    rm -f "$state/runner-id"
+  fi
+  ip link del "$tap" 2> /dev/null || true
+  rm -f "$dir/rootfs.ext4" "$dir/registration.ext4" "$dir/firecracker.socket"
+}
+
+case $action in
+  prepare) prepare ;;
+  stop) stop "${3:-}" ;;
+  cleanup) cleanup ;;
+  *) echo "fc-runner-vm: prepare, stop or cleanup, not $action" >&2; exit 2 ;;
+esac

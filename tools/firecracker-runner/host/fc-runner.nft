@@ -1,0 +1,33 @@
+#!/usr/bin/nft -f
+# The runner VMs' network (fc-runner-network.service).  Jobs may come from a
+# public repository, so a VM reaches the internet, through NAT, and nothing
+# else: not this machine, not the home network or any other private
+# address, not the other VMs, and only from the VMs' own addresses.
+#
+# These chains come before bunix's (priority filter - 1), where a drop is
+# final, and stay when bunix's firewall is reloaded or not loaded.  What
+# they let through, bunix's forward chain accepts (fc-runner-forward.nft).
+
+destroy table inet fc-runner
+
+table inet fc-runner {
+	chain input {
+		type filter hook input priority filter - 1;
+		iifname "fc-tap*" ct state established,related accept
+		iifname "fc-tap*" drop
+	}
+
+	chain forward {
+		type filter hook forward priority filter - 1;
+		iifname "fc-tap*" meta nfproto ipv6 drop
+		iifname "fc-tap*" ip saddr != 172.16.0.0/24 drop
+		iifname "fc-tap*" ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+		                             169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+		                             224.0.0.0/3 } drop
+	}
+
+	chain postrouting {
+		type nat hook postrouting priority srcnat;
+		ip saddr 172.16.0.0/24 oifname != "fc-tap*" masquerade
+	}
+}

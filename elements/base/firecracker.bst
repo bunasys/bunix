@@ -16,5 +16,6 @@ sources:
 
 config:
   install-commands:
-  - install -D -m 0755 firecracker-v1.18.0-x86_64 %{install-root}%{bindir}/firecracker
-  - install -D -m 0755 jailer-v1.18.0-x86_64 %{install-root}%{bindir}/jailer
+  # the release's file names carry its version, which the source URL sets
+  - install -D -m 0755 firecracker-v*-x86_64 %{install-root}%{bindir}/firecracker
+  - install -D -m 0755 jailer-v*-x86_64 %{install-root}%{bindir}/jailer

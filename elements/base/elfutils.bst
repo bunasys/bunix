@@ -43,4 +43,4 @@ config:
   # (the top-level Makefile installs this one, and it would build the programs)
   - install -m 0644 version.h %{install-root}%{includedir}/elfutils/version.h
   - install -m 0644 config/libdw.pc %{install-root}%{libdir}/pkgconfig/libdw.pc
-  - rm -f %{install-root}%{libdir}/libelf.a %{install-root}%{libdir}/libdw.a
+  - rm %{install-root}%{libdir}/libelf.a %{install-root}%{libdir}/libdw.a

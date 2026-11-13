@@ -271,8 +271,9 @@ CONFIG_FUSE_FS=y
 # Virtual machines on this machine (Firecracker, QEMU): KVM for /dev/kvm,
 # tun for the VMs' TAP network devices, and the bridge that joins several
 # VMs' TAPs into one network.  Modules: the CPU's KVM module loads at boot
-# (udev matches the vmx/svm CPU flag), tun when /dev/net/tun is first
-# opened, the bridge when one is created.
+# (udev matches the vmx/svm CPU flag), the bridge when one is created;
+# tun at boot where something needs it, as /dev/net/tun appears only once
+# it is loaded (tools/firecracker-runner/install.sh).
 CONFIG_VIRTUALIZATION=y
 CONFIG_KVM=m
 CONFIG_KVM_INTEL=m
@@ -417,6 +418,7 @@ CONFIG_BPF_JIT_ALWAYS_ON=y
 # - the function tracer, for fentry/fexit programs (faster than kprobes)
 # - BPF on network traffic: tc's bpf classifier and action on the clsact
 #   qdisc (sch_ingress), and AF_XDP sockets
+
 # CONFIG_DEBUG_INFO_NONE is not set
 CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y
 CONFIG_DEBUG_INFO_BTF=y

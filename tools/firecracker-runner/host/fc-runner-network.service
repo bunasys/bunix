@@ -1,0 +1,16 @@
+# The runner VMs' network rules (fc-runner.nft) and forwarding, for every
+# instance (fc-runner@.service).  The rules are a table of their own:
+# reloading bunix's firewall replaces only its own table.
+[Unit]
+Description=Network rules for the Firecracker runner VMs
+After=nftables.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft -f /var/lib/fc-runner/fc-runner.nft
+ExecStart=/usr/bin/sysctl -q -w net.ipv4.ip_forward=1
+ExecStop=/usr/bin/nft destroy table inet fc-runner
+
+[Install]
+WantedBy=multi-user.target

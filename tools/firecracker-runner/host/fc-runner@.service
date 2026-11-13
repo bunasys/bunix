@@ -1,24 +1,45 @@
-# GitHub Actions jobs in Firecracker microVMs, one VM per job
-# (tools/firecracker-runner/README.md).  One instance per registered runner:
-# fc-runner@1, fc-runner@2, ..., each with its own VM, tap device and
-# /var/lib/fc-runner/<n>/config.ext4.  Firecracker runs as fc-runner, not
-# root: it needs only /dev/kvm (open to everyone) and its tap device.
+# GitHub Actions jobs in Firecracker microVMs (tools/firecracker-runner/
+# README.md).  Each run of this service is one VM for one job: the VM
+# reboots when its job is done, which ends Firecracker, and the service
+# starts again with a fresh disk and a new registration (fc-runner-vm).
+#
+# Firecracker runs as fc-runner-<n>, a user of this instance alone, and
+# sees only this instance's directory: a VM that broke out of it would not
+# reach the GitHub App's key or another instance's VM.
 [Unit]
-Description=GitHub Actions runner %i in Firecracker microVMs
-After=network-online.target nftables.service
+Description=GitHub Actions jobs in Firecracker microVMs, instance %i
+After=network-online.target nftables.service fc-runner-network.service
 Wants=network-online.target
+Requires=fc-runner-network.service
 
 [Service]
-User=fc-runner
-ExecStartPre=+/var/lib/fc-runner/bin/fc-runner-network up %i
-ExecStart=/var/lib/fc-runner/bin/fc-runner-loop %i
-ExecStopPost=+/var/lib/fc-runner/bin/fc-runner-network down %i
+User=fc-runner-%i
+Group=fc-runner-%i
+ExecStartPre=+/var/lib/fc-runner/bin/fc-runner-vm prepare %i
+ExecStart=/usr/bin/firecracker --api-sock /var/lib/fc-runner/%i/firecracker.socket \
+  --config-file /var/lib/fc-runner/%i/vm.json
+ExecStop=+/var/lib/fc-runner/bin/fc-runner-vm stop %i $MAINPID
+ExecStopPost=+/var/lib/fc-runner/bin/fc-runner-vm cleanup %i
 Restart=always
 RestartSec=10
-# Stop signals the loop alone, which shuts its VM down (fc-runner-loop);
-# Firecracker is killed only if the VM has not gone after TimeoutStopSec.
-KillMode=mixed
 TimeoutStopSec=90
+
+# The sandbox applies to every command, the + ones too: the instance's
+# directory is systemd's to make, and /run/fc-runner exists only once
+# prepare has run
+ProtectSystem=strict
+StateDirectory=fc-runner/%i
+StateDirectoryMode=0700
+InaccessiblePaths=-/etc/fc-runner -/run/fc-runner
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+DevicePolicy=closed
+DeviceAllow=/dev/kvm rw
+DeviceAllow=/dev/net/tun rw
 
 [Install]
 WantedBy=multi-user.target

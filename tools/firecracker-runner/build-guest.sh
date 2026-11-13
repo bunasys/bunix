@@ -2,8 +2,9 @@
 # Builds the runner VM's disk image, rootfs.ext4, in the current directory:
 # Firecracker's CI image of Ubuntu 24.04 (the userland GitHub's own
 # ubuntu-24.04 runners have) with the GitHub Actions runner, Docker and the
-# usual build tools.  It holds no credentials: the registration reaches each VM
-# on a separate drive (register.sh).  Also fetches the guest kernel, vmlinux.
+# usual build tools.  It holds no credentials: each VM's registration
+# reaches it on a drive of its own (host/fc-runner-vm).  Also fetches the
+# guest kernel, vmlinux.
 #
 #   tools/firecracker-runner/build-guest.sh       # on an x86_64 Linux host
 #
@@ -37,35 +38,47 @@ fetch "https://github.com/actions/runner/releases/download/v$runner_version/$run
 fetch "https://github.com/mikefarah/yq/releases/download/v$yq_version/yq_linux_amd64" \
   yq "$yq_sha256"
 
-sudo rm -rf root
-mkdir -p root squashfs
-sudo mount -o loop,ro ubuntu-24.04.squashfs squashfs
-sudo cp -a squashfs/. root/
-sudo umount squashfs
-rmdir squashfs
+# The image's files are put together in a directory of their own, removed
+# at the end
+work=$(mktemp -d "$PWD/guest-root.XXXXXX")
+root=$work/root
+mkdir "$root" "$work/squashfs"
+sudo mount -o loop,ro ubuntu-24.04.squashfs "$work/squashfs"
+sudo cp -a "$work/squashfs/." "$root/"
+sudo umount "$work/squashfs"
 
 # apt in the chroot needs the kernel's file systems and a resolver
-cleanup() {
+unmount_chroot() {
   for fs in dev/pts dev proc sys; do
-    sudo umount "root/$fs" 2> /dev/null || true
+    sudo umount "$root/$fs" 2> /dev/null || true
   done
 }
-trap cleanup EXIT
+remove_work() {
+  unmount_chroot
+  # Never remove through a mount that is still there: it would reach this
+  # machine's own /dev
+  if findmnt -rn -o TARGET | grep -q "^$work/"; then
+    echo "build-guest.sh: still mounted under $work; left in place" >&2
+    return 1
+  fi
+  sudo rm -rf --one-file-system "$work"
+}
+trap remove_work EXIT
 for fs in proc sys dev dev/pts; do
-  sudo mount --bind "/$fs" "root/$fs"
+  sudo mount --bind "/$fs" "$root/$fs"
 done
-sudo rm -f root/etc/resolv.conf
-echo 'nameserver 1.1.1.1' | sudo tee root/etc/resolv.conf > /dev/null
-# (the image mounts a tmpfs there at boot; apt needs it in the chroot too)
-sudo install -d -m 1777 root/tmp
+sudo rm -f "$root/etc/resolv.conf"
+echo 'nameserver 1.1.1.1' | sudo tee "$root/etc/resolv.conf" > /dev/null
+# The image mounts a tmpfs there at boot; apt needs it in the chroot too.
+sudo install -d -m 1777 "$root/tmp"
 
-sudo mkdir -p root/home/runner/actions-runner
-sudo tar -xzf "$runner_tarball" -C root/home/runner/actions-runner
-sudo chroot root /bin/bash -e <<'EOF'
+sudo mkdir -p "$root/home/runner/actions-runner"
+sudo tar -xzf "$runner_tarball" -C "$root/home/runner/actions-runner"
+sudo chroot "$root" /bin/bash -e <<'EOF'
 export DEBIAN_FRONTEND=noninteractive
-# (Ubuntu's PATH, not the build host's: useradd is in /usr/sbin)
+# Ubuntu's PATH, not the build host's: useradd is in /usr/sbin.
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# (Firecracker's image is trimmed of apt's caches)
+# Firecracker's image is trimmed of apt's caches.
 mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial /var/log/apt
 apt-get update
 apt-get install -y --no-install-recommends passwd sudo git curl ca-certificates jq \
@@ -82,20 +95,20 @@ echo 'runner ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/runner
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 EOF
-cleanup
-trap - EXIT
+# Unmounted before the image is made, or it would copy this machine's /dev
+# and /proc
+unmount_chroot
 
 sudo install -m 0644 "$here"/guest/runner-net.service "$here"/guest/actions-runner.service \
-  root/etc/systemd/system/
-sudo install -m 0755 "$here"/guest/runner-net "$here"/guest/runner-config root/usr/local/bin/
-sudo install -m 0755 yq root/usr/local/bin/yq
-sudo chroot root systemctl enable runner-net.service actions-runner.service docker.service
+  "$root/etc/systemd/system/"
+sudo install -m 0755 "$here"/guest/runner-net "$here"/guest/runner-registration "$root/usr/local/bin/"
+sudo install -m 0755 yq "$root/usr/local/bin/yq"
+sudo chroot "$root" systemctl enable runner-net.service actions-runner.service docker.service
 # The VM's DNS: public resolvers, reached through the host's NAT (the home
-# network itself is closed to it, host/fc-runner-forward.nft)
-printf 'nameserver 1.1.1.1\nnameserver 9.9.9.9\n' | sudo tee root/etc/resolv.conf > /dev/null
+# network itself is closed to it, host/fc-runner.nft)
+printf 'nameserver 1.1.1.1\nnameserver 9.9.9.9\n' | sudo tee "$root/etc/resolv.conf" > /dev/null
 
 rm -f rootfs.ext4
 truncate -s "$disk_size" rootfs.ext4
-sudo mkfs.ext4 -q -d root -F rootfs.ext4
-sudo rm -rf root
+sudo mkfs.ext4 -q -d "$root" -F rootfs.ext4
 ls -lsh vmlinux rootfs.ext4

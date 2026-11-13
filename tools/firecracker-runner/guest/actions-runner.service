@@ -1,9 +1,7 @@
-# One job per VM: the runner's registration comes from the read-only
-# config drive (/dev/vdb); --once makes it take one job, report it and
-# exit, and when the runner stops for any reason the VM reboots, which ends
-# Firecracker; the host then boots a clean copy.  (--once, not
-# --ephemeral: an ephemeral runner removes its registration, and a new one
-# would need an admin token on the host.)
+# The runner, for this VM's one job.  Its registration (runner-registration)
+# is a just-in-time one: GitHub gives it one job and removes it afterwards.
+# When the runner stops, for any reason, the VM reboots, which ends
+# Firecracker; the host then starts a clean VM with a new registration.
 [Unit]
 Description=GitHub Actions runner
 After=runner-net.service
@@ -12,8 +10,8 @@ Requires=runner-net.service
 [Service]
 User=runner
 WorkingDirectory=/home/runner/actions-runner
-ExecStartPre=+/usr/local/bin/runner-config
-ExecStart=/home/runner/actions-runner/run.sh --once
+ExecStartPre=+/usr/local/bin/runner-registration
+ExecStart=/bin/sh -c 'exec ./run.sh --jitconfig "$$(cat /run/runner-jitconfig)"'
 ExecStopPost=+/usr/bin/systemctl reboot
 TimeoutStopSec=60
 

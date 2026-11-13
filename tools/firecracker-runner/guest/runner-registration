@@ -1,0 +1,9 @@
+#!/bin/sh
+# This VM's registration with GitHub reaches it on a read-only drive,
+# /dev/vdb, made by the host just before the VM booted (host/fc-runner-vm):
+# the image itself holds none.  It is good for one job.
+set -e
+mkdir -p /run/runner-registration
+mount -o ro /dev/vdb /run/runner-registration
+install -o runner -g runner -m 0400 /run/runner-registration/jitconfig /run/runner-jitconfig
+umount /run/runner-registration
