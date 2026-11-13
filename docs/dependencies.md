@@ -1,7 +1,8 @@
 # Keeping bunix's dependencies up to date
 
-Status: step 1 (inventory, SBOM, the check) built; steps 2–4 are design.
-Agreed 2026-11-12.
+Status: step 1 runs: the check every day at 05:17 UTC
+(.github/workflows/dependencies.yml), its report in the issue labelled
+`dependencies`.  Steps 2–4 are design.  Agreed 2026-11-12.
 
 ## The goal
 
