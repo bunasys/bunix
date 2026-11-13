@@ -10,8 +10,8 @@ build-depends:
 
 sources:
 - kind: tar
-  url: thrysoee:editline/libedit-20251016-3.1.tar.gz
-  ref: 21362b00653bbfc1c71f71a7578da66b5b5203559d43134d2dd7719e313ce041
+  url: thrysoee:editline/libedit-20260512-3.1.tar.gz
+  ref: 432d5e7ea8b0116dd39f2eca7bc11d0eed77faa6b77ea526ace89907c23ea4a0
 
 variables:
   prefix: /usr/lib/swift-toolchain/deps

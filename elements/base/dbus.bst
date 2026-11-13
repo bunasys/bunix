@@ -16,8 +16,8 @@ depends:
 
 sources:
 - kind: tar
-  url: dbus:dbus/dbus-1.16.2.tar.xz
-  ref: 0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2
+  url: dbus:dbus/dbus-1.16.4.tar.xz
+  ref: d08b05526c2cb7966a5fb79210d6112b1aca3d135f315c1b302e14b4b0297dac
 
 variables:
   # its setuid helper (dbus-daemon-launch-helper) gets a directory of its own

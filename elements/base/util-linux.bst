@@ -13,8 +13,8 @@ depends:
 
 sources:
 - kind: tar
-  url: kernel:linux/utils/util-linux/v2.42/util-linux-2.42.3.tar.xz
-  ref: 66ac7c0e725278eb2b039e3104f2c91119341d941b41bac7a285c695f940bd57
+  url: kernel:linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz
+  ref: fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec
 
 variables:
   # Left out: what needs PAM (login, su, runuser, chfn/chsh), libcrypt
