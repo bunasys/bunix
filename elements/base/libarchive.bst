@@ -18,8 +18,8 @@ depends:
 
 sources:
 - kind: tar
-  url: https://www.libarchive.org/downloads/libarchive-3.8.10.tar.xz
-  ref: 56cad765459d5ee25a3b761f90c47d99379d28297fbfb72d908880d6b875fb96
+  url: https://www.libarchive.org/downloads/libarchive-3.8.11.tar.xz
+  ref: a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2
 
 variables:
   # no XML (the xar format), no ACLs (no libacl)

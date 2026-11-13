@@ -16,8 +16,8 @@ depends:
 
 sources:
 - kind: tar
-  url: openbsd:OpenSSH/portable/openssh-10.6p1.tar.gz
-  ref: a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39
+  url: openbsd:OpenSSH/portable/openssh-10.6p2.tar.gz
+  ref: 9ae44872090cf2f06b3cf9ff147e7f16f309671340763ed2f99248398ae29d5b
 
 variables:
   # UAPI.9: helpers (sftp-server, sshd-session, ...) in /usr/lib/ssh; the

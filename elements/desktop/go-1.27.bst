@@ -18,8 +18,8 @@ build-depends:
 
 sources:
 - kind: tar
-  url: golang:go1.27.3.src.tar.gz
-  ref: 6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb
+  url: golang:go1.27.4.src.tar.gz
+  ref: 73cfb8571aec0c01177687db87163d46aa20e9779672772891aa17654d9a6099
 
 environment:
   GOROOT_BOOTSTRAP: "%{tools}/go"

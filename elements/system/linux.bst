@@ -23,8 +23,8 @@ build-depends:
 
 sources:
 - kind: tar
-  url: kernel:linux/kernel/v6.x/linux-6.18.60.tar.xz
-  ref: 3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e
+  url: kernel:linux/kernel/v6.x/linux-6.18.63.tar.xz
+  ref: 81764a545072d160748beff4d9de2e7d95aa9f16e8261110288f067a2cc61d71
 - kind: local
   path: files/linux
   directory: bunix

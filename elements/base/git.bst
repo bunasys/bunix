@@ -20,8 +20,8 @@ depends:
 
 sources:
 - kind: tar
-  url: kernel:software/scm/git/git-2.56.0.tar.xz
-  ref: 26c56c296b38c0695b26fa95f475f1d01704d2d38e73465ca30b0b2f5dc789d3
+  url: kernel:software/scm/git/git-2.56.1.tar.xz
+  ref: f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f
 
 variables:
   # INSTALL_SYMLINKS: the built-in commands (git-add, ...) are links to

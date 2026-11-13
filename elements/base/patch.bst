@@ -10,8 +10,8 @@ build-depends:
 
 sources:
 - kind: tar
-  url: gnu:patch/patch-2.8.tar.xz
-  ref: f87cee69eec2b4fcbf60a396b030ad6aa3415f192aa5f7ee84cad5e11f7f5ae3
+  url: gnu:patch/patch-2.8.1.tar.xz
+  ref: 3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17
 
 variables:
   conf-local: --disable-nls

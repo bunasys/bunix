@@ -19,8 +19,8 @@ build-depends:
 
 sources:
 - kind: tar
-  url: golang:go1.26.10.src.tar.gz
-  ref: fd63e883ba2f2bfca93c1646b31ebef63e2b1e4d2b317c9789d976a68d81f36f
+  url: golang:go1.26.11.src.tar.gz
+  ref: d44101b0ff27ed2a4c75ad46c17b9c74359209e2eb2ca7c9df6cb4fdb68e1969
 
 environment:
   GOROOT_BOOTSTRAP: "%{tools}/go"
