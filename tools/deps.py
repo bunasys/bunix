@@ -44,9 +44,10 @@ GitHub for new commits on followed branches, OSV.dev for advisories on the
 Rust crates, Go modules and Python packages the elements vendor, NVD for
 advisories by CPE, and Debian's and Alpine's security data by package.
 Debian lists a CVE against a package when it is reported, NVD only once
-it has analysed it, weeks later; Alpine lists the CVEs its updates fixed.  GITHUB_TOKEN and NVD_API_KEY are used when set
-(NVD allows 5 requests in 30 seconds without a key, so a full check then
-takes about 20 minutes).  Needs PyYAML: uv run --with pyyaml tools/deps.py.
+it has analysed it, weeks later; Alpine lists the CVEs its updates fixed.
+GITHUB_TOKEN and NVD_API_KEY are used when set (NVD allows 5 requests in
+30 seconds without a key, so a full check then takes about 20 minutes;
+a key NVD refuses is reported, and the check goes on without it).  Needs PyYAML: uv run --with pyyaml tools/deps.py.
 
 The report is read by people and by an agent, and much of it comes from
 outside: version strings are checked against a strict pattern before they
@@ -266,9 +267,13 @@ def series(version):
 
 
 def anitya_versions(project_id):
-    """Anitya's stable versions of a project, newest first."""
-    project = http_json(f"https://release-monitoring.org/api/project/{project_id}")
-    return project.get("stable_versions") or project.get("versions") or []
+    """Anitya's stable versions of a project, newest first, from its HTTP
+    API v2.  stable_versions is marked deprecated there in favour of
+    version_details, but only it has the versions with the project's tag
+    prefix taken off (1.4, not v1.4; 2.42, not glibc-2.42), as the
+    elements' URLs have them."""
+    answer = http_json(f"https://release-monitoring.org/api/v2/versions/?project_id={project_id}")
+    return answer.get("stable_versions") or []
 
 
 def github_versions(repo):
@@ -344,41 +349,57 @@ def osv_advisories(packages):
     return found
 
 
+def nvd_key():
+    """NVD_API_KEY, without the spaces and line ends a pasted secret may
+    carry, or None."""
+    return os.environ.get("NVD_API_KEY", "").strip() or None
+
+
+def nvd_refuses_key():
+    """Whether NVD refuses NVD_API_KEY: it answers every request made with
+    a key it does not accept (mistyped, or not yet activated from NVD's
+    email) with 404, so the key is tried once before the check."""
+    key = nvd_key()
+    if not key:
+        return False
+    try:
+        http_json("https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=1",
+                  headers={"apiKey": key})
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return True
+        raise
+    return False
+
+
 def nvd_advisories(cpe, version):
-    """The CVE ids NVD says affect this version of this product."""
-    key = os.environ.get("NVD_API_KEY")
+    """The CVE ids NVD says affect this version of this product.  As NVD's
+    CVE API documents it: cpeName names the version, and isVulnerable
+    keeps the CVEs where it is the vulnerable product, not only what that
+    runs on (Django on Python, Apache with OpenSSL).  Unlike a
+    virtualMatchString, it also matches the CVEs NVD files against every
+    version of the product."""
+    key = nvd_key()
     headers = {"apiKey": key} if key else {}
-    product = f"cpe:2.3:{cpe}"
-    match = urllib.parse.quote(f"{product}:{version}")
+    cpe_name = urllib.parse.quote(f"cpe:2.3:{cpe}:{version}")
     found, start = set(), 0
     while True:
         try:
             answer = http_json("https://services.nvd.nist.gov/rest/json/cves/2.0"
-                               f"?virtualMatchString={match}&noRejected&startIndex={start}",
+                               f"?cpeName={cpe_name}&isVulnerable&noRejected&startIndex={start}",
                                headers=headers)
         finally:
-            # NVD's published limits: 50 requests in 30 seconds with a key, 5 without
-            time.sleep(0.7 if key else 6.5)
-        # NVD also matches CVEs where this product is only what the
-        # vulnerable one runs on (Django on Python, Apache with OpenSSL):
-        # only the ones that call this product itself vulnerable count
+            # NVD allows 50 requests in 30 seconds with a key and 5 without,
+            # and asks for a pause of several seconds between requests
+            time.sleep(2 if key else 6.5)
         for item in answer.get("vulnerabilities", []):
             cve_id = item["cve"]["id"]
-            if CVE_ID.fullmatch(cve_id) and names_vulnerable(item["cve"], product):
+            if CVE_ID.fullmatch(cve_id):
                 found.add(cve_id)
         start += answer["resultsPerPage"]
         if answer["resultsPerPage"] == 0 or start >= answer["totalResults"]:
             break
     return found
-
-
-def names_vulnerable(cve, product):
-    for configuration in cve.get("configurations", []):
-        for node in configuration.get("nodes", []):
-            for match in node.get("cpeMatch", []):
-                if match["vulnerable"] and match["criteria"].startswith(product + ":"):
-                    return True
-    return False
 
 
 def compare_versions(ours, theirs):
@@ -627,6 +648,11 @@ def check_element(name, element, entry, elements, feeds):
 
 def check(elements, upstreams):
     findings = []
+    if nvd_refuses_key():
+        findings.append(("failures", "NVD refuses NVD_API_KEY (mistyped, or not activated from "
+                                     "NVD's email): checked without it, more slowly"))
+        # nvd_advisories reads the key from the environment
+        del os.environ["NVD_API_KEY"]
     # Each distribution's data is read once; without it, its advisories are
     # reported missing and the rest of the check goes on.
     feeds = {}
