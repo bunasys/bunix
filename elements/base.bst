@@ -21,6 +21,7 @@ depends:
 - base/grep.bst
 - base/htop.bst
 - base/iproute2.bst
+- base/iputils.bst
 - base/iwd.bst
 - base/kmod.bst
 - base/less.bst

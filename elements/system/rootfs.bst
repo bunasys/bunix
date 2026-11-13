@@ -201,13 +201,13 @@ config:
     # Command names.  uutils first, then BusyBox for what nothing else
     # provides: find/xargs are uutils findutils, ps/top/free procps-ng,
     # killall psmisc, mount/dmesg/kill/more util-linux, netstat net-tools,
-    # nslookup BIND, ip iproute2, grep and tar GNU's, less and vi (neovim)
-    # their own packages.
+    # nslookup BIND, ip iproute2, ping iputils, grep and tar GNU's, less
+    # and vi (neovim) their own packages.
     cd %{install-root}%{bindir}
     for name in $(%{in-image} ./coreutils --list); do
       [ -e "$name" ] || ln -s coreutils "$name"
     done
-    for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip ping ping6 \
+    for name in grep egrep fgrep sed awk gzip gunzip zcat tar wget ip \
                 traceroute which strings lsof; do
       [ -e "$name" ] || ln -s busybox "$name"
     done
