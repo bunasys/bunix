@@ -1,0 +1,936 @@
+# Where each element's project releases, for tools/deps.py: its docstring
+# says what each key means, docs/dependencies.md why this file exists.
+# One entry per element that downloads something; tools/deps.py stops
+# when this and the elements disagree.
+
+base/acl.bst:
+  anitya: 16
+  cpe: ['a:acl_project:acl', 'a:acl:acl']
+  debian: acl
+  alpine: acl
+base/alsa-lib.bst:
+  anitya: 38
+  cpe: 'a:alsa-project:alsa-lib'
+  debian: alsa-lib
+  alpine: alsa-lib
+base/alsa-utils.bst:
+  anitya: 37
+  debian: alsa-utils
+  alpine: alsa-utils
+base/at-spi2-core.bst:
+  anitya: 7841
+  debian: at-spi2-core
+  alpine: at-spi2-core
+base/attr.bst:
+  anitya: 137
+  cpe: 'a:attr_project:attr'
+  debian: attr
+  alpine: attr
+base/autoconf.bst:
+  anitya: 141
+  debian: autoconf
+  alpine: autoconf
+base/automake.bst:
+  anitya: 144
+  cpe: 'a:gnu:automake'
+  debian: automake
+  alpine: automake
+base/bash.bst:
+  anitya: 166
+  cpe: 'a:gnu:bash'
+  debian: bash
+  alpine: bash
+base/bc.bst:
+  github: gavinhoward/bc
+base/bind.bst:
+  anitya: 383859
+  cpe: 'a:isc:bind'
+  debian: bind9
+  alpine: bind
+base/bindgen.bst:
+  anitya: 17910
+  debian: rust-bindgen
+base/botan.bst:
+  anitya: 214
+  cpe: 'a:botan_project:botan'
+  debian: botan3
+  alpine: botan3
+base/busybox.bst:
+  anitya: 230
+  cpe: 'a:busybox:busybox'
+  debian: busybox
+  alpine: busybox
+base/bzip2.bst:
+  anitya: 237
+  cpe: 'a:bzip:bzip2'
+  debian: bzip2
+  alpine: bzip2
+base/ca-certificates.bst:
+  anitya: 332224
+  debian: ca-certificates
+  alpine: ca-certificates
+base/cairo.bst:
+  anitya: 247
+  cpe: 'a:cairographics:cairo'
+  debian: cairo
+  alpine: cairo
+base/cargo-c.bst:
+  anitya: 58394
+  version-regex: 'cargo-c-([\d.]+)(?:%2B|\+)'
+  debian: rust-cargo-c
+  alpine: cargo-c
+base/chromium-rust.bst:
+  pinned-by: base/chromium.bst
+  version-regex: 'dist/(\d{4}-\d\d-\d\d)/'
+base/chromium.bst:
+  anitya: 13344
+  cpe: 'a:google:chrome'
+base/cmake.bst:
+  anitya: 306
+  cpe: 'a:cmake_project:cmake'
+  debian: cmake
+  alpine: cmake
+base/cpio.bst:
+  anitya: 353
+  cpe: 'a:gnu:cpio'
+  debian: cpio
+  alpine: cpio
+base/crubit.bst:
+  pinned-by: base/chromium.bst
+base/cryptsetup.bst:
+  anitya: 13709
+  cpe: 'a:cryptsetup_project:cryptsetup'
+  debian: cryptsetup
+  alpine: cryptsetup
+base/curl.bst:
+  anitya: 381
+  cpe: 'a:haxx:curl'
+  debian: curl
+  alpine: curl
+base/dbus-user-session.bst:
+  part-of: base/dbus.bst
+base/dbus.bst:
+  anitya: 5356
+  cpe: 'a:freedesktop:dbus'
+  debian: dbus
+  alpine: dbus
+base/device-mapper.bst:
+  anitya: 5354
+  version-regex: 'LVM2\.([\d.]+)\.tgz'
+  debian: lvm2
+  alpine: lvm2
+base/diffutils.bst:
+  anitya: 436
+  cpe: 'a:gnu:diffutils'
+  debian: diffutils
+  alpine: diffutils
+base/dm-udev-rules.bst:
+  part-of: base/device-mapper.bst
+  version-regex: 'LVM2\.([\d.]+)\.tgz'
+base/dosfstools.bst:
+  anitya: 455
+  cpe: 'a:dosfstools_project:dosfstools'
+  debian: dosfstools
+  alpine: dosfstools
+base/duktape.bst:
+  anitya: 21345
+  cpe: 'a:duktape_project:duktape'
+  debian: duktape
+  alpine: duktape
+base/dwarves.bst:
+  anitya: 385833
+  debian: dwarves
+  alpine: dwarves
+base/e2fsprogs.bst:
+  anitya: 646
+  cpe: 'a:e2fsprogs_project:e2fsprogs'
+  debian: e2fsprogs
+  alpine: e2fsprogs
+base/efibootmgr.bst:
+  anitya: 663
+  debian: efibootmgr
+  alpine: efibootmgr
+base/efivar.bst:
+  anitya: 664
+  debian: efivar
+  alpine: efivar
+base/elfutils.bst:
+  anitya: 5679
+  cpe: 'a:elfutils_project:elfutils'
+  debian: elfutils
+  alpine: elfutils
+base/erofs-utils.bst:
+  anitya: 63188
+  cpe: 'a:erofs-utils_project:erofs-utils'
+  debian: erofs-utils
+  alpine: erofs-utils
+base/expat.bst:
+  anitya: 770
+  cpe: 'a:libexpat:expat'
+  debian: expat
+  alpine: expat
+base/file.bst:
+  anitya: 807
+  cpe: ['a:file_project:file', 'a:christos_zoulas:file']
+  debian: file
+  alpine: file
+base/firecracker.bst:
+  anitya: 279834
+  alpine: firecracker
+base/fish.bst:
+  anitya: 815
+  cpe: 'a:fishshell:fish'
+  debian: fish
+  alpine: fish
+base/flex.bst:
+  anitya: 819
+  cpe: ['a:flex_project:flex', 'a:westes:flex']
+  debian: flex
+  alpine: flex
+base/fontconfig.bst:
+  anitya: 827
+  cpe: 'a:fontconfig_project:fontconfig'
+  debian: fontconfig
+  alpine: fontconfig
+base/fonts-arabic.bst:
+  follows: 'google/fonts@main'
+base/fonts-noto.bst:
+  follows: 'google/fonts@main'
+base/freetype.bst:
+  anitya: 854
+  cpe: 'a:freetype:freetype'
+  debian: freetype
+  alpine: freetype
+base/fribidi.bst:
+  anitya: 857
+  cpe: 'a:gnu:fribidi'
+  debian: fribidi
+  alpine: fribidi
+base/gdb.bst:
+  anitya: 11798
+  cpe: 'a:gnu:gdb'
+  debian: gdb
+  alpine: gdb
+base/gdk-pixbuf.bst:
+  anitya: 9533
+  cpe: 'a:gnome:gdk-pixbuf'
+  debian: gdk-pixbuf
+  alpine: gdk-pixbuf
+base/gettext.bst:
+  anitya: 898
+  cpe: 'a:gnu:gettext'
+  debian: gettext
+  alpine: gettext
+base/ghostty.bst:
+  anitya: 376250
+  cpe: 'a:ghostty:ghostty'
+  alpine: ghostty
+base/git.bst:
+  anitya: 5350
+  cpe: 'a:git-scm:git'
+  debian: git
+  alpine: git
+base/glib.bst:
+  anitya: 10024
+  cpe: 'a:gnome:glib'
+  debian: glib2.0
+  alpine: glib
+base/gmp.bst:
+  anitya: 1186
+  cpe: 'a:gmplib:gmp'
+  debian: gmp
+  alpine: gmp
+base/go.bst:
+  anitya: 1227
+  cpe: 'a:golang:go'
+  debian: golang-1.26
+  alpine: go
+base/gperf.bst:
+  anitya: 1237
+  debian: gperf
+  alpine: gperf
+base/graphene.bst:
+  anitya: 12758
+  debian: graphene
+  alpine: graphene
+base/greetd.bst:
+  anitya: 236458
+  debian: greetd
+  alpine: greetd
+base/grep.bst:
+  anitya: 1251
+  cpe: 'a:gnu:grep'
+  debian: grep
+  alpine: grep
+base/grim.bst:
+  anitya: 20169
+  debian: grim
+  alpine: grim
+base/gtk4-layer-shell.bst:
+  anitya: 359774
+  debian: gtk4-layer-shell
+  alpine: gtk4-layer-shell
+base/gtk4.bst:
+  anitya: 13942
+  cpe: 'a:gnome:gtk'
+  debian: gtk4
+  alpine: gtk4.0
+base/harfbuzz.bst:
+  anitya: 1299
+  cpe: 'a:harfbuzz_project:harfbuzz'
+  debian: harfbuzz
+  alpine: harfbuzz
+base/htop.bst:
+  anitya: 1332
+  debian: htop
+  alpine: htop
+base/hudhud-shields.bst:
+  follows: 'uBlockOrigin/uAssets@master'
+base/hwdata.bst:
+  anitya: 5387
+  debian: hwdata
+  alpine: hwdata
+base/iproute2.bst:
+  anitya: 1392
+  cpe: 'a:iproute2_project:iproute2'
+  debian: iproute2
+  alpine: iproute2
+base/iputils.bst:
+  anitya: 1395
+  cpe: 'a:iputils_project:iputils'
+  debian: iputils
+  alpine: iputils
+base/iwd.bst:
+  anitya: 18380
+  cpe: 'a:intel:inet_wireless_daemon'
+  debian: iwd
+  alpine: iwd
+base/json-c.bst:
+  anitya: 390279
+  cpe: ['a:json-c:json-c', 'a:json-c_project:json-c']
+  debian: json-c
+  alpine: json-c
+base/keyutils.bst:
+  anitya: 17740
+  cpe: 'a:keyutils_project:keyutils'
+  debian: keyutils
+  alpine: keyutils
+base/kmod.bst:
+  anitya: 1517
+  cpe: 'a:kernel:kmod'
+  debian: kmod
+  alpine: kmod
+base/less.bst:
+  anitya: 1550
+  cpe: ['a:gnu:less', 'a:greenwoodsoftware:less']
+  debian: less
+  alpine: less
+base/libadwaita.bst:
+  anitya: 234898
+  debian: libadwaita-1
+  alpine: libadwaita
+base/libarchive.bst:
+  anitya: 1558
+  cpe: 'a:libarchive:libarchive'
+  debian: libarchive
+  alpine: libarchive
+base/libcap.bst:
+  anitya: 1569
+  cpe: 'a:libcap_project:libcap'
+  debian: libcap2
+  alpine: libcap
+base/libdrm.bst:
+  anitya: 1596
+  debian: libdrm
+  alpine: libdrm
+base/libepoxy.bst:
+  anitya: 6090
+  debian: libepoxy
+  alpine: libepoxy
+base/libevdev.bst:
+  anitya: 20540
+  debian: libevdev
+  alpine: libevdev
+base/libffi.bst:
+  anitya: 1611
+  cpe: 'a:libffi_project:libffi'
+  debian: libffi
+  alpine: libffi
+base/libinput.bst:
+  anitya: 5781
+  cpe: 'a:freedesktop:libinput'
+  debian: libinput
+  alpine: libinput
+base/libjpeg-turbo.bst:
+  anitya: 1648
+  cpe: ['a:libjpeg-turbo:libjpeg-turbo', 'a:d.r.commander:libjpeg-turbo']
+  debian: libjpeg-turbo
+  alpine: libjpeg-turbo
+base/libmnl.bst:
+  anitya: 1663
+  cpe: 'a:netfilter:libmnl'
+  debian: libmnl
+  alpine: libmnl
+base/libnftnl.bst:
+  anitya: 1681
+  cpe: 'a:netfilter:libnftnl'
+  debian: libnftnl
+  alpine: libnftnl
+base/libpng.bst:
+  anitya: 1705
+  cpe: 'a:libpng:libpng'
+  debian: libpng1.6
+  alpine: libpng
+base/librsvg.bst:
+  anitya: 368609
+  cpe: 'a:gnome:librsvg'
+  debian: librsvg
+  alpine: librsvg
+base/libtiff.bst:
+  anitya: 1738
+  cpe: 'a:libtiff:libtiff'
+  debian: tiff
+  alpine: tiff
+base/libtool.bst:
+  anitya: 1741
+  cpe: 'a:gnu:libtool'
+  debian: libtool
+  alpine: libtool
+base/libusb.bst:
+  anitya: 1749
+  cpe: 'a:libusb:libusb'
+  debian: libusb-1.0
+  alpine: libusb
+base/libuv.bst:
+  anitya: 10784
+  cpe: ['a:libuv:libuv', 'a:libuv_project:libuv']
+  debian: libuv1
+  alpine: libuv
+base/libxcrypt.bst:
+  anitya: 16436
+  cpe: 'a:elektrobit:libxcrypt'
+  debian: libxcrypt
+  alpine: libxcrypt
+base/libxkbcommon.bst:
+  anitya: 1780
+  cpe: 'a:xkbcommon:libxkbcommon'
+  debian: libxkbcommon
+  alpine: libxkbcommon
+base/libxml2.bst:
+  anitya: 1783
+  cpe: 'a:xmlsoft:libxml2'
+  debian: libxml2
+  alpine: libxml2
+base/linux-headers.bst:
+  part-of: system/linux.bst
+base/linux-pam.bst:
+  anitya: 12244
+  cpe: 'a:kernel:linux-pam'
+  debian: pam
+  alpine: linux-pam
+base/llvm-23.bst:
+  anitya: 1830
+  cpe: 'a:llvm:llvm'
+  debian: llvm-toolchain-23
+  alpine: llvm23
+base/llvm.bst:
+  anitya: 1830
+  cpe: 'a:llvm:llvm'
+  debian: llvm-toolchain-22
+  alpine: llvm22
+base/lua.bst:
+  anitya: 1847
+  cpe: 'a:lua:lua'
+  alpine: lua5.5
+base/lz4.bst:
+  anitya: 1865
+  cpe: 'a:lz4_project:lz4'
+  debian: lz4
+  alpine: lz4
+base/m4.bst:
+  anitya: 1871
+  debian: m4
+  alpine: m4
+base/make.bst:
+  anitya: 1877
+  cpe: 'a:gnu:make'
+  debian: make-dfsg
+  alpine: make
+base/mesa.bst:
+  anitya: 1970
+  cpe: 'a:mesa3d:mesa'
+  debian: mesa
+  alpine: mesa
+base/meson.bst:
+  anitya: 6472
+  debian: meson
+  alpine: meson
+base/mokutil.bst:
+  anitya: 246006
+  debian: mokutil
+  alpine: mokutil
+base/mpfr.bst:
+  anitya: 2019
+  debian: mpfr4
+  alpine: mpfr4
+base/mtdev.bst:
+  anitya: 8868
+  debian: mtdev
+  alpine: mtdev
+base/mtools.bst:
+  anitya: 2028
+  debian: mtools
+  alpine: mtools
+base/nawa.bst:
+  github: bunasys/nawa
+base/ncurses.bst:
+  anitya: 373226
+  cpe: 'a:invisible-island:ncurses'
+  debian: ncurses
+  alpine: ncurses
+base/neovim.bst:
+  anitya: 9037
+  cpe: 'a:neovim:neovim'
+  debian: neovim
+  alpine: neovim
+base/net-tools.bst:
+  anitya: 10231
+  cpe: 'a:net-tools_project:net-tools'
+  debian: net-tools
+  alpine: net-tools
+base/nftables.bst:
+  anitya: 2082
+  debian: nftables
+  alpine: nftables
+base/ninja.bst:
+  anitya: 132832
+  debian: ninja-build
+  alpine: ninja-build
+base/nodejs.bst:
+  anitya: 8251
+  cpe: 'a:nodejs:nodejs'
+  debian: nodejs
+  alpine: nodejs
+base/nspr.bst:
+  anitya: 7953
+  cpe: 'a:mozilla:netscape_portable_runtime'
+  debian: nspr
+  alpine: nspr
+base/nss.bst:
+  anitya: 2503
+  cpe: 'a:mozilla:nss'
+  debian: nss
+  alpine: nss
+base/nvme-cli.bst:
+  anitya: 9074
+  debian: nvme-cli
+  alpine: nvme-cli
+base/oniguruma.bst:
+  anitya: 11184
+  cpe: 'a:oniguruma_project:oniguruma'
+  debian: libonig
+  alpine: oniguruma
+base/openssh.bst:
+  anitya: 2565
+  cpe: 'a:openbsd:openssh'
+  debian: openssh
+  alpine: openssh
+base/openssl.bst:
+  anitya: 2566
+  cpe: 'a:openssl:openssl'
+  debian: openssl
+  alpine: openssl
+base/pango.bst:
+  anitya: 11783
+  cpe: 'a:pango:pango'
+  debian: pango1.0
+  alpine: pango
+base/patch.bst:
+  anitya: 2597
+  cpe: 'a:gnu:patch'
+  debian: patch
+  alpine: patch
+base/pciutils.bst:
+  anitya: 2605
+  debian: pciutils
+  alpine: pciutils
+base/pcre2.bst:
+  anitya: 5832
+  cpe: 'a:pcre:pcre2'
+  debian: pcre2
+  alpine: pcre2
+base/perl.bst:
+  anitya: 13599
+  cpe: 'a:perl:perl'
+  debian: perl
+  alpine: perl
+base/pipewire.bst:
+  anitya: 57357
+  debian: pipewire
+  alpine: pipewire
+base/pixman.bst:
+  anitya: 3648
+  cpe: 'a:pixman:pixman'
+  debian: pixman
+  alpine: pixman
+base/pkgconf.bst:
+  anitya: 12753
+  cpe: 'a:pkgconf:pkgconf'
+  debian: pkgconf
+  alpine: pkgconf
+base/plymouth.bst:
+  anitya: 3669
+  debian: plymouth
+  alpine: plymouth
+base/polkit.bst:
+  anitya: 3682
+  cpe: ['a:freedesktop:polkit', 'a:polkit_project:polkit']
+  debian: policykit-1
+  alpine: polkit
+base/popt.bst:
+  anitya: 3689
+  cpe: 'a:popt_project:popt'
+  debian: popt
+  alpine: popt
+base/procps-ng.bst:
+  anitya: 3708
+  cpe: 'a:procps-ng_project:procps-ng'
+  debian: procps
+  alpine: procps-ng
+base/psmisc.bst:
+  anitya: 3721
+  debian: psmisc
+  alpine: psmisc
+base/python-jinja2.bst:
+  anitya: 3894
+  cpe: 'a:pocoo:jinja2'
+base/python-mako.bst:
+  anitya: 3915
+  cpe: 'a:sqlalchemy:mako'
+base/python-markupsafe.bst:
+  anitya: 3918
+base/python-packaging.bst:
+  anitya: 60461
+base/python-pefile.bst:
+  anitya: 11315
+base/python-pyelftools.bst:
+  anitya: 16219
+base/python-pyyaml.bst:
+  anitya: 4123
+  cpe: 'a:pyyaml:pyyaml'
+base/python.bst:
+  anitya: 13254
+  cpe: 'a:python:python'
+  debian: python3.15
+  alpine: python3
+base/readline.bst:
+  anitya: 4173
+  cpe: 'a:gnu:readline'
+  debian: readline
+  alpine: readline
+base/ripgrep.bst:
+  anitya: 15461
+  cpe: 'a:ripgrep_project:ripgrep'
+  debian: rust-ripgrep
+  alpine: ripgrep
+base/rsync.bst:
+  anitya: 4217
+  cpe: 'a:samba:rsync'
+  debian: rsync
+  alpine: rsync
+base/seatd.bst:
+  anitya: 234932
+  debian: seatd
+  alpine: seatd
+base/shadow.bst:
+  anitya: 4802
+  cpe: 'a:shadow_project:shadow'
+  debian: shadow
+  alpine: shadow
+base/smartmontools.bst:
+  anitya: 4835
+  cpe: 'a:smartmontools:smartmontools'
+  debian: smartmontools
+  alpine: smartmontools
+base/spirv-headers.bst:
+  pinned-by: base/spirv-tools.bst
+base/spirv-llvm-translator.bst:
+  anitya: 227273
+  debian: spirv-llvm-translator-22
+  alpine: spirv-llvm-translator
+base/spirv-tools.bst:
+  part-of: desktop/vulkan-headers.bst
+base/sqv.bst:
+  anitya: 191618
+  debian: rust-sequoia-sqv
+  alpine: sequoia-sqv
+base/strace.bst:
+  anitya: 4897
+  cpe: 'a:strace_project:strace'
+  debian: strace
+  alpine: strace
+base/systemd.bst:
+  anitya: 5440
+  cpe: ['a:systemd_project:systemd', 'a:lennart_poettering:systemd']
+  debian: systemd
+base/tar.bst:
+  anitya: 4939
+  cpe: 'a:gnu:tar'
+  debian: tar
+  alpine: tar
+base/tpm2-tss.bst:
+  anitya: 12683
+  debian: tpm2-tss
+  alpine: tpm2-tss
+base/tzdata.bst:
+  anitya: 5021
+  debian: tzdata
+  alpine: tzdata
+base/usbutils.bst:
+  anitya: 5061
+  debian: usbutils
+  alpine: usbutils
+base/userspace-rcu.bst:
+  anitya: 7134
+  debian: liburcu
+  alpine: userspace-rcu
+base/util-linux-login.bst:
+  part-of: base/util-linux.bst
+base/util-linux.bst:
+  anitya: 8179
+  cpe: ['a:kernel:util-linux', 'a:util-linux_project:util-linux']
+  debian: util-linux
+  alpine: util-linux
+base/uutils-coreutils.bst:
+  anitya: 320599
+  debian: rust-coreutils
+  alpine: uutils
+base/uutils-findutils.bst:
+  github: uutils/findutils
+base/wayland-protocols.bst:
+  anitya: 13997
+  debian: wayland-protocols
+  alpine: wayland-protocols
+base/wayland.bst:
+  anitya: 10061
+  cpe: 'a:wayland:wayland'
+  debian: wayland
+  alpine: wayland
+base/wireguard-tools.bst:
+  anitya: 62381
+  debian: wireguard
+  alpine: wireguard-tools
+base/wireless-regdb.bst:
+  anitya: 15257
+  debian: wireless-regdb
+  alpine: wireless-regdb
+base/wireplumber.bst:
+  anitya: 235056
+  debian: wireplumber
+  alpine: wireplumber
+base/xkeyboard-config.bst:
+  anitya: 5191
+  debian: xkeyboard-config
+  alpine: xkeyboard-config
+base/xz.bst:
+  anitya: 5277
+  cpe: 'a:tukaani:xz'
+  debian: xz-utils
+  alpine: xz
+base/zig.bst:
+  anitya: 13871
+  alpine: zig
+base/zlib.bst:
+  anitya: 5303
+  cpe: 'a:zlib:zlib'
+  debian: zlib
+  alpine: zlib
+base/zstd.bst:
+  anitya: 12083
+  cpe: 'a:facebook:zstandard'
+  debian: libzstd
+  alpine: zstd
+
+bootstrap/go-seed.bst:
+  untracked: 'the Go that builds base/go.bst, a release behind it; moved by hand'
+bootstrap/rust-seed.bst:
+  untracked: 'the Rust that builds bootstrap/rust.bst, a release behind it; moved by hand'
+bootstrap/rust.bst:
+  anitya: 7635
+  cpe: 'a:rust-lang:rust'
+  debian: rustc
+  alpine: rust
+bootstrap/seed.bst:
+  untracked: 'the bootstrap image, replaced by hand'
+bootstrap/stage1/binutils.bst:
+  part-of: bootstrap/stage3/binutils.bst
+bootstrap/stage1/gcc.bst:
+  part-of: bootstrap/stage3/gcc.bst
+bootstrap/stage1/glibc.bst:
+  part-of: bootstrap/stage3/glibc.bst
+bootstrap/stage1/libstdcxx.bst:
+  part-of: bootstrap/stage3/gcc.bst
+bootstrap/stage1/linux-headers.bst:
+  part-of: system/linux.bst
+bootstrap/stage1/python.bst:
+  part-of: base/python.bst
+bootstrap/stage2/bash.bst:
+  part-of: base/bash.bst
+bootstrap/stage2/binutils.bst:
+  part-of: bootstrap/stage3/binutils.bst
+bootstrap/stage2/coreutils.bst:
+  anitya: 343
+  cpe: 'a:gnu:coreutils'
+  debian: coreutils
+  alpine: coreutils
+bootstrap/stage2/diffutils.bst:
+  part-of: base/diffutils.bst
+bootstrap/stage2/file.bst:
+  part-of: base/file.bst
+bootstrap/stage2/findutils.bst:
+  anitya: 812
+  cpe: 'a:gnu:findutils'
+  debian: findutils
+  alpine: findutils
+bootstrap/stage2/gawk.bst:
+  anitya: 868
+  debian: gawk
+  alpine: gawk
+bootstrap/stage2/gcc.bst:
+  part-of: bootstrap/stage3/gcc.bst
+bootstrap/stage2/grep.bst:
+  part-of: base/grep.bst
+bootstrap/stage2/gzip.bst:
+  anitya: 1290
+  cpe: 'a:gnu:gzip'
+  debian: gzip
+  alpine: gzip
+bootstrap/stage2/m4.bst:
+  part-of: base/m4.bst
+bootstrap/stage2/make.bst:
+  part-of: base/make.bst
+bootstrap/stage2/ncurses.bst:
+  part-of: base/ncurses.bst
+bootstrap/stage2/patch.bst:
+  part-of: base/patch.bst
+bootstrap/stage2/sed.bst:
+  anitya: 4789
+  cpe: 'a:gnu:sed'
+  debian: sed
+  alpine: sed
+bootstrap/stage2/tar.bst:
+  part-of: base/tar.bst
+bootstrap/stage2/xz.bst:
+  part-of: base/xz.bst
+bootstrap/stage3/binutils.bst:
+  anitya: 7981
+  cpe: 'a:gnu:binutils'
+  debian: binutils
+  alpine: binutils
+bootstrap/stage3/bison.bst:
+  anitya: 193
+  cpe: 'a:gnu:bison'
+  debian: bison
+  alpine: bison
+bootstrap/stage3/gcc.bst:
+  anitya: 6502
+  cpe: 'a:gnu:gcc'
+  debian: gcc-16
+  alpine: gcc
+bootstrap/stage3/glibc.bst:
+  anitya: 5401
+  cpe: 'a:gnu:glibc'
+  debian: glibc
+bootstrap/stage3/python.bst:
+  part-of: base/python.bst
+
+desktop/accountsservice.bst:
+  anitya: 13107
+  cpe: 'a:ray_stode:accountsservice'
+  debian: accountsservice
+  alpine: accountsservice
+desktop/cli11.bst:
+  anitya: 20578
+  debian: cli11
+desktop/dms-greeter.bst:
+  part-of: desktop/dms.bst
+desktop/dms.bst:
+  anitya: 388076
+desktop/go-1.27.bst:
+  anitya: 1227
+  cpe: 'a:golang:go'
+  debian: golang-1.27
+  alpine: go
+desktop/jemalloc.bst:
+  anitya: 1441
+  debian: jemalloc
+  alpine: jemalloc
+desktop/niri.bst:
+  anitya: 372826
+  alpine: niri
+desktop/qt6-base.bst:
+  anitya: 7927
+  cpe: 'a:qt:qt'
+  debian: qt6-base
+  alpine: qt6-qtbase
+desktop/qt6-declarative.bst:
+  part-of: desktop/qt6-base.bst
+desktop/qt6-shadertools.bst:
+  part-of: desktop/qt6-base.bst
+desktop/qt6-svg.bst:
+  part-of: desktop/qt6-base.bst
+desktop/quickshell.bst:
+  anitya: 378649
+  debian: quickshell
+desktop/vulkan-headers.bst:
+  anitya: 88835
+  alpine: vulkan-headers
+
+sysext/swift-deps/curl.bst:
+  part-of: base/curl.bst
+sysext/swift-deps/libedit.bst:
+  anitya: 1599
+  cpe: 'a:libedit_project:libedit'
+sysext/swift-deps/libxml2.bst:
+  anitya: 1783
+  cpe: 'a:xmlsoft:libxml2'
+  debian: libxml2
+  alpine: libxml2
+sysext/swift-deps/ncurses.bst:
+  part-of: base/ncurses.bst
+sysext/swift-deps/sqlite.bst:
+  part-of: tools/sqlite.bst
+sysext/swift-tree.bst:
+  anitya: 21267
+  version-regex: 'swift-([\d.]+-RELEASE)-ubuntu'
+  cpe: 'a:apple:swift'
+  debian: swiftlang
+
+system/firmware.bst:
+  anitya: 141464
+  alpine: linux-firmware
+system/linux.bst:
+  anitya: 391932
+  cpe: 'o:linux:linux_kernel'
+system/microcode.bst:
+  anitya: 20614
+  cpe: 'a:intel:microcode'
+  alpine: intel-ucode
+system/shim.bst:
+  anitya: 10719
+  version-regex: '\+([\d.]+)-\d+_amd64'
+  cpe: 'a:redhat:shim'
+  debian: shim
+
+tools/patchelf.bst:
+  anitya: 2598
+  cpe: 'a:nixos:patchelf'
+  debian: patchelf
+  alpine: patchelf
+tools/sqlite.bst:
+  anitya: 4877
+  cpe: 'a:sqlite:sqlite'
+  debian: sqlite3
+  alpine: sqlite
+tools/sqop.bst:
+  anitya: 191619
