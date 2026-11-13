@@ -39,6 +39,18 @@ config:
     done
 
   - |
+    # Node runs a script, and npm and corepack start (no network here: npm
+    # only packs a local package)
+    node -e 'console.log([1, 2, 3].map(n => n * 2).join(","))' | grep -qx '2,4,6'
+    npm --version
+    npx --version
+    corepack --version
+    mkdir pkg
+    cd pkg
+    echo '{"name": "probe", "version": "1.0.0"}' > package.json
+    npm pack --silent | grep -qx 'probe-1.0.0.tgz'
+
+  - |
     # the VMM itself starts (it needs /dev/kvm only to run a VM)
     firecracker --version | grep -q '^Firecracker v'
     jailer --version | grep -q '^Jailer v'
