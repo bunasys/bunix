@@ -15,6 +15,8 @@ build-depends:
 - base/pkgconf.bst
 # scripts/build_OID_registry generates the certificate parser's OID table
 - base/perl.bst
+# BTF (CONFIG_DEBUG_INFO_BTF) is made from the build's DWARF by pahole
+- base/dwarves.bst
 # compresses the modules; depmod indexes them
 - base/zstd.bst
 - base/kmod.bst

@@ -1,0 +1,5 @@
+# The runner VMs' traffic out, and the answers back, in bunix's forward
+# chain.  What a VM may not reach is dropped before this, in the runners'
+# own table (fc-runner.nft).
+iifname "fc-tap*" accept
+oifname "fc-tap*" ct state established,related accept

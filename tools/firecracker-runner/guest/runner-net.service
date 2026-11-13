@@ -1,0 +1,15 @@
+# The VM's way out through the host (/usr/local/bin/runner-net)
+[Unit]
+Description=Default route through the host
+After=fcnet.service
+Requires=fcnet.service
+Before=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/runner-net
+
+[Install]
+WantedBy=multi-user.target

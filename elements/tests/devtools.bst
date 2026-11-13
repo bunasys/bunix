@@ -29,10 +29,16 @@ config:
     test "$(sha256sum < note.txt)" = "$(sha256sum < ../note.txt)"
 
   - |
-    for cmd in "gdb --version" "gdbserver --version" "strace -V"; do
+    for cmd in "gdb --version" "gdbserver --version" "strace -V" \
+               "firecracker --version" "jailer --version"; do
       out=$($cmd 2>&1) || true
       echo "$out" | head -1
       case $out in
         *"error while loading shared libraries"*) echo "BROKEN: $cmd"; exit 1 ;;
       esac
     done
+
+  - |
+    # the VMM itself starts (it needs /dev/kvm only to run a VM)
+    firecracker --version | grep -q '^Firecracker v'
+    jailer --version | grep -q '^Jailer v'
