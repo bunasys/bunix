@@ -1,10 +1,11 @@
 kind: manual
 description: |
-  Node.js -- only for building Hudhud (docs/browser.md): Chromium
-  makes its built-in pages and DevTools with it.  Node 24: the major
-  version Chromium is built with (it checks the version: base/
-  chromium.bst).  Not on the running system.  Node's own copies of
-  V8, ICU, OpenSSL and the rest; without npm and corepack.
+  Node.js 24 with npm and corepack, in the devtools extension
+  (sysext/devtools-content.bst), and what Hudhud is built with
+  (docs/browser.md): Chromium makes its built-in pages and DevTools with
+  it, and checks the major version (base/chromium.bst), so the version
+  follows Chromium's.  Anyone who needs another Node fetches it
+  themselves.  Node's own copies of V8, ICU, OpenSSL and the rest.
 
 (@): include/system.yml
 
@@ -22,10 +23,13 @@ config:
   configure-commands:
   # configure.py itself: the `configure` wrapper only accepts the Python
   # versions known when Node 24 came out, and the system has 3.15
-  - python3 configure.py --prefix=%{prefix} --without-npm --without-corepack --ninja
+  - python3 configure.py --prefix=%{prefix} --ninja
   build-commands:
   # built on the Fly machine's 16 CPUs (tools/fly/README.md)
   - ninja -C out/Release -j16
   install-commands:
   - make install DESTDIR=%{install-root} BUILDTYPE=Release
   - '%{install-root}%{bindir}/node --version'
+  # npm and corepack are scripts Node runs: their links must point into
+  # the installed tree
+  - test -e %{install-root}%{bindir}/npm && test -e %{install-root}%{bindir}/corepack
