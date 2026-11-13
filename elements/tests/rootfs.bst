@@ -76,7 +76,7 @@ config:
       "sqv --version" "nawa --version" "updatectl --version" "systemd-sysext --version" \
       "/usr/lib/systemd/systemd-sysupdate --version" "/usr/lib/systemd/systemd-pull --version" \
       "efibootmgr --version" "mkfs.vfat --help" "sfdisk --version" \
-      "ip -V" "ss -V" "bridge -V" "wg --version" "rsync --version" "tar --version" \
+      "ip -V" "ss -V" "bridge -V" "ping -V" "wg --version" "rsync --version" "tar --version" \
       "lspci --version" "lsusb --version" "nvme version" "smartctl --version" \
       "mokutil --version" "cryptsetup --version" "veritysetup --version" \
       "hostnamectl --version" "timedatectl --version" "zdump --version"
@@ -99,9 +99,11 @@ config:
   - |
     # udev's hardware database is compiled (system/rootfs.bst)
     test -s /usr/lib/udev/hwdb.bin
-    # GNU tar and iproute2 replace BusyBox's, and the time zones are there
+    # GNU tar, iproute2 and iputils replace BusyBox's, and the time zones
+    # are there
     tar --version | grep -q 'GNU tar'
     test "$(readlink /usr/bin/ip)" != busybox
+    ping -V | grep -q iputils
     test -f /usr/share/zoneinfo/Europe/Berlin
     test -f /usr/share/zoneinfo/tzdata.zi
     TZ=Asia/Tokyo date +%Z | grep -qx JST

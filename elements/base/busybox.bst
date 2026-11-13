@@ -1,7 +1,7 @@
 kind: manual
 description: |
   BusyBox -- one binary for what no other package here provides (grep, sed,
-  awk, tar, gzip, wget, ip, ping, traceroute, which, strings, lsof).  Which
+  awk, tar, gzip, wget, ip, traceroute, which, strings, lsof).  Which
   applets get a name in /usr/bin is decided when the system image is put
   together.
 
@@ -21,11 +21,13 @@ config:
   - make defconfig
   # tc(8) does not build against current kernel headers, and the system has
   # no use for a second init or login stack: logins and passwords go
-  # through PAM (util-linux's login, shadow's passwd and chpasswd).
+  # through PAM (util-linux's login, shadow's passwd and chpasswd).  ping
+  # is iputils' (base/iputils.bst), which works without root.
   - |
     for sym in TC BOOTCHARTD INIT LINUXRC HALT POWEROFF REBOOT SULOGIN \
                GETTY INETD UDHCPD UDHCPC6 RUNSV SV \
-               LOGIN PASSWD CHPASSWD SU ADDUSER DELUSER ADDGROUP DELGROUP; do
+               LOGIN PASSWD CHPASSWD SU ADDUSER DELUSER ADDGROUP DELGROUP \
+               PING PING6; do
       sed -i "s/^CONFIG_$sym=y/# CONFIG_$sym is not set/" .config
     done
   - make oldconfig
