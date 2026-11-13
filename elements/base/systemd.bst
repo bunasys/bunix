@@ -61,9 +61,14 @@ variables:
   # udev's hardware database -- keyboard and touchpad fixes, sensor
   # orientation, the names lsusb and lspci show.  The
   # rest are on by default and have no use here: no containers or VMs, no
-  # hibernation.
+  # hibernation.  clock-valid-range-usec-max=0: systemd otherwise resets a
+  # clock more than 15 years past its epoch, treating it as a broken RTC.
+  # The epoch is a source file mtime, which BuildStream pins to 2011-11-11,
+  # so from 2026-11-10 every boot threw away the RTC time; the clock fell
+  # back days, DNSSEC rejected every answer and timesyncd could not resolve
+  # its server.  The epoch stays as the lower bound, for an RTC at 1970.
   meson-local: >-
-    -Dauto_features=disabled -Dmode=release
+    -Dauto_features=disabled -Dmode=release -Dclock-valid-range-usec-max=0
     -Dblkid=enabled -Dlibmount=enabled -Dopenssl=enabled -Dkmod=enabled
     -Dlibcryptsetup=enabled -Dlibcurl=enabled -Dxz=enabled -Dzlib=enabled -Dfdisk=enabled
     -Dsysupdate=enabled -Dsysupdated=enabled -Dimportd=enabled -Drepart=enabled -Dsysext=true
