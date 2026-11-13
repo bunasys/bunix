@@ -1,0 +1,75 @@
+# The daily dependency check (docs/dependencies.md): new releases and known
+# vulnerabilities for every element, posted to one tracking issue, which
+# each run replaces with its report.
+#
+# On bunasys' own runners (tools/firecracker-runner): a fresh VM per run.
+# Runs only from main, on a schedule or by hand; never for pull requests.
+name: Dependencies
+
+on:
+  schedule:
+    # 05:17 UTC: off the hour, when GitHub's scheduler is busiest
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: dependencies
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: bunix-firecracker
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        run: |
+          git clone --depth 1 "https://github.com/$GITHUB_REPOSITORY" bunix
+          git -C bunix log -1 --format='%H %s'
+
+      - name: PyYAML
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends python3-yaml
+
+      - name: Check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # optional: without it NVD allows 5 requests in 30 seconds and the
+          # check takes about 20 minutes
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: python3 -I bunix/tools/deps.py check report.md
+
+      - name: Keep the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dependency-report
+          path: report.md
+          retention-days: 30
+
+      - name: Post to the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          api=https://api.github.com/repos/$GITHUB_REPOSITORY
+          auth="Authorization: Bearer $GH_TOKEN"
+          # an issue's body holds at most 65536 characters; the whole report
+          # is the run's artifact
+          {
+            head -c 60000 report.md
+            printf '\n\n---\nRun: %s\n' "$RUN_URL"
+          } > body.md
+          issue=$(curl -fsS -H "$auth" "$api/issues?labels=dependencies&state=open&creator=github-actions%5Bbot%5D" \
+            | jq -r 'first(.[] | .number) // empty')
+          if [ -z "$issue" ]; then
+            jq -n --rawfile body body.md \
+              '{title: "Dependency report", labels: ["dependencies"], body: $body}' \
+              | curl -fsS -H "$auth" -X POST "$api/issues" -d @- | jq -r .html_url
+          else
+            jq -n --rawfile body body.md '{body: $body}' \
+              | curl -fsS -H "$auth" -X PATCH "$api/issues/$issue" -d @- | jq -r .html_url
+          fi
