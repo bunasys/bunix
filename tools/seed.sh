@@ -7,8 +7,10 @@
 # Cross-compiled on an x86_64 bunix machine, by bunix's own gcc, following
 # elements/bootstrap/ stage 1 (a cross toolchain) and stage 2 (tools that
 # run on the target).  The x86_64 seed is cross-compiled too, as the
-# bootstrap is: its triplet differs from this machine's in the vendor
-# field, so nothing of this machine's is picked up by accident.
+# bootstrap is: its triplet (x86_64-bunix-linux-gnu) differs from this
+# machine's (x86_64-linux-gnu, from `gcc -dumpmachine`) in the vendor
+# field, which is enough for every configure to treat it as another
+# machine's and not look in this one's /usr.
 #
 #   ~/seed-<arch>/host     gawk and bison for this machine (glibc's build needs them)
 #   ~/seed-<arch>/cross    binutils and gcc that run here and produce the seed's code
@@ -39,7 +41,11 @@ umask 022
 
 # The tarball is the same only when built at the same path, so by the same
 # user: gcc records its configure line, and that names the directories below.
-arch=${1:?usage: seed.sh aarch64|x86_64}
+if [ $# != 1 ]; then
+    echo "usage: seed.sh aarch64|x86_64" >&2
+    exit 1
+fi
+arch=$1
 work=$HOME/seed-$arch
 seed=$work/dest/seed
 sysroot=$seed/sysroot
@@ -52,11 +58,11 @@ target=$arch-bunix-linux-gnu
 case $arch in
     aarch64)
         kernel_arch=arm64
-        gcc_library_directories=gcc/config/aarch64/t-aarch64-linux
+        library_directories=gcc/config/aarch64/t-aarch64-linux
         ;;
     x86_64)
         kernel_arch=x86_64
-        gcc_library_directories=gcc/config/i386/t-linux64
+        library_directories=gcc/config/i386/t-linux64
         ;;
     *) echo "seed.sh: unknown architecture $arch" >&2; exit 1 ;;
 esac
@@ -70,6 +76,12 @@ export MAKEINFO=true
 export SOURCE_DATE_EPOCH=$(date -u -d 2026-11-14 +%s)
 
 build=$(gcc -dumpmachine)
+# Everything below relies on this being a cross build.  Were the two the
+# same, every configure would test, and link, against this machine.
+if [ "$build" = "$target" ]; then
+    echo "seed.sh: this machine's gcc is already $target" >&2
+    exit 1
+fi
 
 # The same versions and checksums as elements/bootstrap/.  A version is
 # written here only: the steps below name packages, not versions, except
@@ -150,7 +162,8 @@ unpack_gcc() {
     unpack gmp gmp
     unpack mpfr mpfr
     unpack mpc mpc
-    sed -E -e '/(lp64|m64)=/s/lib64/lib/' -i $gcc_library_directories
+    # lp64 is aarch64's name for its 64-bit libraries, m64 is x86_64's
+    sed -E -e '/(lp64|m64)=/s/lib64/lib/' -i $library_directories
 }
 
 # ---- Tools for this machine --------------------------------------------

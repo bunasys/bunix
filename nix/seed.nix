@@ -1,7 +1,7 @@
 # The seed: the one thing in the store that was not built in it.  A static
 # toolchain (gcc, binutils, glibc, bash and the usual tools) for one
-# architecture, built outside Nix: the aarch64 one is cross-compiled on an
-# x86_64 bunix machine by tools/seed.sh.
+# architecture, built outside Nix: cross-compiled on an x86_64 bunix
+# machine by tools/seed.sh.
 # Stage 1 is built with it; nothing after stage 3 depends on it, except
 # that its bash is still every build's /bin/sh (sh.nix).
 #
@@ -19,14 +19,15 @@
 { system }:
 
 let
-  # one seed for each architecture bunix builds on
+  # One seed for each architecture bunix builds on.  Each url is where
+  # that seed is today, as its builder sees it: the Mac that serves it to
+  # the aarch64 VM, and the file tools/seed.sh leaves on the x86_64 machine.
   seeds = {
     aarch64-linux = {
       name = "bunix-seed-aarch64";
       url = "http://host.lima.internal:8642/bunix-seed-aarch64.tar.xz";
       sha256 = "1glm6rh0xbf431damk1qb0gqapa3azgi1xgnqwqw00mmszhfq75s";
     };
-    # where tools/seed.sh leaves it, on the machine that built it
     x86_64-linux = {
       name = "bunix-seed-x86_64";
       url = "file:///home/khaled/seed-x86_64/bunix-seed-x86_64.tar.xz";
