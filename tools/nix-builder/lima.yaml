@@ -57,5 +57,7 @@ provision:
         DEBIAN_FRONTEND=noninteractive apt-get install -y nix-setup-systemd
     }
     install -m 644 /bunix/tools/nix-builder/nix.conf /etc/nix/nix.conf
+    # nix.conf's build-dir
+    mkdir -p /nix/var/nix/builds
     usermod -aG nix-users "{{.User}}"
     systemctl restart nix-daemon

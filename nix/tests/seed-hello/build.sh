@@ -16,10 +16,11 @@ gcc -static hello.c -o $out/bin/hello-static
 g++ -static hello.cc -o $out/bin/hello-cc-static
 
 # A dynamic program names its loader by absolute path, and the usual one
-# (/lib/ld-linux-aarch64.so.1) does not exist here: it has to be the seed's.
+# (in /lib) does not exist here: it has to be the seed's.
 libc=$seed/sysroot/usr/lib
+loader=$(echo $libc/ld-linux-*.so.*)
 gcc hello.c -o $out/bin/hello-dynamic \
-    -Wl,--dynamic-linker=$libc/ld-linux-aarch64.so.1 -Wl,-rpath,$libc
+    -Wl,--dynamic-linker=$loader -Wl,-rpath,$libc
 
 [ "$($out/bin/hello-static)" = "hello from C" ] || fail "hello-static"
 [ "$($out/bin/hello-cc-static)" = "hello from C++, 3 stages to go" ] || fail "hello-cc-static"

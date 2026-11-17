@@ -1,0 +1,52 @@
+{
+  "binutils": {
+    "version": "2.47",
+    "url": "https://mirrors.kernel.org/gnu/binutils/binutils-2.47.tar.xz",
+    "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff"
+  },
+  "bison": {
+    "version": "3.8.2",
+    "url": "https://mirrors.kernel.org/gnu/bison/bison-3.8.2.tar.xz",
+    "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
+  },
+  "gcc": {
+    "version": "16.2.0",
+    "url": "https://mirrors.kernel.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
+    "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"
+  },
+  "glibc": {
+    "version": "2.44",
+    "url": "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz",
+    "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667"
+  },
+  "gmp": {
+    "version": "6.3.0",
+    "url": "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz",
+    "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+  },
+  "linux": {
+    "version": "6.18.52",
+    "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.52.tar.xz",
+    "sha256": "2b69564f7d4fea0c859b1959ba33709ee6e9139bd100e30a853b57159a8221b8"
+  },
+  "m4": {
+    "version": "1.4.21",
+    "url": "https://mirrors.kernel.org/gnu/m4/m4-1.4.21.tar.xz",
+    "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66"
+  },
+  "mpc": {
+    "version": "1.4.1",
+    "url": "https://mirrors.kernel.org/gnu/mpc/mpc-1.4.1.tar.xz",
+    "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931"
+  },
+  "mpfr": {
+    "version": "4.2.2",
+    "url": "https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
+    "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
+  },
+  "python": {
+    "version": "3.15.2",
+    "url": "https://www.python.org/ftp/python/3.15.2/Python-3.15.2.tar.xz",
+    "sha256": "8b5536d280142ecf6cdfe15d12a21ba1c65e300bbf7b28a8d0cdb849575797de"
+  }
+}
