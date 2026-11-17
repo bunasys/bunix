@@ -26,7 +26,6 @@ gcc -c start.c
 ld start.o -o start -lc
 readelf -l start | grep -q "interpreter: $glibc/lib/" || fail "ld's default loader is not stage 1's glibc"
 
-# The seed built stage 1, and that is all: its store path is in none of it.
-for built in $out $glibc $binutils $gcc; do
-    ! grep -r -q $seed $built || fail "the seed's store path is in $built"
-done
+# glibc, binutils and gcc may not name the seed (stage1.nix); nor does
+# what they build
+! grep -r -q $seed $out || fail "the seed's store path is in the output"

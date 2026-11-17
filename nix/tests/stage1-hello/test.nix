@@ -19,8 +19,6 @@ derivation {
   PATH = "${stage1.gcc}/bin:${stage1.binutils}/bin:${seed}/bin";
   inherit seed;
   glibc = stage1.glibc;
-  binutils = stage1.binutils;
-  gcc = stage1.gcc;
   hello_c = ../hello.c;
   hello_cc = ../hello.cc;
 }

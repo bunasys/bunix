@@ -1,4 +1,9 @@
 {
+  "bash": {
+    "version": "5.3",
+    "url": "https://mirrors.kernel.org/gnu/bash/bash-5.3.tar.gz",
+    "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"
+  },
   "binutils": {
     "version": "2.47",
     "url": "https://mirrors.kernel.org/gnu/binutils/binutils-2.47.tar.xz",
@@ -8,6 +13,26 @@
     "version": "3.8.2",
     "url": "https://mirrors.kernel.org/gnu/bison/bison-3.8.2.tar.xz",
     "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
+  },
+  "coreutils": {
+    "version": "9.12",
+    "url": "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.12.tar.xz",
+    "sha256": "a480198559733e9b3da999e90543ac6f888a2caa544d8d664c5a1f17e528e210"
+  },
+  "diffutils": {
+    "version": "3.12",
+    "url": "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz",
+    "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd"
+  },
+  "findutils": {
+    "version": "4.11.0",
+    "url": "https://mirrors.kernel.org/gnu/findutils/findutils-4.11.0.tar.xz",
+    "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd"
+  },
+  "gawk": {
+    "version": "5.3.2",
+    "url": "https://mirrors.kernel.org/gnu/gawk/gawk-5.3.2.tar.xz",
+    "sha256": "f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc"
   },
   "gcc": {
     "version": "16.2.0",
@@ -24,6 +49,16 @@
     "url": "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz",
     "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
   },
+  "grep": {
+    "version": "3.12",
+    "url": "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz",
+    "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9"
+  },
+  "gzip": {
+    "version": "1.15",
+    "url": "https://mirrors.kernel.org/gnu/gzip/gzip-1.15.tar.xz",
+    "sha256": "9aa0cc780dec156b8282844833b342ab7cb08c25d2cd9a1869cdd0df31deff48"
+  },
   "linux": {
     "version": "6.18.52",
     "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.52.tar.xz",
@@ -33,6 +68,11 @@
     "version": "1.4.21",
     "url": "https://mirrors.kernel.org/gnu/m4/m4-1.4.21.tar.xz",
     "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66"
+  },
+  "make": {
+    "version": "4.4.1",
+    "url": "https://mirrors.kernel.org/gnu/make/make-4.4.1.tar.gz",
+    "sha256": "dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
   },
   "mpc": {
     "version": "1.4.1",
@@ -44,9 +84,29 @@
     "url": "https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
     "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
   },
+  "patch": {
+    "version": "2.8.1",
+    "url": "https://mirrors.kernel.org/gnu/patch/patch-2.8.1.tar.xz",
+    "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17"
+  },
   "python": {
     "version": "3.15.2",
     "url": "https://www.python.org/ftp/python/3.15.2/Python-3.15.2.tar.xz",
     "sha256": "8b5536d280142ecf6cdfe15d12a21ba1c65e300bbf7b28a8d0cdb849575797de"
+  },
+  "sed": {
+    "version": "4.10",
+    "url": "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz",
+    "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7"
+  },
+  "tar": {
+    "version": "1.35",
+    "url": "https://mirrors.kernel.org/gnu/tar/tar-1.35.tar.xz",
+    "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
+  },
+  "xz": {
+    "version": "5.8.4",
+    "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz",
+    "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b"
   }
 }

@@ -8,6 +8,11 @@
 #            build can run nothing else, except /bin/sh.
 #   env      more environment variables for the script.  A package becomes
 #            its store path, a string stays itself.
+#   mustNotReference
+#            packages whose store paths must not appear anywhere in the
+#            result: the build fails if one does.  A result that names
+#            a package needs it to run, as far as Nix can tell, and
+#            drags it along.
 #
 # What a build script can rely on (package.sh provides it):
 #
@@ -22,7 +27,7 @@
 # (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is the bash that runs the scripts.
 { system, shell }:
 
-{ name, source, script, tools, env ? {} }:
+{ name, source, script, tools, env ? {}, mustNotReference ? [] }:
 
 let
   fetch = import ./fetch.nix;
@@ -35,5 +40,6 @@ derivation (env // {
   args = [ ./package.sh ];
   src = fetch source;
   inherit script;
+  disallowedReferences = mustNotReference;
   PATH = builtins.concatStringsSep ":" toolDirectories;
 })
