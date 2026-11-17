@@ -11,7 +11,7 @@
 #   python ───────┘         └────────────┴─ gcc
 #
 # The seed builds glibc, binutils and gcc, and that is all: its store path
-# may not appear in them (mustNotReference), or everything built with them
+# may not appear in them (mustNotDependOn), or everything built with them
 # would depend on the seed.  The stage's own build tools (m4, bison,
 # Python) are linked with the seed and are not used after it.
 #
@@ -89,7 +89,7 @@ let
     source = sources.glibc;
     script = ./stage1/glibc.sh;
     tools = [ bison python seed ];
-    mustNotReference = [ seed ];
+    mustNotDependOn = [ seed ];
     env = { linux_headers = linuxHeaders; };
   };
 
@@ -100,7 +100,7 @@ let
     source = sources.binutils;
     script = ./stage1/binutils.sh;
     tools = [ seed ];
-    mustNotReference = [ seed ];
+    mustNotDependOn = [ seed ];
     env = {
       CC = staticCc;
       CXX = staticCxx;
@@ -113,7 +113,7 @@ let
     source = sources.gcc;
     script = ./stage1/gcc.sh;
     tools = [ binutils seed ];
-    mustNotReference = [ seed ];
+    mustNotDependOn = [ seed ];
     env = {
       CC = staticCc;
       CXX = staticCxx;

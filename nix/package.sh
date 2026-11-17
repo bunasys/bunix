@@ -18,6 +18,11 @@ jobs=$NIX_BUILD_CORES
 [ "$jobs" != 0 ] || jobs=$(nproc)
 export MAKEFLAGS=-j$jobs
 
+# The time of the build, for whatever would record it (gcc's __DATE__,
+# Python's compiled modules): always the same, the one Nix gives every
+# file in the store, so that building twice gives the same bytes.
+export SOURCE_DATE_EPOCH=1
+
 source "$script"
 
 # Debugging information names the build directory and the store paths of

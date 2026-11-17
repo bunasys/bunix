@@ -1,5 +1,6 @@
-# Stage 2's tools are enough to build with: a make-driven build runs with
-# stage 2's tools and stage 1's compiler on PATH and nothing of the seed's.
+# Stage 2's tools are enough to build with: a small package is unpacked,
+# patched and built by make, with stage 2's tools and stage 1's compiler on
+# PATH and nothing of the seed's.  (/bin/sh is still the seed's bash.)
 #
 #   nix-build /bunix/nix/tests/stage2-hello/test.nix
 { system ? builtins.currentSystem }:

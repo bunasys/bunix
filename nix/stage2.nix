@@ -5,16 +5,15 @@
 #
 # Stage 1 was built with the seed's tools; stage 2 is built with them too,
 # for the last time.  From stage 3 on, a build's PATH is stage 2's tools
-# and stage 1's compiler: no program of the seed's runs.
+# and stage 1's compiler.  The seed's bash still runs as /bin/sh, for make
+# recipes and scripts that start with #!/bin/sh (sh.nix).
 #
-# Most of these are built the same way, by stage2/configure-make-install.sh;
-# what a package adds to `./configure` is its configure_flags.
-#
-# None may name the seed's store path (mustNotReference): stage 3 will
-# depend on these, and would then depend on the seed through them.  A
-# configure script finds programs such as install or grep on PATH, where
+# No package of this stage may depend on the seed (mustNotDependOn): stage
+# 3 will depend on these, and would then depend on the seed through them.
+# A configure script finds programs such as install or grep on PATH, where
 # they are still the seed's, and some packages write the path it found into
-# what they install.  Those are told the program's plain name instead.
+# what they install.  Those are told the program's plain name instead: in
+# configure_arguments, or in the package's own script when it has one.
 { system ? builtins.currentSystem }:
 
 let
@@ -26,136 +25,111 @@ let
     shell = "${seed}/bin/bash";
   };
 
-  # stage 1's compiler and linker first, then the seed for everything else
-  buildTools = [ stage1.gcc stage1.binutils seed ];
-  configureMakeInstall = ./stage2/configure-make-install.sh;
+  # What every package of this stage has in common.  The tools are stage
+  # 1's compiler and linker first, then the seed for everything else.
+  stage2Package = package: mkPackage ({
+    tools = [ stage1.gcc stage1.binutils seed ];
+    mustNotDependOn = [ seed ];
+  } // package);
 
-  bash = mkPackage {
+  bash = stage2Package {
     name = "stage2-bash";
     source = sources.bash;
     script = ./stage2/bash.sh;
-    tools = buildTools;
-    mustNotReference = [ seed ];
   };
 
-  coreutils = mkPackage {
+  coreutils = stage2Package {
     name = "stage2-coreutils";
     source = sources.coreutils;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
-    env = { configure_flags = "--enable-install-program=hostname --enable-no-install-program=kill,uptime"; };
+    script = ./configure-make-install.sh;
+    env = { configure_arguments = "--enable-install-program=hostname --enable-no-install-program=kill,uptime"; };
   };
 
-  diffutils = mkPackage {
+  diffutils = stage2Package {
     name = "stage2-diffutils";
     source = sources.diffutils;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
-    # diff runs pr for `diff -l`
-    env = { configure_flags = "ac_cv_path_PR_PROGRAM=pr"; };
+    script = ./configure-make-install.sh;
+    # pr by its name, not the seed's path (see the top): `diff -l` runs it
+    env = { configure_arguments = "ac_cv_path_PR_PROGRAM=pr"; };
   };
 
-  findutils = mkPackage {
+  findutils = stage2Package {
     name = "stage2-findutils";
     source = sources.findutils;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
-    # the updatedb script runs sort
-    env = { configure_flags = "ac_cv_path_SORT=sort"; };
+    script = ./configure-make-install.sh;
+    # sort by its name, not the seed's path (see the top): updatedb runs it
+    env = { configure_arguments = "ac_cv_path_SORT=sort"; };
   };
 
-  gawk = mkPackage {
+  gawk = stage2Package {
     name = "stage2-gawk";
     source = sources.gawk;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  grep = mkPackage {
+  grep = stage2Package {
     name = "stage2-grep";
     source = sources.grep;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  gzip = mkPackage {
+  gzip = stage2Package {
     name = "stage2-gzip";
     source = sources.gzip;
     script = ./stage2/gzip.sh;
-    tools = buildTools;
-    mustNotReference = [ seed ];
   };
 
-  make = mkPackage {
+  make = stage2Package {
     name = "stage2-make";
     source = sources.make;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
-    env = { configure_flags = "--without-guile"; };
+    script = ./configure-make-install.sh;
+    env = { configure_arguments = "--without-guile"; };
   };
 
-  patch = mkPackage {
+  patch = stage2Package {
     name = "stage2-patch";
     source = sources.patch;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  sed = mkPackage {
+  sed = stage2Package {
     name = "stage2-sed";
     source = sources.sed;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  tar = mkPackage {
+  tar = stage2Package {
     name = "stage2-tar";
     source = sources.tar;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  xz = mkPackage {
+  xz = stage2Package {
     name = "stage2-xz";
     source = sources.xz;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
   # The three that glibc's build needs besides the usual tools.  Stage 1
   # has them too, but linked with the seed's glibc.
-  m4 = mkPackage {
+  m4 = stage2Package {
     name = "stage2-m4";
     source = sources.m4;
-    script = configureMakeInstall;
-    tools = buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
   };
 
-  bison = mkPackage {
+  bison = stage2Package {
     name = "stage2-bison";
     source = sources.bison;
-    script = configureMakeInstall;
-    tools = [ m4 ] ++ buildTools;
-    mustNotReference = [ seed ];
+    script = ./configure-make-install.sh;
+    # bison runs m4, and records where it is
+    tools = [ m4 stage1.gcc stage1.binutils seed ];
   };
 
-  python = mkPackage {
+  python = stage2Package {
     name = "stage2-python";
     source = sources.python;
     script = ./stage2/python.sh;
-    tools = buildTools;
-    mustNotReference = [ seed ];
   };
 in
 {
