@@ -1,13 +1,18 @@
 #!/bin/bash
-# The aarch64 seed: what the Nix store on aarch64 starts from (stage 0).
+# A seed: what the Nix store of one architecture starts from (stage 0).
+#
+#   tools/seed.sh aarch64
+#   tools/seed.sh x86_64
 #
 # Cross-compiled on an x86_64 bunix machine, by bunix's own gcc, following
 # elements/bootstrap/ stage 1 (a cross toolchain) and stage 2 (tools that
-# run on the target), with the target changed to aarch64:
+# run on the target).  The x86_64 seed is cross-compiled too, as the
+# bootstrap is: its triplet differs from this machine's in the vendor
+# field, so nothing of this machine's is picked up by accident.
 #
-#   ~/seed-aarch64/host     gawk and bison for this machine (glibc's build needs them)
-#   ~/seed-aarch64/cross    binutils and gcc that run here and produce aarch64 code
-#   ~/seed-aarch64/dest/seed  the seed itself, packed as bunix-seed-aarch64.tar.xz
+#   ~/seed-<arch>/host     gawk and bison for this machine (glibc's build needs them)
+#   ~/seed-<arch>/cross    binutils and gcc that run here and produce the seed's code
+#   ~/seed-<arch>/dest/seed  the seed itself, packed as bunix-seed-<arch>.tar.xz
 #
 # The seed differs from stage 2 in three ways.  The first two are because a
 # Nix build starts with nothing but /nix/store, at a path not known until
@@ -22,23 +27,39 @@
 # - it is smaller: no m4, file or ncurses, and no bison or Python.  Stage 1
 #   in Nix builds what it needs of these with the seed's gcc.
 #
-# Usage, on a bunix 0.4.0 machine with the gcc extension:  tools/aarch64-seed.sh
+# It runs on a bunix 0.4.0 machine with the gcc extension.
 #
 # A step that succeeded is not run again, which is for working on this
-# script: remove ~/seed-aarch64/done/<step> to repeat one.  Each step's
-# output is in ~/seed-aarch64/log/<step>.log.  A seed that is published is
-# built from an empty ~/seed-aarch64 (keeping src/ is fine): a repeated
+# script: remove ~/seed-<arch>/done/<step> to repeat one.  Each step's
+# output is in ~/seed-<arch>/log/<step>.log.  A seed that is published is
+# built from an empty ~/seed-<arch> (keeping src/ is fine): a repeated
 # step installs over what the earlier run left in dest/.
 set -euo pipefail
 umask 022
 
 # The tarball is the same only when built at the same path, so by the same
 # user: gcc records its configure line, and that names the directories below.
-work=$HOME/seed-aarch64
+arch=${1:?usage: seed.sh aarch64|x86_64}
+work=$HOME/seed-$arch
 seed=$work/dest/seed
 sysroot=$seed/sysroot
 cross=$work/cross
-target=aarch64-bunix-linux-gnu
+target=$arch-bunix-linux-gnu
+
+# What differs by architecture: the kernel's name for it, and the file of
+# gcc's source that puts 64-bit libraries in lib64 (the seed has one
+# architecture, they go in lib).
+case $arch in
+    aarch64)
+        kernel_arch=arm64
+        gcc_library_directories=gcc/config/aarch64/t-aarch64-linux
+        ;;
+    x86_64)
+        kernel_arch=x86_64
+        gcc_library_directories=gcc/config/i386/t-linux64
+        ;;
+    *) echo "seed.sh: unknown architecture $arch" >&2; exit 1 ;;
+esac
 
 export LC_ALL=C TZ=UTC
 export PATH=$cross/bin:$work/host/bin:/usr/bin
@@ -129,8 +150,7 @@ unpack_gcc() {
     unpack gmp gmp
     unpack mpfr mpfr
     unpack mpc mpc
-    # 64-bit libraries go in lib, not lib64: the seed has one architecture
-    sed -e '/lp64=/s/lib64/lib/' -i gcc/config/aarch64/t-aarch64-linux
+    sed -E -e '/(lp64|m64)=/s/lib64/lib/' -i $gcc_library_directories
 }
 
 # ---- Tools for this machine --------------------------------------------
@@ -154,7 +174,7 @@ host_bison() {
 step host-gawk host_gawk
 step host-bison host_bison
 
-# ---- Stage 1: the cross toolchain, and glibc for aarch64 ----------------
+# ---- Stage 1: the cross toolchain, and glibc for the seed ---------------
 
 cross_binutils() {
     unpack binutils
@@ -196,7 +216,7 @@ cross_gcc() {
 
 linux_headers() {
     unpack linux
-    make ARCH=arm64 headers
+    make ARCH=$kernel_arch headers
     find usr/include -type f ! -name '*.h' -delete
     mkdir -p "$sysroot/usr"
     cp -r usr/include "$sysroot/usr/"
@@ -241,7 +261,7 @@ step linux-headers linux_headers
 step glibc glibc
 step cross-libstdcxx cross_libstdcxx
 
-# ---- Stage 2: the seed's programs, static, for aarch64 ------------------
+# ---- Stage 2: the seed's programs, static --------------------------------
 
 # build_seed_tool [configure arguments]: the autotools package unpacked in
 # the current directory, static, into the seed.
@@ -310,7 +330,7 @@ seed_binutils() {
     make DESTDIR="$work/dest" install
 }
 
-# Pass 2: gcc that runs on aarch64.  No LTO: it needs a linker plugin.
+# Pass 2: gcc that runs on the seed's architecture.  No LTO: it needs a linker plugin.
 # Its libstdc++ and libgcc are static only, so what the seed builds does
 # not depend on a shared library of the seed's by accident.
 seed_gcc() {
@@ -370,7 +390,7 @@ find "$seed" -type f \( -name '*.a' -o -name '*.o' \) -exec file {} + \
 # Under a temporary name first: an interrupted run leaves no half-written
 # file where a finished tarball is expected.
 current=pack
-tarball=$work/bunix-seed-aarch64.tar.xz
+tarball=$work/bunix-seed-$arch.tar.xz
 tar -C "$seed" --sort=name --mtime="@$SOURCE_DATE_EPOCH" \
     --owner=0 --group=0 --numeric-owner -cf - . | xz -6 -T1 > "$tarball.tmp"
 mv "$tarball.tmp" "$tarball"
