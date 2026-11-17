@@ -24,5 +24,5 @@ derivation {
 
   # Nix fails the build if the result needs any of these to run.
   disallowedRequisites =
-    [ stage3.gcc stage3.binutils seed stage1.glibc stage1.binutils stage1.gcc ] ++ stage2.all;
+    [ stage3.gcc stage3.binutils seed ] ++ stage1.all ++ stage2.all;
 }

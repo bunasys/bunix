@@ -5,12 +5,18 @@
 #   nix-build /bunix/nix/stage3.nix -A gcc
 #
 #   glibc ─┬─ binutils ─┐
-#          └────────────┴─ gcc ── gcc.lib (gccLibraries)
+#          └────────────┴─ gcc (outputs: out, lib)
 #
 # This gcc is a normal one, unlike stage 1's: it optimises at link time,
 # and has libstdc++ and libgcc as shared libraries.  Those are an output of
 # their own, gcc.lib, and a program it builds depends on glibc and gcc.lib,
 # not on the compiler (stage3/gcc.sh).
+#
+# What it cannot do yet:
+# - -fsanitize: the sanitizer libraries are not built (stage3/gcc.sh);
+# - put objects compiled with -flto in a library with plain `ar`: binutils
+#   is built before gcc and does not know gcc's plugin.  `gcc-ar`,
+#   `gcc-ranlib` and `gcc-nm` do.
 { system ? builtins.currentSystem }:
 
 let
@@ -29,11 +35,14 @@ let
   # What every package of this stage has in common.
   stage3Package = package: mkPackage ({
     tools = stage2.all ++ [ stage1.gcc stage1.binutils ];
-    mustNotDependOn = [ seed stage1.glibc stage1.binutils stage1.gcc ] ++ stage2.all;
+    mustNotDependOn = [ seed ] ++ stage1.all ++ stage2.all;
   } // package);
 
+  # No stage in the names: these are the final ones.
+  #
   # The kernel's headers are stage 1's: they are files copied from the
-  # kernel's source, the same whoever copies them.
+  # kernel's source, the same whoever copies them, and glibc copies them
+  # again into itself.
   glibc = stage3Package {
     name = "glibc";
     source = sources.glibc;
@@ -65,5 +74,4 @@ let
 in
 {
   inherit glibc binutils gcc;
-  gccLibraries = gcc.lib;
 }

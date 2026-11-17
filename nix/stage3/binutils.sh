@@ -1,3 +1,5 @@
+# The patch for the loader is stage1/binutils.sh's, line for line: a change
+# to one is a change to both.
 unpack $src
 mkdir build
 cd build

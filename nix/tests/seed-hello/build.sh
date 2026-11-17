@@ -23,7 +23,7 @@ gcc hello.c -o $out/bin/hello-dynamic \
     -Wl,--dynamic-linker=$loader -Wl,-rpath,$libc
 
 [ "$($out/bin/hello-static)" = "hello from C" ] || fail "hello-static"
-[ "$($out/bin/hello-cc-static)" = "hello from C++, 3 stages to go" ] || fail "hello-cc-static"
+[ "$($out/bin/hello-cc-static)" = "hello from C++, with a vector of 3" ] || fail "hello-cc-static"
 [ "$($out/bin/hello-dynamic)" = "hello from C" ] || fail "hello-dynamic"
 
 readelf -l $out/bin/hello-dynamic | grep -q "interpreter: $libc/" || fail "hello-dynamic's loader is not the seed's"

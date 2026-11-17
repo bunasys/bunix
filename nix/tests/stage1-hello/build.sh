@@ -14,7 +14,7 @@ gcc hello.c -o $out/bin/hello
 g++ hello.cc -o $out/bin/hello-cc
 
 [ "$($out/bin/hello)" = "hello from C" ] || fail "hello"
-[ "$($out/bin/hello-cc)" = "hello from C++, 3 stages to go" ] || fail "hello-cc"
+[ "$($out/bin/hello-cc)" = "hello from C++, with a vector of 3" ] || fail "hello-cc"
 
 for program in hello hello-cc; do
     readelf -l $out/bin/$program | grep -q "interpreter: $glibc/lib/" || fail "$program's loader is not stage 1's glibc"

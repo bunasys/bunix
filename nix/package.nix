@@ -9,9 +9,10 @@
 #   env      more environment variables for the script.  A package becomes
 #            its store path, a string stays itself.
 #   outputs  the store paths the result is split into, when it is more
-#            than one: [ "out" "lib" ] gives the script $out and $lib,
-#            and in Nix the second is `package.lib`.  What only needs
-#            the second does not drag the first along.
+#            than one: [ "out" "lib" ] gives the script $out and $lib.
+#            "out" comes first; in Nix, `package` alone is it, and
+#            `package.lib` the second.  What only needs the second does
+#            not drag the first along.
 #   mustNotDependOn
 #            packages the result must not need to run, itself or
 #            through anything else it needs: the build fails if it

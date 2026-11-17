@@ -2,6 +2,16 @@
 #
 #   nix-build /bunix/nix/stage1.nix -A gcc
 #
+# The whole chain, of which this is the first step:
+#
+#             builds               compiled by    tools on PATH   may not depend on
+#   seed      (tools/seed.sh, outside Nix)
+#   stage 1   glibc binutils gcc   the seed's gcc the seed        the seed
+#   stage 2   bash make tar ...    stage 1's gcc  the seed        the seed
+#   stage 3   glibc binutils gcc   stage 1's gcc  stage 2         the seed, stage 1, stage 2
+#
+# Stage 3 is what everything else is built with.
+#
 # The seed's gcc builds programs for the seed's own glibc.  Stage 1's gcc
 # builds them for stage 1's glibc: its headers, its start files and its
 # loader, all by their store paths.  Everything after is built with it.
@@ -126,4 +136,7 @@ let
 in
 {
   inherit linuxHeaders m4 bison python glibc binutils gcc;
+
+  # everything of the stage: what stage 3 may not depend on
+  all = [ linuxHeaders m4 bison python glibc binutils gcc ];
 }

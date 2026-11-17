@@ -11,17 +11,12 @@ mkdir build
 cd build
 echo "rootsbindir=$out/bin" > configparms
 
-# The scripts glibc installs (ldd, sotruss, xtrace, tzselect) are bash
-# scripts, and start with the path of the bash configure finds: stage 2's,
-# which glibc may not depend on.  /bin/sh is a bash wherever these files
-# build anything.
 # --enable-kernel: as in project.conf (glibc-min-kernel)
 ../configure \
     --prefix=$out \
     --with-headers=$out/include --enable-kernel=5.4 \
     --enable-stack-protector=strong \
-    --disable-nscd --disable-werror \
-    ac_cv_path_BASH_SHELL=/bin/sh
+    --disable-nscd --disable-werror
 make
 make install
 
