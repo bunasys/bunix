@@ -8,6 +8,10 @@
 #            build can run nothing else, except /bin/sh.
 #   env      more environment variables for the script.  A package becomes
 #            its store path, a string stays itself.
+#   outputs  the store paths the result is split into, when it is more
+#            than one: [ "out" "lib" ] gives the script $out and $lib,
+#            and in Nix the second is `package.lib`.  What only needs
+#            the second does not drag the first along.
 #   mustNotDependOn
 #            packages the result must not need to run, itself or
 #            through anything else it needs: the build fails if it
@@ -22,14 +26,14 @@
 #   - make runs in parallel (MAKEFLAGS);
 #   - SOURCE_DATE_EPOCH is set, for programs that record when they were
 #     built;
-#   - afterwards, debugging information is stripped from everything in
-#     $out, and libtool's .la files are deleted.
+#   - afterwards, debugging information is stripped from everything
+#     installed, and libtool's .la files are deleted.
 #
 # `system` is the architecture built on and for, as Nix names it
 # (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is the bash that runs the scripts.
 { system, shell }:
 
-{ name, source, script, tools, env ? {}, mustNotDependOn ? [] }:
+{ name, source, script, tools, env ? {}, outputs ? [ "out" ], mustNotDependOn ? [] }:
 
 let
   fetch = import ./fetch.nix;
@@ -41,7 +45,7 @@ derivation (env // {
   builder = shell;
   args = [ ./package.sh ];
   src = fetch source;
-  inherit script;
+  inherit script outputs;
   disallowedRequisites = mustNotDependOn;
   PATH = builtins.concatStringsSep ":" toolDirectories;
 })

@@ -30,8 +30,14 @@ source "$script"
 # the package needs to run, so the information goes, and the size with it.
 # strip is given every file and refuses those that are not programs or
 # libraries, hence no check of its result.
-find "$out" -type f -exec strip --strip-debug {} + 2> /dev/null || true
-
+#
 # .la files record the build directory and the paths of build-time
-# libraries, which only mislead later builds
-find "$out" -name '*.la' -delete
+# libraries, which only mislead later builds.
+#
+# $outputs is the names of the package's outputs (out, lib), each the name
+# of the variable that holds its path.
+for output in $outputs; do
+    installed=${!output}
+    find "$installed" -type f -exec strip --strip-debug {} + 2> /dev/null || true
+    find "$installed" -name '*.la' -delete
+done
