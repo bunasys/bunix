@@ -6,6 +6,14 @@
 #            install into $out
 #   tools    the packages whose bin/ make up PATH, first one first.  The
 #            build can run nothing else, except /bin/sh.
+#   libraries
+#            the packages whose headers and libraries the build uses.
+#            gcc finds their include/ and lib/ by itself (through its
+#            variables C_INCLUDE_PATH and LIBRARY_PATH), pkg-config their
+#            lib/pkgconfig, and LDFLAGS has the linker record each lib/
+#            in what is built, which is how the result finds them when
+#            it runs.  A script whose build system ignores LDFLAGS has
+#            to pass it on itself.
 #   env      more environment variables for the script.  A package becomes
 #            its store path, a string stays itself.
 #   outputs  the store paths the result is split into, when it is more
@@ -31,16 +39,31 @@
 #     installed, and libtool's .la files are deleted.
 #
 # `system` is the architecture built on and for, as Nix names it
-# (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is the bash that runs the scripts.
-{ system, shell }:
+# (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is
+# the bash that runs the scripts.  `environment` is variables for every
+# package made with this mkPackage; a package's own env wins.
+{ system, shell, environment ? {} }:
 
-{ name, source, script, tools, env ? {}, outputs ? [ "out" ], mustNotDependOn ? [] }:
+{ name, source, script, tools, libraries ? [], env ? {}, outputs ? [ "out" ], mustNotDependOn ? [] }:
 
 let
   fetch = import ./fetch.nix;
   toolDirectories = map (tool: "${tool}/bin") tools;
+
+  inEachLibrary = directory: separator:
+    builtins.concatStringsSep separator (map (library: "${library}/${directory}") libraries);
+
+  # Not set at all without libraries: to gcc, an empty C_INCLUDE_PATH or
+  # LIBRARY_PATH means the current directory.
+  librarySearchPaths = if libraries == [] then {} else {
+    C_INCLUDE_PATH = inEachLibrary "include" ":";
+    CPLUS_INCLUDE_PATH = inEachLibrary "include" ":";
+    LIBRARY_PATH = inEachLibrary "lib" ":";
+    PKG_CONFIG_PATH = inEachLibrary "lib/pkgconfig" ":";
+    LDFLAGS = builtins.concatStringsSep " " (map (library: "-Wl,-rpath,${library}/lib") libraries);
+  };
 in
-derivation (env // {
+derivation (environment // librarySearchPaths // env // {
   name = "${name}-${source.version}";
   inherit system;
   builder = shell;
