@@ -20,10 +20,20 @@
 # those need in turn (stage.nix).  What a script can rely on, and what is
 # checked of its result, is in system-package.sh.
 #
-# `bootstrapTools` are for a group of packages built before the system has
-# a compiler and tools of its own: stage 1's and stage 2's, after /usr/bin
-# on PATH.  `stagingTools`: see stage.nix.
-{ system, shell, stagingTools, bootstrapTools ? [] }:
+# What a group of packages has in common is said once, where the group is
+# defined (toolchain.nix, tools.nix):
+#
+#   bootstrapTools
+#            for a group built before the system has a compiler and tools
+#            of its own: stage 1's and stage 2's, after /usr/bin on PATH
+#   buildEnvironment
+#            system packages that are buildDepends of every package of the
+#            group: the compiler and the tools
+#   defaults variables every package of the group starts with, such as the
+#            compiler's flags; a package's env wins
+#
+# `stagingTools`: see stage.nix.
+{ system, shell, stagingTools, bootstrapTools ? [], buildEnvironment ? [], defaults ? {} }:
 
 { name, script, source ? null, version ? source.version, depends ? [], buildDepends ? [], env ? {} }:
 
@@ -35,6 +45,7 @@ in
 stagedBuild {
   name = "${name}-${version}";
   run = ./system-package.sh;
-  inherit depends buildDepends bootstrapTools;
-  env = env // sourceVariable // { inherit script; };
+  inherit depends bootstrapTools;
+  buildDepends = buildEnvironment ++ buildDepends;
+  env = defaults // env // sourceVariable // { inherit script; };
 }

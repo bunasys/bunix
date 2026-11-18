@@ -1,7 +1,7 @@
 # The system out of Nix: /usr, and no store
 
-Status: 2026-11-19.  Steps 1 to 3 of the order of work are built and
-tested on both builders; the rest is proposed.
+Status: 2026-11-19.  Steps 1 to 4 of the order of work are built and
+tested; the rest is proposed.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -37,8 +37,8 @@ kernel and the boot; its layout is not kept.
 seed ─ stage 1 (store: glibc, binutils, gcc)
      ─ stage 2 (store: bash, make, tar, ...)
      ─ toolchain (/usr: glibc, binutils, gcc)   built by stage 1's gcc, stage 2's tools
-     ─ base (/usr: bash, coreutils, make, ...)  built by the toolchain, stage 2's tools
-     ─ every other package (/usr)               built by the toolchain and base
+     ─ tools (/usr: bash, coreutils, make, ...) built by the toolchain, stage 2's tools
+     ─ every other package (/usr)               built by the toolchain and the tools
 ```
 
 glibc, binutils, gcc and about fifteen tools are built twice: once to
@@ -46,9 +46,14 @@ build with, once to ship.  `elements/bootstrap/` does the same today.
 
 A group of packages built before the system has tools of its own says so
 once, where the group is defined (`bootstrapTools`): stage 1's and stage
-2's programs are then on PATH after `/usr/bin`.  The toolchain and base
-have them; the packages after base do not, and their authors never meet
-the idea.
+2's programs are then on PATH after `/usr/bin`.  The toolchain and the
+tools have them; the packages after do not, and their authors never
+meet the idea.  Those are built with `buildEnvironment`: the system's
+compiler and tools, as BuildStream's elements are with
+`bootstrap/build-env.bst`.
+
+The tools are GNU's, for building.  What an image ships is another
+matter: bunix's coreutils is uutils'.
 
 **Stage 3 goes.**  It is a complete toolchain in the store's layout, and
 nothing is built with it.  With it go gcc's separate libraries output,
@@ -159,7 +164,9 @@ nix/
   fetch.nix  sources.json  architecture.nix
   bootstrap/   seed.nix sh.nix package.{nix,sh} stage1.nix stage1/ stage2.nix stage2/
   stage.{nix,sh}  system-package.{nix,sh}
+  autotools.sh
   toolchain.nix  toolchain/*.sh
+  tools.nix      tools/*.sh
   base.nix       base/*.sh         one .nix and one directory for each group,
   desktop.nix    desktop/*.sh      as elements/ has them
   images/        initramfs.{nix,sh} init.sh ...
@@ -187,6 +194,6 @@ nix/
 | 1. Staging: a build with a `/usr` made of its dependencies | `nix/tests/usr-staging`, `usr-glibc` pass on both builders | done |
 | 2. glibc for `/usr`, built by stage 1's gcc | a program linked against it runs in a staged build, loader `/lib/ld-linux-...` | done |
 | 3. binutils and gcc for `/usr` | `nix/tests/usr-toolchain`: C and C++, threads, shared libraries and LTO with no flags, no store path in the results | done |
-| 4. base: bash, coreutils, make and the rest, built by that gcc | the toolchain rebuilds itself using only system packages | |
+| 4. tools: bash, coreutils, make and the rest, built by that gcc | `nix/tests/usr-build-environment`: glibc builds again with the system's compiler and tools alone, and comes out the same, file for file | done |
 | 5. The initramfs as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | |
 | 6. Remove stage 3 and the store-layout packages; move the bootstrap under `nix/bootstrap/` | the tests that remain pass on both builders | |
