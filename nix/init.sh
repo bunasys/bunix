@@ -1,13 +1,28 @@
+#!/bin/sh
 # /init: the first program the kernel starts, and so far the whole of
-# bunix's init system.  initramfs.sh puts the shell's path on the first
-# line and the contents' on PATH.
+# bunix's init system.
 #
 # `demo` on the kernel's command line: say what booted and power off,
 # for a boot that nobody is watching.
 
+# PATH: the bin/ of each of the system's packages (initramfs.sh)
+. /etc/environment
+
+# The kernel keeps a file system of its devices, and mounts it itself only
+# on a root that is a disk.  Before this, /dev has the console and nothing
+# else: no /dev/null, no terminals, no disks.
+mount -t devtmpfs dev /dev
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t tmpfs tmp /tmp
+
+power_off() {
+    echo "=== powering off ==="
+    # the kernel's own power-off, asked for through sysrq: there is no init
+    # system yet to shut down
+    echo o > /proc/sysrq-trigger
+    sleep 60
+}
 
 echo
 echo "=== bunix booted ==="
@@ -17,14 +32,10 @@ echo "init:       pid $$, bash $BASH_VERSION"
 echo "store:      $(ls /nix/store | wc -l) packages"
 
 for word in $(cat /proc/cmdline); do
-    if [ $word = demo ]; then
-        echo "=== powering off ==="
-        # the kernel's own power-off, asked for through sysrq: there is no
-        # init system yet to shut down
-        echo o > /proc/sysrq-trigger
-        sleep 60
-    fi
+    [ "$word" != demo ] || power_off
 done
 
-# a shell that owns the console, so that Ctrl-C reaches what it runs
-exec setsid -c bash -i
+# A shell that owns the console, so that Ctrl-C reaches what it runs.  When
+# it exits, so does the machine: the kernel panics if /init ever returns.
+setsid -c bash -i
+power_off

@@ -1,5 +1,10 @@
 unpack $src
 
+# perl records when it was configured, by running `date`, and takes no
+# option for it: the date it runs is given the time every build has.
+sed -i '/^cf_time=/s|\$date 2>&1|$date -u -d @'$SOURCE_DATE_EPOCH' 2>\&1|' Configure
+grep -q "^cf_time=.*-d @$SOURCE_DATE_EPOCH" Configure
+
 # perl's Configure is its own, not autoconf's.
 # -Dlocincpth, -Dloclibpth, -Dlibpth, -Dusrinc: it looks for headers and
 #   libraries as files in /usr, which is not there, and leaves out what it
@@ -23,3 +28,9 @@ recorded=$(find $out/lib -name Config.pm -o -name Config_heavy.pl -o -name confi
 for directory in ${PATH//:/ }; do
     sed -i "s|$directory/||g" $recorded
 done
+
+# It also lists gcc's own directories of headers and libraries, which gcc
+# finds without being told, and which would make perl need all of the
+# compiler to run.
+compiler=$(dirname "$(dirname "$(command -v gcc)")")
+sed -i "s|$compiler/[^ '\"]*||g" $recorded

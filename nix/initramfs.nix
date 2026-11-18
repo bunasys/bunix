@@ -16,7 +16,9 @@ let
   packages = import ./packages.nix { inherit system; };
 
   # what the system has; its commands are on PATH in this order
-  contents = [ packages.bash packages.coreutils packages.utilLinux stage3.glibc ];
+  # glibc is in it for its own commands (getconf, ldd, locale); every
+  # program needs it there anyway
+  contents = [ packages.bash packages.coreutils packages.util-linux stage3.glibc ];
 
   # the tools that pack it: gen_init_cpio comes with the kernel
   tools = [ packages.linux ] ++ stage2.all;

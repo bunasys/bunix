@@ -23,11 +23,16 @@ let
     shell = "${stage2.bash}/bin/bash";
   };
 
+  # the tools a build has unless it says otherwise
+  buildTools = [ stage3.gcc stage3.binutils ] ++ stage2.all;
+
   # What every package has in common.
   systemPackage = package: mkPackage ({
-    tools = [ stage3.gcc stage3.binutils ] ++ stage2.all;
+    tools = buildTools;
     mustNotDependOn = [ seed ] ++ stage1.all ++ stage2.all;
   } // package);
+
+  # ---- Libraries -----------------------------------------------------------
 
   zlib = systemPackage {
     name = "zlib";
@@ -44,7 +49,7 @@ let
     libraries = [ zlib ];
   };
 
-  # ---- A shell and the usual commands -------------------------------------
+  # ---- The shell and the usual commands -----------------------------------
 
   bash = systemPackage {
     name = "bash";
@@ -61,13 +66,13 @@ let
 
   # mount, and the rest of what talks to the kernel about disks, terminals
   # and processes
-  utilLinux = systemPackage {
+  util-linux = systemPackage {
     name = "util-linux";
     source = sources.util-linux;
     script = ./packages/util-linux.sh;
   };
 
-  # ---- What the kernel's build needs --------------------------------------
+  # ---- Build tools ---------------------------------------------------------
 
   m4 = systemPackage {
     name = "m4";
@@ -75,12 +80,12 @@ let
     script = ./configure-make-install.sh;
   };
 
-  # flex runs m4, and records where it is
+  # flex runs m4, and records where it is: ours, so before stage 2's on PATH
   flex = systemPackage {
     name = "flex";
     source = sources.flex;
     script = ./configure-make-install.sh;
-    tools = [ m4 stage3.gcc stage3.binutils ] ++ stage2.all;
+    tools = [ m4 ] ++ buildTools;
     # _GNU_SOURCE: without it flex 2.6.4 calls reallocarray undeclared, and
     # crashes while it builds itself
     env = { configure_arguments = "--disable-nls CPPFLAGS=-D_GNU_SOURCE"; };
@@ -92,7 +97,6 @@ let
     script = ./packages/bc.sh;
   };
 
-  # the kernel generates some of its assembly with perl scripts
   perl = systemPackage {
     name = "perl";
     source = sources.perl;
@@ -106,10 +110,12 @@ let
     name = "linux";
     source = sources.linux;
     script = ./packages/linux.sh;
-    tools = [ flex bc perl stage3.gcc stage3.binutils ] ++ stage2.all;
-    env = { configuration = ./packages/linux; };
+    # flex and bc for the kernel's own configuration and build tools; perl
+    # because arm64's kernel generates some of its assembly with perl scripts
+    tools = [ flex bc perl ] ++ buildTools;
+    env = { options = ./packages/linux; };
   };
 in
 {
-  inherit zlib file bash coreutils utilLinux m4 flex bc perl linux;
+  inherit zlib file bash coreutils util-linux m4 flex bc perl linux;
 }
