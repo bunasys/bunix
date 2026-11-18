@@ -69,7 +69,7 @@ let
   util-linux = systemPackage {
     name = "util-linux";
     source = sources.util-linux;
-    script = ./packages/util-linux.sh;
+    script = ./stage2/util-linux.sh;
   };
 
   # ---- Build tools ---------------------------------------------------------

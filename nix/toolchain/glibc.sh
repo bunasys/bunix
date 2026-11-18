@@ -1,0 +1,32 @@
+unpack $src
+
+# the kernel's headers, beside glibc's own
+mkdir -p $out/usr
+cp -r $linux_headers/include $out/usr/
+chmod -R u+w $out/usr/include
+
+mkdir build
+cd build
+
+# UAPI.9: /usr/sbin is a link to /usr/bin, and there is no /usr/libexec.
+# glibc takes these from configparms, not from configure.
+printf '%s\n' rootsbindir=/usr/bin sbindir=/usr/bin libexecdir=/usr/lib > configparms
+
+# --libdir, libc_cv_slibdir: libraries, and the loader, in the directory
+#   named after the architecture.
+# --enable-kernel: as in project.conf (glibc-min-kernel)
+../configure \
+    --prefix=/usr --libdir=/usr/lib/$triplet libc_cv_slibdir=/usr/lib/$triplet \
+    --with-headers=$out/usr/include --enable-kernel=5.4 \
+    --enable-stack-protector=strong \
+    --disable-nscd --disable-werror
+make
+make DESTDIR=$out install
+
+# A program asks for its loader by one fixed path: /lib/ld-linux-aarch64.so.1
+# on aarch64, /lib64/ld-linux-x86-64.so.2 on x86_64.  /lib is /usr/lib and
+# /lib64 is /usr/lib/$triplet (stage.sh, and any image), so x86_64's is
+# found; aarch64's needs this link beside the directory.
+if [ $system = aarch64-linux ]; then
+    ln -s $triplet/ld-linux-aarch64.so.1 $out/usr/lib/ld-linux-aarch64.so.1
+fi

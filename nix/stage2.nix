@@ -131,9 +131,18 @@ let
     source = sources.python;
     script = ./stage2/python.sh;
   };
+
+  # unshare, mount and chroot's companions: what a system package's build
+  # stages its dependencies with (stage.sh).  Not one of `all`: no build
+  # script runs it.
+  util-linux = stage2Package {
+    name = "stage2-util-linux";
+    source = sources.util-linux;
+    script = ./stage2/util-linux.sh;
+  };
 in
 {
-  inherit bash coreutils diffutils findutils gawk grep gzip make patch sed tar xz m4 bison python;
+  inherit bash coreutils diffutils findutils gawk grep gzip make patch sed tar xz m4 bison python util-linux;
 
   # every tool of the stage: what stage 3 has on its PATH
   all = [ bash coreutils diffutils findutils gawk grep gzip make patch sed tar xz m4 bison python ];
