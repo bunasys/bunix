@@ -17,13 +17,15 @@ set -eu
 build() {
     limactl shell bunix-builder nix-build "$@" --no-out-link
 }
-kernel=$(build /bunix/nix/packages.nix -A linux)
-initramfs=$(build /bunix/nix/initramfs.nix)
+kernel=$(build /bunix/nix/system.nix -A linux)
+initramfs=$(build /bunix/nix/images/initramfs.nix)
+# the kernel is in a directory named after its release
+vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
 
 boot=${TMPDIR:-/tmp}/bunix-boot
 mkdir -p "$boot"
-limactl copy "bunix-builder:$kernel/vmlinuz" "$boot/vmlinuz"
-limactl copy "bunix-builder:$initramfs" "$boot/initramfs.cpio.gz"
+limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
+limactl copy "bunix-builder:$initramfs/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
 
 # -accel hvf: the Mac's hypervisor; the guest runs on the real processor
 # console=ttyAMA0: the kernel's messages and the shell on QEMU's serial

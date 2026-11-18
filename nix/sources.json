@@ -99,6 +99,11 @@
     "url": "https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
     "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
   },
+  "ncurses": {
+    "version": "6.6",
+    "url": "https://mirrors.kernel.org/gnu/ncurses/ncurses-6.6.tar.gz",
+    "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"
+  },
   "patch": {
     "version": "2.8.1",
     "url": "https://mirrors.kernel.org/gnu/patch/patch-2.8.1.tar.xz",
@@ -109,10 +114,20 @@
     "url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz",
     "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91"
   },
+  "pkgconf": {
+    "version": "3.0.10",
+    "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.10.tar.xz",
+    "sha256": "9371b2f6372da574d4c6dc96fe9b1463037bcf6afcb6671c1555afde7b17e2de"
+  },
   "python": {
     "version": "3.15.2",
     "url": "https://www.python.org/ftp/python/3.15.2/Python-3.15.2.tar.xz",
     "sha256": "8b5536d280142ecf6cdfe15d12a21ba1c65e300bbf7b28a8d0cdb849575797de"
+  },
+  "readline": {
+    "version": "8.3",
+    "url": "https://mirrors.kernel.org/gnu/readline/readline-8.3.tar.gz",
+    "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc"
   },
   "sed": {
     "version": "4.10",

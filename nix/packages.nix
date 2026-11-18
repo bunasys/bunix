@@ -113,7 +113,7 @@ let
     # flex and bc for the kernel's own configuration and build tools; perl
     # because arm64's kernel generates some of its assembly with perl scripts
     tools = [ flex bc perl ] ++ buildTools;
-    env = { options = ./packages/linux; };
+    env = { options = ./system/linux; };
   };
 in
 {

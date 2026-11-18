@@ -27,6 +27,8 @@ shopt -s nullglob
 # for system-package.sh: what the result may count on finding when it runs
 export runtime_packages=$(packages_in closure-run-*)
 staged=$(packages_in closure-run-* closure-build-*)
+# for a build that makes an image (stage.nix)
+export contents_packages=$(packages_in closure-contents-*)
 
 # Each package's usr/ is a layer of /usr.  Two packages with the same file
 # would make /usr depend on the order of the layers, so that is an error,

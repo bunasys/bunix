@@ -1,7 +1,7 @@
 # The system out of Nix: /usr, and no store
 
-Status: 2026-11-19.  Steps 1 to 4 of the order of work are built and
-tested; the rest is proposed.
+Status: 2026-11-19.  Steps 1 to 5 of the order of work are built and
+tested: a system with no `/nix` boots.  Step 6 is the clearing up.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -14,9 +14,10 @@ and its `/usr` image come out of the store.  This is the answer.
 - **The store is the builder's.**  It holds sources, the bootstrap, and
   every package's result, each result being a `/usr` tree.
 
-What `tools/boot-vm.sh` boots today is the other thing: programs whose
-loader and libraries are store paths.  It proved the toolchain, the
-kernel and the boot; its layout is not kept.
+The first system that booted was the other thing: programs whose loader
+and libraries are store paths.  It proved the toolchain, the kernel and
+the boot; its layout is not kept, and `tools/boot-vm.sh` now boots a
+system made as below.
 
 ## Two kinds of package
 
@@ -52,8 +53,11 @@ meet the idea.  Those are built with `buildEnvironment`: the system's
 compiler and tools, as BuildStream's elements are with
 `bootstrap/build-env.bst`.
 
-The tools are GNU's, for building.  What an image ships is another
-matter: bunix's coreutils is uutils'.
+The tools are GNU's, and an image ships the same ones: GNU coreutils in
+place of uutils', and no BusyBox.  What BusyBox supplied (grep, sed, awk,
+tar, gzip, wget, ip, traceroute, which, strings, lsof) comes from GNU's
+packages, already among the tools, and from iproute2, curl and a few
+small packages, to be ported.
 
 **Stage 3 goes.**  It is a complete toolchain in the store's layout, and
 nothing is built with it.  With it go gcc's separate libraries output,
@@ -140,11 +144,15 @@ package runs by name (`sh`, `sed`) that no `depends` provides.
 ## The image
 
 The union of the chosen packages' `usr/` and `etc/` trees, with what they
-`depends` on, as files: no `/nix`, no `depends` files.  The initramfs is
-one such union, packed as now by the kernel's `gen_init_cpio`; the `/usr`
-image, the extensions and their signatures are others, in the formats
-bunix already has.  The kernel is built as it is today;
-`tools/boot-vm.sh` does not change.
+`depends` on, as files: no `/nix`, no `depends` files.  The initramfs
+(`nix/images/initramfs.nix`) is one such union, packed by the kernel's
+`gen_init_cpio`; the `/usr` image, the extensions and their signatures
+are others, in the formats bunix already has.  A build that makes an
+image names its `contents`, and Nix gives it those packages and all they
+need.
+
+No package is yet in two parts for running and for building against, so
+an image with glibc has its headers and static libraries too.
 
 ## What stays, what goes
 
@@ -195,5 +203,5 @@ nix/
 | 2. glibc for `/usr`, built by stage 1's gcc | a program linked against it runs in a staged build, loader `/lib/ld-linux-...` | done |
 | 3. binutils and gcc for `/usr` | `nix/tests/usr-toolchain`: C and C++, threads, shared libraries and LTO with no flags, no store path in the results | done |
 | 4. tools: bash, coreutils, make and the rest, built by that gcc | `nix/tests/usr-build-environment`: glibc builds again with the system's compiler and tools alone, and comes out the same, file for file | done |
-| 5. The initramfs as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | |
+| 5. The initramfs as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | done (aarch64) |
 | 6. Remove stage 3 and the store-layout packages; move the bootstrap under `nix/bootstrap/` | the tests that remain pass on both builders | |

@@ -30,13 +30,15 @@ let
     bootstrapTools = stage2.all;
     # gcc's depends bring glibc, binutils and its libraries
     buildEnvironment = [ toolchain.gcc ];
-    # as include/system.yml has them.  gcc already defaults to PIE and the
-    # stack protector.
-    defaults = {
-      CFLAGS = "-O2 -pipe -fno-plt";
-      CXXFLAGS = "-O2 -pipe -fno-plt";
-      LDFLAGS = "-Wl,-O1,--as-needed";
-    };
+    defaults = flags;
+  };
+
+  # The compiler's flags for a system package, as include/system.yml has
+  # them.  gcc already defaults to PIE and the stack protector.
+  flags = {
+    CFLAGS = "-O2 -pipe -fno-plt";
+    CXXFLAGS = "-O2 -pipe -fno-plt";
+    LDFLAGS = "-Wl,-O1,--as-needed";
   };
 
   # Every one needs glibc to run, and is built with those before it.
@@ -172,4 +174,5 @@ in
   # what a package is built with, once these exist: the compiler and the
   # tools, all in /usr, and nothing of the bootstrap on PATH
   buildEnvironment = [ toolchain.gcc ] ++ all;
+  inherit flags;
 }

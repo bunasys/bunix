@@ -4,9 +4,7 @@
 #
 # `demo` on the kernel's command line: say what booted and power off,
 # for a boot that nobody is watching.
-
-# PATH: the bin/ of each of the system's packages (initramfs.sh)
-. /etc/environment
+export PATH=/usr/bin
 
 # The kernel keeps a file system of its devices, and mounts it itself only
 # on a root that is a disk.  Before this, /dev has the console and nothing
@@ -29,7 +27,7 @@ echo "=== bunix booted ==="
 echo "kernel:     $(uname -srm)"
 echo "page size:  $(getconf PAGESIZE)"
 echo "init:       pid $$, bash $BASH_VERSION"
-echo "store:      $(ls /nix/store | wc -l) packages"
+echo "root:       $(echo /*)"
 
 for word in $(cat /proc/cmdline); do
     [ "$word" != demo ] || power_off

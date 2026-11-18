@@ -10,6 +10,9 @@
 #            system packages staged for the build only
 #   bootstrapTools
 #            bootstrap packages whose bin/ come after /usr/bin on PATH
+#   contents for a build that makes an image: the system packages to put
+#            in it.  They are not staged; the script gets them, and all
+#            they need to run, as $contents_packages.
 #   env      more environment variables for the script
 #
 # mkSystemPackage is this with system-package.sh as the script; the tests
@@ -19,7 +22,7 @@
 # mount, chroot.
 { system, shell, stagingTools }:
 
-{ name, run, depends ? [], buildDepends ? [], bootstrapTools ? [], env ? {} }:
+{ name, run, depends ? [], buildDepends ? [], bootstrapTools ? [], contents ? [], env ? {} }:
 
 let
   architecture = import ./architecture.nix system;
@@ -45,5 +48,6 @@ derivation (env // {
   bootstrap_path = binDirectories bootstrapTools;
   run_inside = run;
   allowedReferences = depends;
-  exportReferencesGraph = closureFiles "run" depends ++ closureFiles "build" buildDepends;
+  exportReferencesGraph =
+    closureFiles "run" depends ++ closureFiles "build" buildDepends ++ closureFiles "contents" contents;
 })
