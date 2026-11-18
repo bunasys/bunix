@@ -18,14 +18,16 @@
 # mkSystemPackage is this with system-package.sh as the script; the tests
 # of the system's packages use it directly.
 #
-# `stagingTools` are the bootstrap packages that do the staging: unshare,
-# mount, chroot.
-{ system, shell, stagingTools }:
+# The staging itself is done by the bootstrap's programs: stage 2's bash,
+# unshare, mount and chroot.
+{ system }:
 
 { name, run, depends ? [], buildDepends ? [], bootstrapTools ? [], contents ? [], env ? {} }:
 
 let
   architecture = import ./architecture.nix system;
+  stage2 = import ./bootstrap/stage2.nix { inherit system; };
+  stagingTools = stage2.all ++ [ stage2.util-linux ];
   binDirectories = packages:
     builtins.concatStringsSep ":" (map (package: "${package}/bin") packages);
 
@@ -42,7 +44,7 @@ in
 derivation (env // {
   inherit name system depends;
   inherit (architecture) triplet loader;
-  builder = shell;
+  builder = "${stage2.bash}/bin/bash";
   args = [ ./stage.sh ];
   PATH = binDirectories stagingTools;
   bootstrap_path = binDirectories bootstrapTools;

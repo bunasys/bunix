@@ -1,7 +1,7 @@
 # /bin/sh, the one program a build sees outside the store: the seed's bash,
 # copied into a store path of its own.
 #
-#   nix-build /bunix/nix/sh.nix
+#   nix-build /bunix/nix/bootstrap/sh.nix
 #
 # tools/nix-builder/nix.conf names the result in sandbox-paths.  Nix shows
 # a build the whole store path that such a file is part of, so naming the

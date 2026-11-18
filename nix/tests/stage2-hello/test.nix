@@ -6,9 +6,9 @@
 { system ? builtins.currentSystem }:
 
 let
-  seed = import ../../seed.nix { inherit system; };
-  stage1 = import ../../stage1.nix { inherit system; };
-  stage2 = import ../../stage2.nix { inherit system; };
+  seed = import ../../bootstrap/seed.nix { inherit system; };
+  stage1 = import ../../bootstrap/stage1.nix { inherit system; };
+  stage2 = import ../../bootstrap/stage2.nix { inherit system; };
   tools = stage2.all ++ [ stage1.gcc stage1.binutils ];
 in
 derivation {

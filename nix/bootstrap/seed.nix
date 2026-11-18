@@ -2,10 +2,10 @@
 # toolchain (gcc, binutils, glibc, bash and the usual tools) for one
 # architecture, built outside Nix: cross-compiled on an x86_64 bunix
 # machine by tools/seed.sh.
-# Stage 1 is built with it; nothing after stage 3 depends on it, except
-# that its bash is still every build's /bin/sh (sh.nix).
+# Stage 1 is built with it; nothing of the system depends on it.  Its bash
+# is still /bin/sh in a build of the bootstrap (sh.nix).
 #
-#   import ./seed.nix { system = "aarch64-linux"; }
+#   import ./bootstrap/seed.nix { system = "aarch64-linux"; }
 #
 # Evaluates to the store path of the unpacked tarball.  The sha256 is of the
 # unpacked tree, so it pins every file of the seed.  The store path comes

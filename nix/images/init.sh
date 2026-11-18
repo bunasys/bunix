@@ -13,6 +13,13 @@ mount -t devtmpfs dev /dev
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t tmpfs tmp /tmp
+# terminals for programs that make their own (ssh, tmux), and shared
+# memory: both are directories of /dev that are file systems themselves
+mkdir -p /dev/pts /dev/shm
+mount -t devpts devpts /dev/pts
+mount -t tmpfs shm /dev/shm
+
+hostname bunix
 
 power_off() {
     echo "=== powering off ==="

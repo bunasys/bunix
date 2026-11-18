@@ -5,17 +5,15 @@
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ../../stage2.nix { inherit system; };
+  stage2 = import ../../bootstrap/stage2.nix { inherit system; };
   toolchain = import ../../toolchain.nix { inherit system; };
   sources = builtins.fromJSON (builtins.readFile ../../sources.json);
-  shell = "${stage2.bash}/bin/bash";
-  stagingTools = stage2.all ++ [ stage2.util-linux ];
 
   mkSystemPackage = import ../../system-package.nix {
-    inherit system shell stagingTools;
+    inherit system;
     bootstrapTools = stage2.all;
   };
-  stagedBuild = import ../../stage.nix { inherit system shell stagingTools; };
+  stagedBuild = import ../../stage.nix { inherit system; };
 
   # A package made by running one function of cases.sh.  Its source is not
   # used: mkSystemPackage wants one.
@@ -41,6 +39,7 @@ in
   linkIntoStore = rejected "link_into_store";
   undeclaredLibrary = rejected "undeclared_library";
   libraryOutsideTriplet = rejected "library_outside_triplet";
+  scriptWithoutInterpreter = rejected "script_without_interpreter";
 
   sameFileTwice = stagedBuild {
     name = "rejected-same-file-twice";

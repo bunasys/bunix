@@ -17,7 +17,7 @@ set -eu
 build() {
     limactl shell bunix-builder nix-build "$@" --no-out-link
 }
-kernel=$(build /bunix/nix/system.nix -A linux)
+kernel=$(build /bunix/nix/boot.nix -A linux)
 initramfs=$(build /bunix/nix/images/initramfs.nix)
 # the kernel is in a directory named after its release
 vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")

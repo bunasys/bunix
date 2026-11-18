@@ -23,4 +23,10 @@ library_outside_triplet() {
     gcc -shared -fPIC f.c -o $out/usr/lib/libf.so
 }
 
+# run by bash, which is not among its depends (glibc alone)
+script_without_interpreter() {
+    printf '#!/bin/sh\necho hello\n' > $out/usr/bin/hello
+    chmod +x $out/usr/bin/hello
+}
+
 $case

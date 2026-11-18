@@ -5,12 +5,8 @@
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ../../stage2.nix { inherit system; };
-  stagedBuild = import ../../stage.nix {
-    inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
-  };
+  stage2 = import ../../bootstrap/stage2.nix { inherit system; };
+  stagedBuild = import ../../stage.nix { inherit system; };
 
   # a package with one file, /usr/share/layers/<number>
   layer = number: stagedBuild {

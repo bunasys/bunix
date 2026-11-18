@@ -6,14 +6,10 @@
 { system ? builtins.currentSystem }:
 
 let
-  stage1 = import ../../stage1.nix { inherit system; };
-  stage2 = import ../../stage2.nix { inherit system; };
+  stage1 = import ../../bootstrap/stage1.nix { inherit system; };
+  stage2 = import ../../bootstrap/stage2.nix { inherit system; };
   toolchain = import ../../toolchain.nix { inherit system; };
-  stagedBuild = import ../../stage.nix {
-    inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
-  };
+  stagedBuild = import ../../stage.nix { inherit system; };
 in
 stagedBuild {
   name = "usr-glibc";

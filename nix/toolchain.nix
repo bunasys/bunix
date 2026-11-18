@@ -10,12 +10,12 @@
 # gcc is built once (gccWhole) and shipped as two packages: the shared
 # libraries that what it compiles needs to run (libstdc++.so.6,
 # libgcc_s.so.1...), and the compiler.  A C++ program depends on the
-# first, 20 MB or so, and an image with it has no compiler.
+# first, 11 MB, and an image with it has no compiler.
 { system ? builtins.currentSystem }:
 
 let
-  stage1 = import ./stage1.nix { inherit system; };
-  stage2 = import ./stage2.nix { inherit system; };
+  stage1 = import ./bootstrap/stage1.nix { inherit system; };
+  stage2 = import ./bootstrap/stage2.nix { inherit system; };
   fetch = import ./fetch.nix;
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
 
@@ -23,8 +23,6 @@ let
 
   mkSystemPackage = import ./system-package.nix {
     inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
     # the system has no compiler or tools of its own yet
     bootstrapTools = [ stage1.gcc stage1.binutils ] ++ stage2.all;
   };
@@ -58,7 +56,7 @@ let
   gccWhole = mkSystemPackage {
     name = "gcc-whole";
     source = sources.gcc;
-    script = ./toolchain/gcc.sh;
+    script = ./toolchain/gcc-whole.sh;
     depends = [ glibc binutils ];
     env = {
       for_usr_glibc = forUsrGlibc;
@@ -79,7 +77,7 @@ let
   gcc = mkSystemPackage {
     name = "gcc";
     version = sources.gcc.version;
-    script = ./toolchain/gcc-compiler.sh;
+    script = ./toolchain/gcc.sh;
     depends = [ glibc binutils gccLibraries ];
     env = { whole = gccWhole; libraries = gccLibraries; };
   };

@@ -1,7 +1,7 @@
 # The system out of Nix: /usr, and no store
 
-Status: 2026-11-19.  Steps 1 to 5 of the order of work are built and
-tested: a system with no `/nix` boots.  Step 6 is the clearing up.
+Status: 2026-11-18.  All six steps of the order of work are done: a
+system with no `/nix` boots, and the store-layout system is gone.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -59,10 +59,9 @@ tar, gzip, wget, ip, traceroute, which, strings, lsof) comes from GNU's
 packages, already among the tools, and from iproute2, curl and a few
 small packages, to be ported.
 
-**Stage 3 goes.**  It is a complete toolchain in the store's layout, and
-nothing is built with it.  With it go gcc's separate libraries output,
-its specs file, `libraries` in `mkPackage`, and the store-layout
-`packages.nix`.
+There was a stage 3: a complete toolchain in the store's layout, with
+packages built by it.  Nothing of the system was built with it, and it
+is removed.
 
 ## How a system package is built
 
@@ -132,6 +131,8 @@ Checked of every system package when its build ends (`system-package.sh`,
 (`nix/tests/usr-rejects`):
 
 - no file in it names the store, and no link points into it;
+- every script in its `/usr/bin` is run by something the package has or
+  declares (`#!/bin/sh` is bash's);
 - the only store paths Nix finds in it are its `depends`;
 - every shared library a program in it asks for is in the package or in
   its `depends`, not merely in a `buildDepends`;
@@ -139,7 +140,8 @@ Checked of every system package when its build ends (`system-package.sh`,
   `/usr/libexec` or `/usr/sbin`.
 
 Not checked, because nothing shows it at build time: a program the
-package runs by name (`sh`, `sed`) that no `depends` provides.
+package runs by name from inside another (`sed` in a script, `sh` through
+`system()`) that no `depends` provides.
 
 ## The image
 
@@ -154,31 +156,31 @@ need.
 No package is yet in two parts for running and for building against, so
 an image with glibc has its headers and static libraries too.
 
-## What stays, what goes
-
-| Stays | Goes |
-|---|---|
-| seed, `tools/seed.sh` | `nix/stage3.nix`, `nix/stage3/` |
-| stage 1, stage 2 | gcc's `lib` output and specs file |
-| `fetch.nix`, `sources.json` | `libraries`, `outputs` in `mkPackage` |
-| the sandbox, pinned sources, fixed build time, the strip step | store-layout bash, coreutils, util-linux, perl... in `packages.nix` |
-| the kernel package, `initramfs.sh`, `init.sh`, `tools/boot-vm.sh` | `nix/tests/stage3-hello`, `nix/tests/libraries` |
-| both builders, both architectures | |
-
-Where the files will be, once stage 3 is gone:
+## Where things are
 
 ```
 nix/
-  fetch.nix  sources.json  architecture.nix
-  bootstrap/   seed.nix sh.nix package.{nix,sh} stage1.nix stage1/ stage2.nix stage2/
-  stage.{nix,sh}  system-package.{nix,sh}
-  autotools.sh
-  toolchain.nix  toolchain/*.sh
-  tools.nix      tools/*.sh
-  base.nix       base/*.sh         one .nix and one directory for each group,
-  desktop.nix    desktop/*.sh      as elements/ has them
-  images/        initramfs.{nix,sh} init.sh ...
+  fetch.nix  sources.json     a pinned download; every source, as data
+  architecture.nix            the library directory's name and the loader's path
+  bootstrap/                  the store: seed.nix sh.nix package.{nix,sh}
+                              stage1.nix stage1/ stage2.nix stage2/
+  stage.{nix,sh}              a build with /usr made of system packages
+  system-package.{nix,sh}     mkSystemPackage, and what is checked of a result
+  autotools.sh                the recipe of an ordinary package
+  toolchain.nix  toolchain/   glibc, binutils, gcc
+  tools.nix      tools/       what a build runs
+  base.nix       base/        after elements/base/; the porting rule is at its top
+  boot.nix       boot/        the kernel
+  images/                     initramfs.{nix,sh}, init.sh
   tests/<name>/  run.sh
+```
+
+What a person runs, on a builder:
+
+```
+nix-build nix/base.nix -A util-linux     one package
+bash nix/tests/run.sh                    every test
+tools/boot-vm.sh                         on the Mac: build the image and boot it
 ```
 
 ## Open questions
@@ -188,12 +190,28 @@ nix/
 - **`/etc` and `/var`.**  Which of a package's files outside `/usr` belong
   to its result, and which to the image.  Today a package's `etc/` is
   staged and its `var/` is not.
-- **Default flags.**  `include/system.yml` gives every element `-O2 -pipe
-  -fno-plt` and `-Wl,-O1,--as-needed`; nothing does that here yet.
-- **Patches.**  No package has needed one yet; `.bst` elements have a
-  `patch` source kind.
-- **How many recipes port unchanged.**  The claim is "nearly all"; it is
-  a claim until twenty have been ported.
+- **A package in two parts, for running and for building against.**  An
+  image with glibc has its headers and static libraries; one with ncurses
+  has its .pc files.  gcc is split by hand (above); the rest are not.
+- **Scripts in glibc.**  ldd, sotruss, tzselect and xtrace are bash
+  scripts, and glibc cannot depend on bash, which depends on glibc.  They
+  are left out for now; they belong in a small package of their own.
+- **libgcc_s.**  glibc loads it by name when a thread is cancelled or
+  exits early, which no check can see, and glibc cannot depend on a
+  package built from it.  Every image lists `gccLibraries` in its contents.
+- **Locales and time zones.**  glibc has none compiled: only the C locale
+  works, and no zone can be named.
+- **How many recipes port unchanged.**  Of the first seven from
+  `elements/base/`, six did; util-linux needed one argument.  The claim
+  is "nearly all" until many more have been ported.
+
+## What the image that boots lacks
+
+It is a shell on a console: no init system, no kernel modules, no device
+manager, no login, no network (no `ip`, no DHCP client, no CA
+certificates), no locales or time zones.  Its kernel is mainline's arm64
+default with 16K pages: it has almost none of Apple Silicon's drivers and
+installs no device trees, so it boots a virtual machine and not a Mac.
 
 ## Order of work
 
@@ -204,4 +222,4 @@ nix/
 | 3. binutils and gcc for `/usr` | `nix/tests/usr-toolchain`: C and C++, threads, shared libraries and LTO with no flags, no store path in the results | done |
 | 4. tools: bash, coreutils, make and the rest, built by that gcc | `nix/tests/usr-build-environment`: glibc builds again with the system's compiler and tools alone, and comes out the same, file for file | done |
 | 5. The initramfs as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | done (aarch64) |
-| 6. Remove stage 3 and the store-layout packages; move the bootstrap under `nix/bootstrap/` | the tests that remain pass on both builders | |
+| 6. Remove stage 3 and the store-layout packages; move the bootstrap under `nix/bootstrap/` | the tests that remain pass on both builders | done |

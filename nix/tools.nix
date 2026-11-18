@@ -8,48 +8,43 @@
 # name the store; found in /usr/bin, sed is where the system will have it.
 # So these are built once more, by the system's gcc, and with the
 # toolchain they are what every later package is built with:
-# `buildEnvironment`.
+# `buildEnvironment`, as bootstrap/build-env.bst is for a .bst element.
 #
 # Stage 2's tools are still on PATH while these are built, after /usr/bin.
 # Each package is built with the ones before it already in /usr: coreutils
-# first, so that install and mkdir are the system's for everything after.
+# first, so that install and mkdir are the system's for everything after;
+# then bash, which the scripts of the others are run by.
 #
-# Whether a bunix image ships these is another matter: its coreutils is
-# not GNU's (elements/base/uutils-coreutils.bst).
+# An image ships these same packages: GNU's, and no BusyBox.
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ./stage2.nix { inherit system; };
+  stage2 = import ./bootstrap/stage2.nix { inherit system; };
   toolchain = import ./toolchain.nix { inherit system; };
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
-
-  mkSystemPackage = import ./system-package.nix {
-    inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
-    bootstrapTools = stage2.all;
-    # gcc's depends bring glibc, binutils and its libraries
-    buildEnvironment = [ toolchain.gcc ];
-    defaults = flags;
-  };
+  inherit (toolchain) glibc;
 
   # The compiler's flags for a system package, as include/system.yml has
   # them.  gcc already defaults to PIE and the stack protector.
-  flags = {
+  compilerFlags = {
     CFLAGS = "-O2 -pipe -fno-plt";
     CXXFLAGS = "-O2 -pipe -fno-plt";
     LDFLAGS = "-Wl,-O1,--as-needed";
   };
 
-  # Every one needs glibc to run, and is built with those before it.
-  tool = package: mkSystemPackage ({
-    script = ./autotools.sh;
-    depends = [ toolchain.glibc ];
-  } // package);
+  mkSystemPackage = import ./system-package.nix {
+    inherit system;
+    bootstrapTools = stage2.all;
+    # the compiler; its depends bring glibc, binutils and its libraries
+    buildEnvironment = [ toolchain.gcc ];
+    defaultEnv = compilerFlags;
+  };
 
-  coreutils = tool {
+  coreutils = mkSystemPackage {
     name = "coreutils";
     source = sources.coreutils;
+    script = ./autotools.sh;
+    depends = [ glibc ];
     env = {
       configure_arguments = "--disable-nls --enable-install-program=hostname --enable-no-install-program=kill,uptime";
       # a staged build is root, which coreutils' configure refuses without this
@@ -57,69 +52,100 @@ let
     };
   };
 
-  sed = tool {
+  # The terminal library: what bash's line editor asks how to clear a line
+  # or move the cursor on the terminal in use.
+  ncurses = mkSystemPackage {
+    name = "ncurses";
+    source = sources.ncurses;
+    script = ./tools/ncurses.sh;
+    depends = [ glibc ];
+    buildDepends = [ coreutils ];
+  };
+
+  bash = mkSystemPackage {
+    name = "bash";
+    source = sources.bash;
+    script = ./tools/bash.sh;
+    depends = [ glibc ncurses ];
+    buildDepends = [ coreutils ];
+  };
+
+  sed = mkSystemPackage {
     name = "sed";
     source = sources.sed;
-    buildDepends = [ coreutils ];
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = [ coreutils bash ];
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  grep = tool {
+  # Without Perl's regular expressions (grep -P), which elements/base/grep.bst
+  # has: that needs pcre2.  bash: egrep and fgrep are scripts.
+  grep = mkSystemPackage {
     name = "grep";
     source = sources.grep;
+    script = ./autotools.sh;
+    depends = [ glibc bash ];
     buildDepends = [ coreutils sed ];
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  gawk = tool {
+  # bash: gawkbug is a script
+  gawk = mkSystemPackage {
     name = "gawk";
     source = sources.gawk;
+    script = ./autotools.sh;
+    depends = [ glibc bash ];
     buildDepends = [ coreutils sed grep ];
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  # the first four, which nearly every configure script runs
-  first = [ coreutils sed grep gawk ];
+  # what nearly every configure script runs
+  configureTools = [ coreutils bash sed grep gawk ];
 
-  bash = tool {
-    name = "bash";
-    source = sources.bash;
-    script = ./tools/bash.sh;
-    buildDepends = first;
-  };
-
-  diffutils = tool {
+  diffutils = mkSystemPackage {
     name = "diffutils";
     source = sources.diffutils;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  findutils = tool {
+  # bash: updatedb is a script
+  findutils = mkSystemPackage {
     name = "findutils";
     source = sources.findutils;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc bash ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  make = tool {
+  make = mkSystemPackage {
     name = "make";
     source = sources.make;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls --without-guile"; };
   };
 
-  patch = tool {
+  patch = mkSystemPackage {
     name = "patch";
     source = sources.patch;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  tar = tool {
+  tar = mkSystemPackage {
     name = "tar";
     source = sources.tar;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = configureTools;
     env = {
       configure_arguments = "--disable-nls --without-selinux --without-posix-acls";
       # as for coreutils
@@ -127,52 +153,64 @@ let
     };
   };
 
-  gzip = tool {
+  # bash: zcat, zgrep and ten more are scripts
+  gzip = mkSystemPackage {
     name = "gzip";
     source = sources.gzip;
     script = ./tools/gzip.sh;
-    buildDepends = first;
+    depends = [ glibc bash ];
+    buildDepends = configureTools;
   };
 
-  xz = tool {
+  # Also liblzma, which other packages read and write .xz with.  bash:
+  # xzgrep, xzdiff and two more are scripts.
+  xz = mkSystemPackage {
     name = "xz";
     source = sources.xz;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc bash ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-static --disable-nls --disable-doc"; };
   };
 
-  m4 = tool {
+  m4 = mkSystemPackage {
     name = "m4";
     source = sources.m4;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls"; };
   };
 
-  # bison runs m4, and records where it is
-  bison = tool {
+  # bison runs m4, and records where it is.  bash: yacc is a script.
+  bison = mkSystemPackage {
     name = "bison";
     source = sources.bison;
-    depends = [ toolchain.glibc m4 ];
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc m4 bash ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--disable-nls"; };
   };
 
   # Enough of Python for a build to run scripts with (glibc's does).  The
   # one a system ships has more modules, each needing a library.
-  python = tool {
+  # bash: python3-config is a script.
+  python = mkSystemPackage {
     name = "python";
     source = sources.python;
-    buildDepends = first;
+    script = ./autotools.sh;
+    depends = [ glibc bash ];
+    buildDepends = configureTools;
     env = { configure_arguments = "--without-ensurepip --disable-test-modules"; };
   };
 
-  all = first ++ [ bash diffutils findutils make patch tar gzip xz m4 bison python ];
+  all = configureTools ++ [ ncurses diffutils findutils make patch tar gzip xz m4 bison python ];
 in
 {
-  inherit coreutils sed grep gawk bash diffutils findutils make patch tar gzip xz m4 bison python all;
+  inherit coreutils ncurses bash sed grep gawk diffutils findutils make patch tar gzip xz m4 bison python all;
+  inherit compilerFlags;
 
   # what a package is built with, once these exist: the compiler and the
   # tools, all in /usr, and nothing of the bootstrap on PATH
   buildEnvironment = [ toolchain.gcc ] ++ all;
-  inherit flags;
 }

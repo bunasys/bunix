@@ -8,7 +8,7 @@
 { system ? builtins.currentSystem }:
 
 let
-  seed = import ../../seed.nix { inherit system; };
+  seed = import ../../bootstrap/seed.nix { inherit system; };
 in
 derivation {
   name = "seed-hello";

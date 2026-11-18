@@ -21,7 +21,7 @@
 # checked of its result, is in system-package.sh.
 #
 # What a group of packages has in common is said once, where the group is
-# defined (toolchain.nix, tools.nix):
+# defined (toolchain.nix, tools.nix, base.nix, boot.nix):
 #
 #   bootstrapTools
 #            for a group built before the system has a compiler and tools
@@ -29,23 +29,27 @@
 #   buildEnvironment
 #            system packages that are buildDepends of every package of the
 #            group: the compiler and the tools
-#   defaults variables every package of the group starts with, such as the
-#            compiler's flags; a package's env wins
-#
-# `stagingTools`: see stage.nix.
-{ system, shell, stagingTools, bootstrapTools ? [], buildEnvironment ? [], defaults ? {} }:
+#   defaultEnv
+#            variables every package of the group starts with, such as
+#            the compiler's flags; a package's env wins
+{ system, bootstrapTools ? [], buildEnvironment ? [], defaultEnv ? {} }:
 
-{ name, script, source ? null, version ? source.version, depends ? [], buildDepends ? [], env ? {} }:
+{ name, script, source ? null, version ? null, depends ? [], buildDepends ? [], env ? {} }:
 
 let
   fetch = import ./fetch.nix;
-  stagedBuild = import ./stage.nix { inherit system shell stagingTools; };
+  stagedBuild = import ./stage.nix { inherit system; };
+  packageVersion =
+    if source != null then source.version
+    else if version != null then version
+    else throw "${name} has neither a source nor a version";
   sourceVariable = if source == null then {} else { src = fetch source; };
 in
 stagedBuild {
-  name = "${name}-${version}";
+  name = "${name}-${packageVersion}";
   run = ./system-package.sh;
   inherit depends bootstrapTools;
   buildDepends = buildEnvironment ++ buildDepends;
-  env = defaults // env // sourceVariable // { inherit script; };
+  # later wins
+  env = defaultEnv // env // sourceVariable // { inherit script; };
 }

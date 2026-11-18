@@ -1,6 +1,6 @@
 # Stage 1: glibc, binutils and gcc in the store, built by the seed.
 #
-#   nix-build /bunix/nix/stage1.nix -A gcc
+#   nix-build /bunix/nix/bootstrap/stage1.nix -A gcc
 #
 # The whole chain, of which this is the first step:
 #
@@ -8,9 +8,10 @@
 #   seed      (tools/seed.sh, outside Nix)
 #   stage 1   glibc binutils gcc   the seed's gcc the seed        the seed
 #   stage 2   bash make tar ...    stage 1's gcc  the seed        the seed
-#   stage 3   glibc binutils gcc   stage 1's gcc  stage 2         the seed, stage 1, stage 2
 #
-# Stage 3 is what everything else is built with.
+# Then the system, in /usr, which names no store path at all
+# (docs/nix-usr-system.md): its toolchain (../toolchain.nix) is built by
+# stage 1's gcc with stage 2's tools, and everything after by that.
 #
 # The seed's gcc builds programs for the seed's own glibc.  Stage 1's gcc
 # builds them for stage 1's glibc: its headers, its start files and its
@@ -28,19 +29,20 @@
 # What this gcc cannot do, because its libgcc and libstdc++ are static
 # only: link a shared library written in C++, and build a dynamic program
 # that calls pthread_exit or pthread_cancel (glibc loads libgcc_s.so for
-# those).  Stages 2 and 3 need neither.
+# those).  Stage 2 and the system's toolchain need neither.
 #
 # `system` is the architecture: by default the machine's that evaluates
 # this.  What differs by architecture is written where it is used, as a
 # `case $system` in a build script; `grep -rn aarch64-linux nix` finds every
 # place.  Two more are per architecture: the seed (seed.nix) and the path of
-# /bin/sh in the builder's nix.conf (sh.nix).
+# /bin/sh in the builder's nix.conf (sh.nix).  The system's own are in
+# ../architecture.nix.
 { system ? builtins.currentSystem }:
 
 let
   seed = import ./seed.nix { inherit system; };
-  fetch = import ./fetch.nix;
-  sources = builtins.fromJSON (builtins.readFile ./sources.json);
+  fetch = import ../fetch.nix;
+  sources = builtins.fromJSON (builtins.readFile ../sources.json);
   mkPackage = import ./package.nix {
     inherit system;
     shell = "${seed}/bin/bash";
@@ -137,6 +139,6 @@ in
 {
   inherit linuxHeaders m4 bison python glibc binutils gcc;
 
-  # everything of the stage: what stage 3 may not depend on
+  # everything of the stage
   all = [ linuxHeaders m4 bison python glibc binutils gcc ];
 }

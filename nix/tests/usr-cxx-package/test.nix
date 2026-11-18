@@ -6,12 +6,10 @@
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ../../stage2.nix { inherit system; };
+  stage2 = import ../../bootstrap/stage2.nix { inherit system; };
   toolchain = import ../../toolchain.nix { inherit system; };
   mkSystemPackage = import ../../system-package.nix {
     inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
     bootstrapTools = stage2.all;
   };
 in

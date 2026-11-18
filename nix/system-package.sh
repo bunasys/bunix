@@ -44,8 +44,10 @@ export MAKEFLAGS=-j$jobs
 export SOURCE_DATE_EPOCH=1
 
 # UAPI.9: libraries in the directory named after the architecture; no
-# /usr/sbin and no /usr/libexec.
-configure_for_usr="--prefix=/usr --libdir=/usr/lib/$triplet --sbindir=/usr/bin --libexecdir=/usr/lib --sysconfdir=/etc --localstatedir=/var"
+# /usr/sbin, no /usr/libexec, no /usr/com.  --bindir is spelled out because
+# a package or two (util-linux) takes its absence, with a prefix of /usr,
+# to mean a root with directories of its own, and installs into /bin.
+configure_for_usr="--prefix=/usr --bindir=/usr/bin --sbindir=/usr/bin --libdir=/usr/lib/$triplet --libexecdir=/usr/lib --sysconfdir=/etc --localstatedir=/var --sharedstatedir=/var/lib"
 
 source "$script"
 
@@ -91,7 +93,7 @@ fi
 # UAPI.9, and the loader: it looks for libraries in /usr/lib/$triplet and
 # nowhere else, while the linker also looks in /usr/lib.  A library
 # installed there links, and is not found when a program starts.
-for directory in usr/lib64 usr/libexec usr/sbin usr/local bin sbin lib lib64; do
+for directory in usr/lib64 usr/libexec usr/sbin usr/com usr/local bin sbin lib lib64; do
     [ ! -e "$out/$directory" ] || fail "it installed /$directory, which a bunix system does not have"
 done
 if find "$out/usr/lib" -maxdepth 1 -type f -name '*.so*' 2> /dev/null | grep .; then
@@ -137,6 +139,36 @@ not_found=$(libraries_not_found)
 if [ -n "$not_found" ]; then
     echo "$not_found" >&2
     fail "the libraries above are neither in the package nor in its depends"
+fi
+
+# Every script among its programs starts with the path of what runs it
+# (#!/bin/sh, #!/usr/bin/perl).  That too has to be the package's own or a
+# declared need, or the script is there and cannot start.  /bin and /sbin
+# are /usr/bin; `env` finds the program it is given in /usr/bin.
+scripts_without_interpreter() {
+    local script first_line interpreter argument
+    [ -d "$out/usr/bin" ] || return 0
+    find "$out/usr/bin" -type f | while read -r script; do
+        first_line=""
+        read -r -n 200 first_line < "$script" 2> /dev/null || true
+        case $first_line in
+            '#!'*) ;;
+            *) continue ;;
+        esac
+        read -r interpreter argument <<< "${first_line#\#!}"
+        case $interpreter in
+            /bin/*|/sbin/*|/usr/sbin/*) interpreter=/usr/bin/${interpreter##*/} ;;
+        esac
+        is_in_the_system "$interpreter" || echo "$script is run by $interpreter"
+        if [ "$interpreter" = /usr/bin/env ]; then
+            is_in_the_system "/usr/bin/${argument%% *}" || echo "$script is run by ${argument%% *}"
+        fi
+    done
+}
+without_interpreter=$(scripts_without_interpreter)
+if [ -n "$without_interpreter" ]; then
+    echo "$without_interpreter" >&2
+    fail "what runs the scripts above is neither in the package nor in its depends"
 fi
 
 # What it needs to run, for whatever stages it or puts it in an image.

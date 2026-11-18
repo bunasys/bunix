@@ -1,15 +1,16 @@
 # Stage 2: the tools a build runs (a shell, make, tar, sed and the rest),
 # built by stage 1's gcc for stage 1's glibc.
 #
-#   nix-build /bunix/nix/stage2.nix -A all
+#   nix-build /bunix/nix/bootstrap/stage2.nix -A all
 #
 # Stage 1 was built with the seed's tools; stage 2 is built with them too,
-# for the last time.  From stage 3 on, a build's PATH is stage 2's tools
-# and stage 1's compiler.  The seed's bash still runs as /bin/sh, for make
+# for the last time.  The system's toolchain and its own tools are built
+# with these and stage 1's compiler (../toolchain.nix, ../tools.nix).  The
+# seed's bash still runs as /bin/sh in a build of the bootstrap, for make
 # recipes and scripts that start with #!/bin/sh (sh.nix).
 #
-# No package of this stage may depend on the seed (mustNotDependOn): stage
-# 3 will depend on these, and would then depend on the seed through them.
+# No package of this stage may depend on the seed (mustNotDependOn): what
+# was built with the seed should not need it to be there.
 # A configure script finds programs such as install or grep on PATH, where
 # they are still the seed's, and some packages write the path it found into
 # what they install.  Those are told the program's plain name instead: in
@@ -19,7 +20,7 @@
 let
   seed = import ./seed.nix { inherit system; };
   stage1 = import ./stage1.nix { inherit system; };
-  sources = builtins.fromJSON (builtins.readFile ./sources.json);
+  sources = builtins.fromJSON (builtins.readFile ../sources.json);
   mkPackage = import ./package.nix {
     inherit system;
     shell = "${seed}/bin/bash";
@@ -144,6 +145,6 @@ in
 {
   inherit bash coreutils diffutils findutils gawk grep gzip make patch sed tar xz m4 bison python util-linux;
 
-  # every tool of the stage: what stage 3 has on its PATH
+  # every tool of the stage: what the system's first packages are built with
   all = [ bash coreutils diffutils findutils gawk grep gzip make patch sed tar xz m4 bison python ];
 }

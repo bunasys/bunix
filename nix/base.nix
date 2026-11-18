@@ -3,41 +3,44 @@
 #
 #   nix-build /bunix/nix/base.nix -A util-linux
 #
-# A package says what it needs to run (depends) and what else its build
-# needs (buildDepends).  One that is configured, built and installed the
-# usual way uses autotools.sh; another has its script in base/.
+# Porting elements/base/x.bst:
+#   description        -> a comment above the entry
+#   sources            -> sources.json "x"; a patch -> env.patches, applied
+#                         by the script
+#   depends            -> depends, plus glibc for a program or library, and
+#                         bash for a script in /usr/bin
+#   build-depends      -> buildDepends, without bootstrap/build-env.bst
+#   kind: autotools with only conf-local
+#                      -> script = ./autotools.sh; env.configure_arguments
+#   make-args, install-commands (>), kind: manual, or an argument with a
+#   space in it        -> base/x.sh: autotools.sh's four lines, and the rest
+#   overlap-whitelist  -> nothing: two packages with one file is an error
+# and a comment for every flag that is not the element's.
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ./stage2.nix { inherit system; };
   toolchain = import ./toolchain.nix { inherit system; };
   tools = import ./tools.nix { inherit system; };
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
   inherit (toolchain) glibc;
+  inherit (tools) ncurses;
 
   mkSystemPackage = import ./system-package.nix {
     inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
     inherit (tools) buildEnvironment;
-    defaults = tools.flags;
+    defaultEnv = tools.compilerFlags;
   };
 
   # ---- Libraries -----------------------------------------------------------
 
-  ncurses = mkSystemPackage {
-    name = "ncurses";
-    source = sources.ncurses;
-    script = ./base/ncurses.sh;
-    depends = [ glibc ];
-  };
-
+  # GNU readline: line editing for the programs that link it (not bash,
+  # which has its own copy).  The patches are upstream's fixes since 8.3,
+  # as they publish them; 002 fixes a crash in iwctl.
   readline = mkSystemPackage {
     name = "readline";
     source = sources.readline;
     script = ./base/readline.sh;
     depends = [ glibc ncurses ];
-    # upstream's fixes since 8.3, as they publish them
     env = {
       patches = [
         ../files/readline/readline83-001
@@ -64,6 +67,8 @@ let
 
   # ---- Build tools -----------------------------------------------------------
 
+  # pkg-config: tells a build the flags to compile and link against a
+  # library, from the .pc file the library installed
   pkgconf = mkSystemPackage {
     name = "pkgconf";
     source = sources.pkgconf;
@@ -71,7 +76,8 @@ let
     depends = [ glibc ];
   };
 
-  # flex runs m4
+  # Generates scanners; the kernel's configuration tool is built with one.
+  # flex runs m4.
   flex = mkSystemPackage {
     name = "flex";
     source = sources.flex;
@@ -80,6 +86,8 @@ let
     env = { configure_arguments = "--disable-static --disable-nls"; };
   };
 
+  # Gavin Howard's bc: GNU's needs ed and texinfo to build.  The kernel's
+  # build computes with it.
   bc = mkSystemPackage {
     name = "bc";
     source = sources.bc;
@@ -87,6 +95,8 @@ let
     depends = [ glibc ];
   };
 
+  # The kernel generates some of its assembly with perl scripts, and
+  # OpenSSL's build is one.
   perl = mkSystemPackage {
     name = "perl";
     source = sources.perl;
@@ -95,5 +105,5 @@ let
   };
 in
 {
-  inherit ncurses readline util-linux pkgconf flex bc perl;
+  inherit readline util-linux pkgconf flex bc perl;
 }

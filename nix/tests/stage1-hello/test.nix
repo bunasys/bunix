@@ -8,8 +8,8 @@
 { system ? builtins.currentSystem }:
 
 let
-  seed = import ../../seed.nix { inherit system; };
-  stage1 = import ../../stage1.nix { inherit system; };
+  seed = import ../../bootstrap/seed.nix { inherit system; };
+  stage1 = import ../../bootstrap/stage1.nix { inherit system; };
 in
 derivation {
   name = "stage1-hello";

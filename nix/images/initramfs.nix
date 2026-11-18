@@ -10,23 +10,23 @@
 { system ? builtins.currentSystem }:
 
 let
-  stage2 = import ../stage2.nix { inherit system; };
+  toolchain = import ../toolchain.nix { inherit system; };
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
-  bunix = import ../system.nix { inherit system; };
-
-  stagedBuild = import ../stage.nix {
-    inherit system;
-    shell = "${stage2.bash}/bin/bash";
-    stagingTools = stage2.all ++ [ stage2.util-linux ];
-  };
+  boot = import ../boot.nix { inherit system; };
+  stagedBuild = import ../stage.nix { inherit system; };
 in
 stagedBuild {
   name = "bunix-initramfs";
   run = ./initramfs.sh;
-  # what the system has
-  contents = [ tools.bash tools.coreutils base.util-linux ];
+
+  # What the system has.  gccLibraries because glibc loads libgcc_s.so.1
+  # when a thread is cancelled or exits early, in a C program too, and
+  # because most programs built elsewhere ask for it or for libstdc++.so.6;
+  # glibc cannot depend on it, it is built from glibc.
+  contents = [ tools.bash tools.coreutils base.util-linux toolchain.gccLibraries ];
+
   # What packs it.  gen_init_cpio comes with the kernel.
-  buildDepends = [ bunix.linux tools.bash tools.coreutils tools.findutils tools.sed tools.grep tools.gzip ];
+  buildDepends = [ boot.linux tools.bash tools.coreutils tools.findutils tools.grep tools.gzip ];
   env = { init = ./init.sh; };
 }

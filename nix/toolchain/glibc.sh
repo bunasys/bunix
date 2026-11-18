@@ -27,6 +27,15 @@ make DESTDIR=$out install
 # there and then; an image makes its own.  var/ holds only a Makefile.
 rm -r $out/etc/ld.so.cache $out/var
 
+# ldd, sotruss, tzselect and xtrace are bash scripts.  glibc cannot need
+# bash, which needs glibc; they are left out.  (`ld.so --list <program>`
+# is what ldd runs.)
+for program in $out/usr/bin/*; do
+    if [ "$(head -c 2 $program)" = '#!' ]; then
+        rm $program
+    fi
+done
+
 # A program asks for its loader by one fixed path ($loader):
 # /lib/ld-linux-aarch64.so.1 on aarch64, /lib64/ld-linux-x86-64.so.2 on
 # x86_64.  /lib is /usr/lib and /lib64 is /usr/lib/$triplet (stage.sh, and

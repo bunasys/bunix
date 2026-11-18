@@ -6,7 +6,7 @@
 { system ? builtins.currentSystem }:
 
 let
-  seed = import ../../seed.nix { inherit system; };
+  seed = import ../../bootstrap/seed.nix { inherit system; };
 in
 derivation {
   name = "sandbox";
@@ -14,5 +14,5 @@ derivation {
   builder = "${seed}/bin/bash";
   args = [ ./build.sh ];
   PATH = "${seed}/bin";
-  sh = import ../../sh.nix { inherit system; };
+  sh = import ../../bootstrap/sh.nix { inherit system; };
 }

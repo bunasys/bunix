@@ -8,6 +8,7 @@ grep -q "^cf_time=.*-d @$SOURCE_DATE_EPOCH" Configure
 # perl's Configure is its own, not autoconf's.
 # Arch Linux's layout: core modules in core_perl, distribution-packaged
 #   modules in vendor_perl; architecture-independent ones under /usr/share.
+# -Dman1dir, -Dman3dir: no manual pages; the element installs them.
 # -Dlibpth: Configure looks for libraries as files, in directories it
 #   guesses; they are in the one named after the architecture.
 # -Dcf_by ... -Dosvers: perl records who built it, on which machine and

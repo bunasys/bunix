@@ -1,6 +1,13 @@
 # Packs the initramfs (initramfs.nix).  The kernel's gen_init_cpio makes
-# the archive from a list of what goes in it, one line an entry; a list
-# can name a device, which a build is not allowed to create as a file.
+# the archive from a list of what goes in it, one line an entry:
+#
+#   dir <path> <mode> <uid> <gid>
+#   file <path> <where to copy it from> <mode> <uid> <gid>
+#   slink <path> <target> <mode> <uid> <gid>
+#   nod <path> <mode> <uid> <gid> <type> <major> <minor>
+#
+# A list can name a device, which a build is not allowed to create as a
+# file.
 #
 # $contents_packages is the store path of every package the system has
 # (stage.nix).  The archive gets their files; it never names where they
@@ -8,41 +15,64 @@
 set -euo pipefail
 cd /build
 
+# ---- The few files that are the system's, not a package's ------------------
+
 echo "root:x:0:0:root:/root:/bin/sh" > passwd
 echo "root:x:0:" > group
+echo "127.0.0.1 localhost" > hosts
+# where glibc looks up users and host names: the files above, then DNS
+printf '%s\n' "passwd: files" "group: files" "hosts: files dns" > nsswitch.conf
+printf '%s\n' 'NAME="bunix"' 'PRETTY_NAME="bunix (Buna Linux)"' 'ID=bunix' > os-release
+system_files="passwd group hosts nsswitch.conf os-release"
+
+# ---- What the packages have ------------------------------------------------
 
 # Every directory, file and link of each package's usr/ and etc/, at the
-# path it has in the system.  ("dir <path> <mode> <uid> <gid>", "file <path>
-# <from> <mode> <uid> <gid>", "slink <path> <target> <mode> <uid> <gid>".)
+# path it has in the system.  A file in the store is read-only, to
+# everyone; in the system it is root's to change.
 : > directories
-: > others
+: > files
+: > links
 for package in $contents_packages; do
     cd $package
     for top in usr etc; do
         [ -d $top ] || continue
-        find $top -type d -printf 'dir /%p %m 0 0\n' >> /build/directories
-        find $top -type f -printf "file /%p $package/%p %m 0 0\n" >> /build/others
-        find $top -type l -printf 'slink /%p %l 777 0 0\n' >> /build/others
+        find $top -type d -printf '/%p\n' >> /build/directories
+        find $top -type f -perm -u+x -printf "/%p $package/%p 755\n" >> /build/files
+        find $top -type f ! -perm -u+x -printf "/%p $package/%p 644\n" >> /build/files
+        find $top -type l -printf '/%p %l\n' >> /build/links
     done
     cd /build
 done
 
 # Two packages with the same file would make the system depend on which
-# came last.
-in_two_packages=$(cut -d' ' -f2 others | sort | uniq -d)
-if [ -n "$in_two_packages" ]; then
-    echo "$in_two_packages" >&2
+# came last; so would a path that is a directory in one and a file in
+# another.
+cut -d' ' -f1 files links | sort > paths
+in_two_packages=$(uniq -d paths)
+file_and_directory=$(comm -12 <(uniq paths) <(sort -u directories))
+if [ -n "$in_two_packages$file_and_directory" ]; then
+    echo "$in_two_packages$file_and_directory" >&2
     echo "initramfs.sh: the paths above are in more than one package" >&2
     exit 1
 fi
 
+# ---- The list ----------------------------------------------------------------
+
+# the directories every system has, whichever packages are in it
+printf '%s\n' /dev /proc /sys /tmp /run /root /home /etc /usr \
+    /var /var/lib /var/log /var/tmp >> directories
+
 {
-    echo "dir /dev 755 0 0"
-    # the console, for /init's first messages; /init mounts the rest
-    echo "nod /dev/console 600 0 0 c 5 1"
-    for directory in /proc /sys /tmp /run /var /root /etc /usr; do
+    # Sorted: find lists a directory in whatever order the disk has it.  A
+    # directory sorts before what is in it, and each is listed once however
+    # many packages have it.
+    LC_ALL=C sort -u directories | while read -r directory; do
         echo "dir $directory 755 0 0"
     done
+
+    # the console, for /init's first messages; /init mounts the rest
+    echo "nod /dev/console 600 0 0 c 5 1"
 
     # the links of a UAPI.9 root; /lib64 only where the loader is asked for
     # there
@@ -54,14 +84,16 @@ fi
     esac
 
     echo "file /init $init 755 0 0"
-    echo "file /etc/passwd /build/passwd 644 0 0"
-    echo "file /etc/group /build/group 644 0 0"
+    for file in $system_files; do
+        echo "file /etc/$file /build/$file 644 0 0"
+    done
 
-    # Sorted: find lists a directory in whatever order the disk has it.  A
-    # directory sorts before what is in it, and each is listed once however
-    # many packages have it.
-    LC_ALL=C sort -u directories | grep -v -x -e 'dir /etc 755 0 0' -e 'dir /usr 755 0 0'
-    LC_ALL=C sort others
+    LC_ALL=C sort files | while read -r path from mode; do
+        echo "file $path $from $mode 0 0"
+    done
+    LC_ALL=C sort links | while read -r path target; do
+        echo "slink $path $target 777 0 0"
+    done
 } > list
 
 # -t: one time for every entry, as files in the store have
