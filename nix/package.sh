@@ -29,8 +29,11 @@ source "$script"
 # Debugging information names the build directory and the store paths of
 # sources.  Nix takes any store path it finds in the output for something
 # the package needs to run, so the information goes, and the size with it.
-# strip is given every file and refuses those that are not programs or
-# libraries, hence no check of its result.
+#
+# Only from what the first bytes show to be a program, library or object
+# file (\177ELF) or an archive of them (!<arch>).  strip will also take
+# other formats it knows and write them back as it sees fit: it turned a
+# kernel image into something no machine boots.
 #
 # .la files record the build directory and the paths of build-time
 # libraries, which only mislead later builds.
@@ -39,7 +42,18 @@ source "$script"
 # of the variable that holds its path.
 for output in $outputs; do
     installed=${!output}
-    find "$installed" -type f -exec strip --strip-debug {} + 2> /dev/null || true
+    find "$installed" -type f | while read -r file; do
+        magic=""
+        read -r -N 7 magic < "$file" 2> /dev/null || true
+        case $magic in
+            $'\177ELF'*|'!<arch>')
+                # installed read-only, as some packages do, it could not be
+                # rewritten
+                chmod u+w "$file"
+                strip --strip-debug "$file"
+                ;;
+        esac
+    done
     find "$installed" -name '*.la' -delete
 done
 

@@ -43,7 +43,73 @@ let
     script = ./configure-make-install.sh;
     libraries = [ zlib ];
   };
+
+  # ---- A shell and the usual commands -------------------------------------
+
+  bash = systemPackage {
+    name = "bash";
+    source = sources.bash;
+    script = ./packages/bash.sh;
+  };
+
+  coreutils = systemPackage {
+    name = "coreutils";
+    source = sources.coreutils;
+    script = ./configure-make-install.sh;
+    env = { configure_arguments = "--enable-install-program=hostname --enable-no-install-program=kill,uptime"; };
+  };
+
+  # mount, and the rest of what talks to the kernel about disks, terminals
+  # and processes
+  utilLinux = systemPackage {
+    name = "util-linux";
+    source = sources.util-linux;
+    script = ./packages/util-linux.sh;
+  };
+
+  # ---- What the kernel's build needs --------------------------------------
+
+  m4 = systemPackage {
+    name = "m4";
+    source = sources.m4;
+    script = ./configure-make-install.sh;
+  };
+
+  # flex runs m4, and records where it is
+  flex = systemPackage {
+    name = "flex";
+    source = sources.flex;
+    script = ./configure-make-install.sh;
+    tools = [ m4 stage3.gcc stage3.binutils ] ++ stage2.all;
+    # _GNU_SOURCE: without it flex 2.6.4 calls reallocarray undeclared, and
+    # crashes while it builds itself
+    env = { configure_arguments = "--disable-nls CPPFLAGS=-D_GNU_SOURCE"; };
+  };
+
+  bc = systemPackage {
+    name = "bc";
+    source = sources.bc;
+    script = ./packages/bc.sh;
+  };
+
+  # the kernel generates some of its assembly with perl scripts
+  perl = systemPackage {
+    name = "perl";
+    source = sources.perl;
+    script = ./packages/perl.sh;
+    env = { glibc = stage3.glibc; };
+  };
+
+  # ---- The kernel ----------------------------------------------------------
+
+  linux = systemPackage {
+    name = "linux";
+    source = sources.linux;
+    script = ./packages/linux.sh;
+    tools = [ flex bc perl stage3.gcc stage3.binutils ] ++ stage2.all;
+    env = { configuration = ./packages/linux; };
+  };
 in
 {
-  inherit zlib file;
+  inherit zlib file bash coreutils utilLinux m4 flex bc perl linux;
 }
