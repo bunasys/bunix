@@ -1,12 +1,16 @@
 # The toolchain of the system: glibc, binutils and gcc for /usr, built by
 # stage 1's gcc with stage 2's tools (docs/nix-usr-system.md).
 #
-#   nix-build /bunix/nix/toolchain.nix -A glibc
+#   nix-build /bunix/nix/toolchain.nix -A gcc
+#
+#   glibc ─┬─ binutils ─┐
+#          └────────────┴─ gcc
 { system ? builtins.currentSystem }:
 
 let
   stage1 = import ./stage1.nix { inherit system; };
   stage2 = import ./stage2.nix { inherit system; };
+  fetch = import ./fetch.nix;
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
 
   mkSystemPackage = import ./system-package.nix {
@@ -27,7 +31,32 @@ let
     tools = bootstrapTools;
     env = { linux_headers = stage1.linuxHeaders; };
   };
+
+  # binutils and gcc are compiled by stage 1's gcc, for the glibc above
+  # (toolchain/for-usr-glibc.sh).
+  binutils = mkSystemPackage {
+    name = "binutils";
+    source = sources.binutils;
+    script = ./toolchain/binutils.sh;
+    depends = [ glibc ];
+    tools = bootstrapTools;
+    env = { for_usr_glibc = ./toolchain/for-usr-glibc.sh; };
+  };
+
+  gcc = mkSystemPackage {
+    name = "gcc";
+    source = sources.gcc;
+    script = ./toolchain/gcc.sh;
+    depends = [ glibc binutils ];
+    tools = bootstrapTools;
+    env = {
+      for_usr_glibc = ./toolchain/for-usr-glibc.sh;
+      gmp = fetch sources.gmp;
+      mpfr = fetch sources.mpfr;
+      mpc = fetch sources.mpc;
+    };
+  };
 in
 {
-  inherit glibc;
+  inherit glibc binutils gcc;
 }

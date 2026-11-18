@@ -16,9 +16,11 @@ cd /build
 
 command -v strip > /dev/null
 
+# --no-same-owner: as root, tar would give each file the owner the archive
+# records for it, and this namespace has no other user to give it to.
 unpack() {
     mkdir -p "${2:-.}"
-    tar -xf "$1" --strip-components=1 -C "${2:-.}"
+    tar -xf "$1" --strip-components=1 --no-same-owner -C "${2:-.}"
 }
 
 jobs=$NIX_BUILD_CORES
