@@ -4,7 +4,13 @@
 #   nix-build /bunix/nix/toolchain.nix -A gcc
 #
 #   glibc ─┬─ binutils ─┐
-#          └────────────┴─ gcc
+#          └────────────┴─ gccWhole ─┬─ gccLibraries
+#                                    └─ gcc
+#
+# gcc is built once (gccWhole) and shipped as two packages: the shared
+# libraries that what it compiles needs to run (libstdc++.so.6,
+# libgcc_s.so.1...), and the compiler.  A C++ program depends on the
+# first, 20 MB or so, and an image with it has no compiler.
 { system ? builtins.currentSystem }:
 
 let
@@ -48,8 +54,9 @@ let
     env = { for_usr_glibc = forUsrGlibc; };
   };
 
-  gcc = mkSystemPackage {
-    name = "gcc";
+  # nothing depends on this one but its two parts
+  gccWhole = mkSystemPackage {
+    name = "gcc-whole";
     source = sources.gcc;
     script = ./toolchain/gcc.sh;
     depends = [ glibc binutils ];
@@ -60,7 +67,23 @@ let
       mpc = fetch sources.mpc;
     };
   };
+
+  gccLibraries = mkSystemPackage {
+    name = "gcc-libraries";
+    version = sources.gcc.version;
+    script = ./toolchain/gcc-libraries.sh;
+    depends = [ glibc ];
+    env = { whole = gccWhole; };
+  };
+
+  gcc = mkSystemPackage {
+    name = "gcc";
+    version = sources.gcc.version;
+    script = ./toolchain/gcc-compiler.sh;
+    depends = [ glibc binutils gccLibraries ];
+    env = { whole = gccWhole; libraries = gccLibraries; };
+  };
 in
 {
-  inherit glibc binutils gcc;
+  inherit glibc binutils gccWhole gccLibraries gcc;
 }

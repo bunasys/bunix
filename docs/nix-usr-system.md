@@ -89,6 +89,19 @@ needed.
   together, as `elements/base/util-linux.bst` notes today; where that list
   lives is an open question below.
 
+## One build, two packages
+
+gcc's run-time libraries (`libstdc++.so.6`, `libgcc_s.so.1`, the
+sanitizers') are what a C++ program needs to run; the compiler is not.
+gcc is built once, as `gccWhole`, and shipped as two packages, each made
+by copying its part of that result: `gccLibraries` (11 MB) and `gcc`,
+which depends on it.  A package with a C++ program depends on
+`gccLibraries`, and an image with it has no compiler
+(`nix/tests/usr-cxx-package`).
+
+A package made from another's result has a `version` where others have a
+`source`.  BuildStream does this with a `filter` element.
+
 ## Dependencies are declared
 
 Nix learns what a bootstrap package needs at run time by finding store
@@ -155,12 +168,6 @@ nix/
 
 ## Open questions
 
-- **A package in two parts.**  gcc's run-time libraries (`libstdc++.so`,
-  `libgcc_s.so`) are in the gcc package, so a C++ program that `depends`
-  on them brings the whole compiler into its image.  BuildStream splits
-  an element by rules; here it would be a second result of the same
-  build.  It has to be settled before base, whose packages are the first
-  to depend on those libraries.
 - **Owners and set-user-id.**  Where the list of them lives, and what
   applies it to an image.
 - **`/etc` and `/var`.**  Which of a package's files outside `/usr` belong

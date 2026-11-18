@@ -7,6 +7,9 @@
 #   name, source, script
 #            as for a bootstrap package (package.nix).  The script
 #            installs with DESTDIR=$out.
+#   version  in place of source, for a package made from another's
+#            result and not from a source of its own (toolchain.nix has
+#            two)
 #   depends  the system packages it needs to run.  An image that has this
 #            package has them too.
 #   buildDepends
@@ -22,18 +25,16 @@
 # on PATH.  `stagingTools`: see stage.nix.
 { system, shell, stagingTools, bootstrapTools ? [] }:
 
-{ name, source, script, depends ? [], buildDepends ? [], env ? {} }:
+{ name, script, source ? null, version ? source.version, depends ? [], buildDepends ? [], env ? {} }:
 
 let
   fetch = import ./fetch.nix;
   stagedBuild = import ./stage.nix { inherit system shell stagingTools; };
+  sourceVariable = if source == null then {} else { src = fetch source; };
 in
 stagedBuild {
-  name = "${name}-${source.version}";
+  name = "${name}-${version}";
   run = ./system-package.sh;
   inherit depends buildDepends bootstrapTools;
-  env = env // {
-    src = fetch source;
-    inherit script;
-  };
+  env = env // sourceVariable // { inherit script; };
 }

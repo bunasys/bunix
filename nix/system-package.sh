@@ -8,7 +8,8 @@
 #     namespace that is nobody outside it;
 #   - /usr is its dependencies; PATH is /usr/bin, then the bootstrap tools
 #     of the package's group, if it has any;
-#   - $src is the source tarball; it installs with DESTDIR=$out;
+#   - $src is the source tarball, if the package has one; it installs with
+#     DESTDIR=$out;
 #   - $triplet names the directory of libraries, /usr/lib/$triplet, and
 #     $configure_for_usr is the arguments that put an autoconf package where
 #     UAPI.9 has things;
