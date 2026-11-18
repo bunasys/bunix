@@ -44,7 +44,9 @@
 #   - SOURCE_DATE_EPOCH is set, for programs that record when they were
 #     built;
 #   - afterwards, debugging information is stripped from everything
-#     installed, and libtool's .la files are deleted.
+#     installed, and libtool's .la files are deleted;
+#   - the build fails if a program or library it installed asks for a
+#     shared library that it would not find when run.
 #
 # `system` is the architecture built on and for, as Nix names it
 # (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is

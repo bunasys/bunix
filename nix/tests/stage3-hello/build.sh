@@ -26,6 +26,15 @@ for program in hello hello-cc; do
 done
 ! readelf -l $out/bin/hello-static | grep -q interpreter || fail "hello-static has a loader: it is not static"
 
+# ---- Where glibc looks on the system it runs on ---------------------------
+#
+# The time zone is the system's; which libraries to load is never the
+# system's to say (stage3/glibc.sh).
+strings $glibc/lib/libc.so.6 | grep -q -x '/etc/localtime' || fail "glibc does not read the time zone from /etc/localtime"
+for list in ld.so.cache ld.so.preload; do
+    ! strings $glibc/lib/ld-linux-*.so.* | grep -q -x "/etc/$list" || fail "the loader reads /etc/$list"
+done
+
 # ---- Threads that end early ----------------------------------------------
 #
 # glibc needs libgcc_s.so when a thread calls pthread_exit or is cancelled.

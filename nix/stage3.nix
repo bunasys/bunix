@@ -12,6 +12,11 @@
 # their own, gcc.lib, and a program it builds depends on glibc and gcc.lib,
 # not on the compiler (stage3/gcc.sh).
 #
+# glibc reads the system's configuration from /etc, and is where the
+# system's time zone data and locales are found through the variables
+# TZDIR and LOCPATH: it has neither itself.  It does not read /etc for
+# which libraries to load (stage3/glibc.sh).
+#
 # What it cannot do yet:
 # - -fsanitize: the sanitizer libraries are not built (stage3/gcc.sh);
 # - put objects compiled with -flto in a library with plain `ar`: binutils

@@ -2,9 +2,10 @@
 # script runs in the middle.
 set -euo pipefail
 
-# Needed at the end; a package whose tools lack it fails here, not after
+# Needed at the end; a package whose tools lack them fails here, not after
 # an hour of building.
 command -v strip > /dev/null
+command -v readelf > /dev/null
 
 # unpack <tarball> [directory]: the tarball's contents, without its top
 # directory, into the current directory or the one named.
@@ -40,4 +41,40 @@ for output in $outputs; do
     installed=${!output}
     find "$installed" -type f -exec strip --strip-debug {} + 2> /dev/null || true
     find "$installed" -name '*.la' -delete
+done
+
+# libraries_not_found <directory>: for each program and shared library in
+# it, the libraries it asks for (NEEDED) that are in none of the
+# directories it records for finding them (RUNPATH), nor in glibc's.
+#
+# A program whose build ignored LDFLAGS links all the same, and fails only
+# when it is run, perhaps on another machine: it fails here instead.
+#
+# glibc's directory is the one the compiler builds for.  When the package
+# is a glibc, that is the previous one, which has libraries of the same
+# names.
+glibc_libraries=$(dirname "$(gcc -print-file-name=libc.so.6)")
+libraries_not_found() {
+    local file dynamic directories library directory found
+    find "$1" -type f \( -perm -u+x -o -name '*.so' -o -name '*.so.*' \) | while read -r file; do
+        dynamic=$(readelf -d "$file" 2> /dev/null) || continue
+        directories=$(echo "$dynamic" | sed -n 's/.*(R\(UN\)\?PATH).*\[\(.*\)\]/\2/p' | tr ':' ' ')
+        # $ORIGIN in a recorded directory stands for the file's own
+        directories=${directories//\$ORIGIN/$(dirname "$file")}
+        for library in $(echo "$dynamic" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
+            found=no
+            for directory in $directories "$glibc_libraries"; do
+                [ ! -e "$directory/$library" ] || found=yes
+            done
+            [ $found = yes ] || echo "$file needs $library"
+        done
+    done
+}
+for output in $outputs; do
+    not_found=$(libraries_not_found "${!output}")
+    if [ -n "$not_found" ]; then
+        echo "$not_found" >&2
+        echo "package.sh: the files above would not find these libraries when run" >&2
+        exit 1
+    fi
 done
