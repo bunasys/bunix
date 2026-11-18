@@ -7,13 +7,21 @@
 #   tools    the packages whose bin/ make up PATH, first one first.  The
 #            build can run nothing else, except /bin/sh.
 #   libraries
-#            the packages whose headers and libraries the build uses.
-#            gcc finds their include/ and lib/ by itself (through its
-#            variables C_INCLUDE_PATH and LIBRARY_PATH), pkg-config their
-#            lib/pkgconfig, and LDFLAGS has the linker record each lib/
-#            in what is built, which is how the result finds them when
-#            it runs.  A script whose build system ignores LDFLAGS has
-#            to pass it on itself.
+#            the packages whose headers and libraries the build uses:
+#            only those listed, not the ones they use in turn.  gcc
+#            finds their include/ and lib/ by itself (its variables
+#            C_INCLUDE_PATH, CPLUS_INCLUDE_PATH and LIBRARY_PATH), and
+#            LDFLAGS has the linker record each lib/ in what is built,
+#            which is how the result finds them when it runs.
+#
+#            - Every library listed is then needed to run the result,
+#              linked or not: list what is linked.
+#            - A build that ignores LDFLAGS (a plain Makefile) has to be
+#              given it by the script; one that hands LDFLAGS to ld
+#              itself cannot take it, the flags are gcc's.
+#            - Their headers come before glibc's and gcc's own.  glibc is
+#              never listed: gcc knows where it is.
+#            - PKG_CONFIG_PATH is set too, for when there is a pkg-config.
 #   env      more environment variables for the script.  A package becomes
 #            its store path, a string stays itself.
 #   outputs  the store paths the result is split into, when it is more
@@ -40,9 +48,8 @@
 #
 # `system` is the architecture built on and for, as Nix names it
 # (aarch64-linux, x86_64-linux); the script sees it as $system.  `shell` is
-# the bash that runs the scripts.  `environment` is variables for every
-# package made with this mkPackage; a package's own env wins.
-{ system, shell, environment ? {} }:
+# the bash that runs the scripts.
+{ system, shell }:
 
 { name, source, script, tools, libraries ? [], env ? {}, outputs ? [ "out" ], mustNotDependOn ? [] }:
 
@@ -50,20 +57,32 @@ let
   fetch = import ./fetch.nix;
   toolDirectories = map (tool: "${tool}/bin") tools;
 
-  inEachLibrary = directory: separator:
-    builtins.concatStringsSep separator (map (library: "${library}/${directory}") libraries);
+  includeDirectories = map (library: "${library}/include") libraries;
+  libraryDirectories = map (library: "${library}/lib") libraries;
+  pkgConfigDirectories =
+    map (library: "${library}/lib/pkgconfig") libraries
+    ++ map (library: "${library}/share/pkgconfig") libraries;
+  recordLibraryDirectories = map (directory: "-Wl,-rpath,${directory}") libraryDirectories;
 
   # Not set at all without libraries: to gcc, an empty C_INCLUDE_PATH or
   # LIBRARY_PATH means the current directory.
-  librarySearchPaths = if libraries == [] then {} else {
-    C_INCLUDE_PATH = inEachLibrary "include" ":";
-    CPLUS_INCLUDE_PATH = inEachLibrary "include" ":";
-    LIBRARY_PATH = inEachLibrary "lib" ":";
-    PKG_CONFIG_PATH = inEachLibrary "lib/pkgconfig" ":";
-    LDFLAGS = builtins.concatStringsSep " " (map (library: "-Wl,-rpath,${library}/lib") libraries);
+  libraryVariables = if libraries == [] then {} else {
+    C_INCLUDE_PATH = builtins.concatStringsSep ":" includeDirectories;
+    CPLUS_INCLUDE_PATH = builtins.concatStringsSep ":" includeDirectories;
+    LIBRARY_PATH = builtins.concatStringsSep ":" libraryDirectories;
+    PKG_CONFIG_PATH = builtins.concatStringsSep ":" pkgConfigDirectories;
+    LDFLAGS = builtins.concatStringsSep " " recordLibraryDirectories;
   };
+
+  # A package's env that set one of these would replace it, and a replaced
+  # LDFLAGS builds a program that cannot find its libraries when it runs.
+  replaced = builtins.attrNames (builtins.intersectAttrs libraryVariables env);
 in
-derivation (environment // librarySearchPaths // env // {
+if replaced != [] then
+  throw "${name}: env sets ${builtins.concatStringsSep ", " replaced}, which `libraries` sets too; add to it in the build script instead (LDFLAGS=\"$LDFLAGS ...\")"
+else
+# Later wins: a package's env, then what mkPackage itself sets.
+derivation (libraryVariables // env // {
   name = "${name}-${source.version}";
   inherit system;
   builder = shell;

@@ -9,7 +9,7 @@ fail() {
 # lib/ to find it by
 magic=$file/lib/libmagic.so
 readelf -d $magic | grep -q 'NEEDED.*libz\.so' || fail "libmagic was built without zlib"
-readelf -d $magic | grep -q "runpath.*$zlib/lib" || fail "libmagic does not have the path of zlib's lib/"
+readelf -d $magic | grep runpath | grep -q -F "$zlib/lib" || fail "libmagic does not have the path of zlib's lib/"
 
 # and finds it when it runs: -z looks inside a compressed file
 echo "some text" | gzip > text.gz

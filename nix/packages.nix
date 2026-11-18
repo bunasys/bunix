@@ -5,7 +5,10 @@
 #   nix-build /bunix/nix/packages.nix -A file
 #
 # A package that uses another's library lists it in `libraries`
-# (package.nix).
+# (package.nix).  One built with -flto sets AR, RANLIB and NM to gcc-ar,
+# gcc-ranlib and gcc-nm in its env: the plain ones cannot read its objects
+# (stage3.nix).  A package with a build script of its own keeps it in
+# packages/<name>.sh.
 { system ? builtins.currentSystem }:
 
 let
@@ -18,18 +21,15 @@ let
   mkPackage = import ./package.nix {
     inherit system;
     shell = "${stage2.bash}/bin/bash";
-    # Plain ar, ranlib and nm cannot read objects compiled with -flto;
-    # gcc's own can (stage3.nix).
-    environment = { AR = "gcc-ar"; RANLIB = "gcc-ranlib"; NM = "gcc-nm"; };
   };
 
   # What every package has in common.
-  package = attributes: mkPackage ({
+  systemPackage = package: mkPackage ({
     tools = [ stage3.gcc stage3.binutils ] ++ stage2.all;
     mustNotDependOn = [ seed ] ++ stage1.all ++ stage2.all;
-  } // attributes);
+  } // package);
 
-  zlib = package {
+  zlib = systemPackage {
     name = "zlib";
     source = sources.zlib;
     script = ./configure-make-install.sh;
@@ -37,7 +37,7 @@ let
 
   # `file` names the kind of a file by its content; libtool's configure
   # scripts run it.  With zlib it also looks inside compressed files.
-  file = package {
+  file = systemPackage {
     name = "file";
     source = sources.file;
     script = ./configure-make-install.sh;
