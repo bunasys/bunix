@@ -23,10 +23,15 @@ printf '%s\n' rootsbindir=/usr/bin sbindir=/usr/bin libexecdir=/usr/lib > config
 make
 make DESTDIR=$out install
 
-# A program asks for its loader by one fixed path: /lib/ld-linux-aarch64.so.1
-# on aarch64, /lib64/ld-linux-x86-64.so.2 on x86_64.  /lib is /usr/lib and
-# /lib64 is /usr/lib/$triplet (stage.sh, and any image), so x86_64's is
-# found; aarch64's needs this link beside the directory.
+# The install runs ldconfig, which writes a cache of the libraries it sees
+# there and then; an image makes its own.  var/ holds only a Makefile.
+rm -r $out/etc/ld.so.cache $out/var
+
+# A program asks for its loader by one fixed path ($loader):
+# /lib/ld-linux-aarch64.so.1 on aarch64, /lib64/ld-linux-x86-64.so.2 on
+# x86_64.  /lib is /usr/lib and /lib64 is /usr/lib/$triplet (stage.sh, and
+# any image), so x86_64's is found; aarch64's needs this link beside the
+# directory.
 if [ $system = aarch64-linux ]; then
     ln -s $triplet/ld-linux-aarch64.so.1 $out/usr/lib/ld-linux-aarch64.so.1
 fi

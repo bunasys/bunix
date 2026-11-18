@@ -7,11 +7,6 @@ fail() {
     exit 1
 }
 
-case $system in
-    aarch64-linux) loader=/lib/ld-linux-aarch64.so.1 ;;
-    x86_64-linux) loader=/lib64/ld-linux-x86-64.so.2 ;;
-esac
-
 [ "$(command -v gcc)" = /usr/bin/gcc ] || fail "gcc is not the system's: $(command -v gcc)"
 [ "$(command -v ld)" = /usr/bin/ld ] || fail "ld is not the system's: $(command -v ld)"
 

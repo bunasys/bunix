@@ -1,0 +1,5 @@
+storePathInFile: the files above name the store
+linkIntoStore: the links above point into the store
+undeclaredLibrary: are neither in the package nor in its depends
+libraryOutsideTriplet: they belong in /usr/lib/
+sameFileTwice: are in more than one staged package

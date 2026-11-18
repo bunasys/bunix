@@ -9,17 +9,16 @@ let
   stage1 = import ../../stage1.nix { inherit system; };
   stage2 = import ../../stage2.nix { inherit system; };
   toolchain = import ../../toolchain.nix { inherit system; };
-  binDirectories = packages:
-    builtins.concatStringsSep ":" (map (package: "${package}/bin") packages);
+  stagedBuild = import ../../stage.nix {
+    inherit system;
+    shell = "${stage2.bash}/bin/bash";
+    stagingTools = stage2.all ++ [ stage2.util-linux ];
+  };
 in
-derivation {
+stagedBuild {
   name = "usr-glibc";
-  inherit system;
-  builder = "${stage2.bash}/bin/bash";
-  args = [ ../../stage.sh ];
-  PATH = binDirectories (stage2.all ++ [ stage2.util-linux ]);
-  toolsPath = binDirectories ([ stage1.gcc stage1.binutils ] ++ stage2.all);
-  inside = ./build.sh;
-  exportReferencesGraph = [ "closure-glibc" toolchain.glibc ];
-  hello_c = ../hello.c;
+  run = ./build.sh;
+  buildDepends = [ toolchain.glibc ];
+  bootstrapTools = [ stage1.gcc stage1.binutils ] ++ stage2.all;
+  env = { hello_c = ../hello.c; };
 }

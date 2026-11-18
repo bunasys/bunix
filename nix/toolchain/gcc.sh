@@ -2,7 +2,6 @@ unpack $src
 unpack $gmp gmp
 unpack $mpfr mpfr
 unpack $mpc mpc
-source $for_usr_glibc
 
 # gcc's own run-time libraries (libgcc_s, libstdc++...) go where glibc's
 # are, /usr/lib/$triplet, not in lib64.  gcc's private files and its
@@ -41,7 +40,7 @@ export MAKEINFO=true
 #   fault with; glibc's need none.
 # --disable-libcc1: a C++ shared library, which stage 1's gcc cannot link.
 ../configure \
-    CC="gcc $for_usr_glibc_flags" CXX="g++ $for_usr_glibc_flags" \
+    CC="gcc $for_usr_glibc" CXX="g++ $for_usr_glibc" \
     --build=$triplet --host=$triplet --target=$triplet \
     --prefix=/usr --libexecdir=/usr/lib --enable-languages=c,c++ \
     --enable-default-pie --enable-default-ssp --enable-host-pie \
