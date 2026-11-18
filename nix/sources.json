@@ -153,5 +153,45 @@
     "version": "1.4",
     "url": "https://github.com/madler/zlib/releases/download/v1.4/zlib-1.4.tar.xz",
     "sha256": "4f11c512053d7bab8d9e9b89bde3575add3e4c50a383b42ef6cb837035fc5a7c"
+  },
+  "bzip2": {
+    "version": "1.0.8",
+    "url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+    "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+  },
+  "openssl": {
+    "version": "3.5.9",
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+    "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a"
+  },
+  "openssh": {
+    "version": "10.6p2",
+    "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p2.tar.gz",
+    "sha256": "9ae44872090cf2f06b3cf9ff147e7f16f309671340763ed2f99248398ae29d5b"
+  },
+  "libmnl": {
+    "version": "1.0.5",
+    "url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2",
+    "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525"
+  },
+  "iproute2": {
+    "version": "7.3.0",
+    "url": "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.xz",
+    "sha256": "5c1789d290bba048a6135ed1ab81b0402dd0fb528d1f1421765c42b1fc3d6289"
+  },
+  "dhcpcd": {
+    "version": "10.5.2",
+    "url": "https://github.com/NetworkConfiguration/dhcpcd/releases/download/v10.5.2/dhcpcd-10.5.2.tar.xz",
+    "sha256": "3e476657fdb6eeb38b277da3a48d0ac0113ecce5858ebdcddff2b629faed52b4"
+  },
+  "rex-aarch64-linux": {
+    "version": "0.1.0-preview.21",
+    "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-arm64.tar.gz",
+    "sha256": "6c669a915a26662d06815abb9d23fd51c7f7c460982e91672e075d30b06cc3f5"
+  },
+  "rex-x86_64-linux": {
+    "version": "0.1.0-preview.21",
+    "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-amd64.tar.gz",
+    "sha256": "41988e86e87e8b0b47c8bca7652d9959178360f7789785232090784e38e23cb5"
   }
 }

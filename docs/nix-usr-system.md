@@ -110,6 +110,14 @@ which depends on it.  A package with a C++ program depends on
 A package made from another's result has a `version` where others have a
 `source`.  BuildStream does this with a `filter` element.
 
+## A program built elsewhere
+
+Rex is published as a program, not as source.  Its package says
+`builtElsewhere = true`: the file is shipped as published, not stripped,
+and may name its builder's store as text.  It is still checked for what
+makes it start here: this system's loader, and libraries among its
+`depends`.
+
 ## Dependencies are declared
 
 Nix learns what a bootstrap package needs at run time by finding store
@@ -207,9 +215,11 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
 
 ## What the image that boots lacks
 
-It is a shell on a console: no init system, no kernel modules, no device
-manager, no login, no network (no `ip`, no DHCP client, no CA
-certificates), no locales or time zones.  Its kernel is mainline's arm64
+It is a shell on a console and, given a key, over SSH, with an address
+from DHCP: no init system, no kernel modules, no device manager, no
+login, no CA certificates, no locales or time zones.  Its accounts are
+written in `images/initramfs.sh`, not taken from the packages that need
+them.  Its kernel is mainline's arm64
 default with 16K pages: it has almost none of Apple Silicon's drivers and
 installs no device trees, so it boots a virtual machine and not a Mac.
 

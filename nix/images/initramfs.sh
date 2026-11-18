@@ -17,8 +17,19 @@ cd /build
 
 # ---- The few files that are the system's, not a package's ------------------
 
-echo "root:x:0:0:root:/root:/bin/sh" > passwd
-echo "root:x:0:" > group
+# Besides root, the accounts two programs give up their rights to
+# (base/openssh.sh, base/dhcpcd.sh).  A package cannot add a line to a
+# file all of them share; until something reads sysusers.d, they are here.
+cat > passwd <<'END'
+root:x:0:0:root:/root:/bin/sh
+sshd:x:74:74:sshd privilege separation:/usr/share/empty.sshd:/usr/bin/false
+dhcpcd:x:75:75:dhcpcd privilege separation:/usr/share/empty.dhcpcd:/usr/bin/false
+END
+cat > group <<'END'
+root:x:0:
+sshd:x:74:
+dhcpcd:x:75:
+END
 echo "127.0.0.1 localhost" > hosts
 # where glibc looks up users and host names: the files above, then DNS
 printf '%s\n' "passwd: files" "group: files" "hosts: files dns" > nsswitch.conf

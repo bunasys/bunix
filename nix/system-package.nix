@@ -15,6 +15,10 @@
 #   buildDepends
 #            the system packages only its build needs.
 #   env      more environment variables for the script.
+#   builtElsewhere
+#            true for a program published as a program, not as source.
+#            It is shipped as it was published, and not held to what
+#            only a build here can ensure (system-package.sh).
 #
 # The build runs with /usr made of depends and buildDepends, and of what
 # those need in turn (stage.nix).  What a script can rely on, and what is
@@ -34,7 +38,7 @@
 #            the compiler's flags; a package's env wins
 { system, bootstrapTools ? [], buildEnvironment ? [], defaultEnv ? {} }:
 
-{ name, script, source ? null, version ? null, depends ? [], buildDepends ? [], env ? {} }:
+{ name, script, source ? null, version ? null, depends ? [], buildDepends ? [], env ? {}, builtElsewhere ? false }:
 
 let
   fetch = import ./fetch.nix;
@@ -51,5 +55,8 @@ stagedBuild {
   inherit depends bootstrapTools;
   buildDepends = buildEnvironment ++ buildDepends;
   # later wins
-  env = defaultEnv // env // sourceVariable // { inherit script; };
+  env = defaultEnv // env // sourceVariable // {
+    inherit script;
+    built_elsewhere = if builtElsewhere then "yes" else "";
+  };
 }

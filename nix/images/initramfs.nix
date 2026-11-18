@@ -24,7 +24,13 @@ stagedBuild {
   # when a thread is cancelled or exits early, in a C program too, and
   # because most programs built elsewhere ask for it or for libstdc++.so.6;
   # glibc cannot depend on it, it is built from glibc.
-  contents = [ tools.bash tools.coreutils base.util-linux toolchain.gccLibraries ];
+  contents = [
+    tools.bash tools.coreutils base.util-linux toolchain.gccLibraries
+    # what a person at its shell expects to find
+    tools.sed tools.grep tools.gawk tools.findutils tools.diffutils tools.tar tools.gzip
+    # the network, and a way in over it
+    base.iproute2 base.dhcpcd base.openssh base.rex
+  ];
 
   # What packs it.  gen_init_cpio comes with the kernel.
   buildDepends = [ boot.linux tools.bash tools.coreutils tools.findutils tools.grep tools.gzip ];

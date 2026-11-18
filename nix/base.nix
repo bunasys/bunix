@@ -1,5 +1,6 @@
 # Packages of a bunix system, after elements/base/: each is built with the
 # system's own compiler and tools (tools.nix), and nothing of the bootstrap.
+# The exceptions are at the end, under "Programs built elsewhere".
 #
 #   nix-build /bunix/nix/base.nix -A util-linux
 #
@@ -53,6 +54,43 @@ let
     };
   };
 
+  # Compression, as a library: OpenSSH's, and later most things'.
+  zlib = mkSystemPackage {
+    name = "zlib";
+    source = sources.zlib;
+    script = ./base/zlib.sh;
+    depends = [ glibc ];
+  };
+
+  # bzip2 and libbz2.  tar runs bzip2 to unpack a .tar.bz2 source.
+  bzip2 = mkSystemPackage {
+    name = "bzip2";
+    source = sources.bzip2;
+    script = ./base/bzip2.sh;
+    depends = [ glibc ];
+  };
+
+  # TLS and cryptography: libssl, libcrypto and the openssl command.  Its
+  # build is a perl program.
+  openssl = mkSystemPackage {
+    name = "openssl";
+    source = sources.openssl;
+    script = ./base/openssl.sh;
+    depends = [ glibc ];
+    buildDepends = [ perl ];
+  };
+
+  # Netlink messages, the kernel's protocol for network configuration;
+  # iproute2 speaks it through this.
+  libmnl = mkSystemPackage {
+    name = "libmnl";
+    source = sources.libmnl;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = [ bzip2 ];
+    env = { configure_arguments = "--disable-static"; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -63,6 +101,51 @@ let
     script = ./base/util-linux.sh;
     depends = [ glibc ncurses readline ];
     buildDepends = [ pkgconf ];
+  };
+
+  # ip, ss and bridge: network interfaces, addresses and routes
+  iproute2 = mkSystemPackage {
+    name = "iproute2";
+    source = sources.iproute2;
+    script = ./base/iproute2.sh;
+    depends = [ glibc libmnl ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # A DHCP client: asks the network for an address, a route and name
+  # servers.  Not an element of elements/base/, where systemd-networkd
+  # does this; it is here until systemd is.  Its hooks are shell scripts
+  # that run sed and coreutils.
+  dhcpcd = mkSystemPackage {
+    name = "dhcpcd";
+    source = sources.dhcpcd;
+    script = ./base/dhcpcd.sh;
+    depends = [ glibc tools.bash tools.coreutils tools.sed ];
+  };
+
+  # OpenSSH: ssh, scp, sftp, ssh-keygen and ssh-agent, and sshd: keys
+  # only, no passwords (files/rootfs/etc/ssh/sshd_config).
+  openssh = mkSystemPackage {
+    name = "openssh";
+    source = sources.openssh;
+    script = ./base/openssh.sh;
+    depends = [ glibc openssl zlib ];
+    env = { sshd_config = ../files/rootfs/etc/ssh/sshd_config; };
+  };
+
+  # ---- Programs built elsewhere ----------------------------------------------
+
+  # Rex (superlogical.com/rex): makes this machine a remote host for the
+  # rex command and Rex for Mac, over SSH.  Published as a program, not as
+  # source, one archive for each architecture (sources.json).
+  rex = mkSystemPackage {
+    name = "rex";
+    source = sources."rex-${system}";
+    script = ./base/rex.sh;
+    depends = [ glibc ];
+    # Rex's builders used Nix: it names four paths of their store, where
+    # its Go runtime would look for time zones and MIME types last.
+    builtElsewhere = true;
   };
 
   # ---- Build tools -----------------------------------------------------------
@@ -105,5 +188,7 @@ let
   };
 in
 {
-  inherit readline util-linux pkgconf flex bc perl;
+  inherit readline zlib bzip2 openssl libmnl;
+  inherit util-linux iproute2 dhcpcd openssh rex;
+  inherit pkgconf flex bc perl;
 }

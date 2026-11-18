@@ -63,7 +63,11 @@ fail() {
 # archive of them (!<arch>): strip also takes other formats it knows and
 # writes them back as it sees fit, and turned a kernel image into something
 # no machine boots.  7 is the length of "!<arch>".
+#
+# Not from a program built elsewhere: it is shipped as the file that was
+# published and pinned.
 find "$out" -type f | while read -r file; do
+    [ -z "$built_elsewhere" ] || break
     magic=""
     read -r -N 7 magic < "$file" 2> /dev/null || true
     case $magic in
@@ -83,7 +87,22 @@ find "$out" -name '*.la' -delete
 # A system package runs from /usr, in an image that has no store.  A store
 # path in it, as text or as where a link points, is something it would
 # look for there and not find.
-if grep -r -l /nix/store "$out"; then
+#
+# A program built elsewhere may name the store of whoever built it, as
+# text, and nothing here can change that: those are not paths of this
+# store (one that is, Nix itself refuses: allowedReferences).  What is
+# asked of it is that it starts here: that it asks for this system's
+# loader.
+if [ -n "$built_elsewhere" ]; then
+    with_another_loader=$(find "$out/usr/bin" -type f | while read -r program; do
+        asks_for=$(readelf -l "$program" 2> /dev/null | sed -n 's/.*program interpreter: \(.*\)\]/\1/p')
+        [ -z "$asks_for" ] || [ "$asks_for" = "$loader" ] || echo "$program asks for the loader $asks_for"
+    done)
+    if [ -n "$with_another_loader" ]; then
+        echo "$with_another_loader" >&2
+        fail "the programs above cannot start here"
+    fi
+elif grep -r -l /nix/store "$out"; then
     fail "the files above name the store"
 fi
 if find "$out" -type l -lname '*/nix/store/*' | grep .; then
