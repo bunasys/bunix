@@ -234,6 +234,16 @@
     "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
     "sha256": "109b074225bf5b9ea3820890876bfdf4ed161adbfaf94b2b4b5984c85ee5d958"
   },
+  "rustfmt-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustfmt-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "26b3200b1461921415927abf7fe410202a6eda2db3e419abde59e0abfcd93fc2"
+  },
+  "rustfmt-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustfmt-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "e3b36c4c7ec3486c059d8067ff48787676612007123aad7a4e8ec12c48ee9ba2"
+  },
   "cargo-aarch64-linux": {
     "version": "1.99.1",
     "url": "https://static.rust-lang.org/dist/cargo-1.99.1-aarch64-unknown-linux-gnu.tar.xz",

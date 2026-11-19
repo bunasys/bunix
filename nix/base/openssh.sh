@@ -21,4 +21,7 @@ make
 # -j1: the install steps write the same directories at once otherwise.
 make -j1 DESTDIR=$out install-nokeys
 install -d $out/usr/share/empty.sshd
+# the account of --with-privsep-user, for whatever puts an image together
+install -d $out/usr/lib/sysusers.d
+echo 'u sshd 74 "sshd privilege separation" /usr/share/empty.sshd' > $out/usr/lib/sysusers.d/sshd.conf
 install -m 644 $sshd_config $out/etc/ssh/sshd_config

@@ -102,6 +102,13 @@ needed.
   store would not keep either.  They are applied when an image is put
   together, as `elements/base/util-linux.bst` notes today; where that list
   lives is an open question below.
+- **An account is a package's to ask for, and the image's to make.**  A
+  package that needs one installs a line in `/usr/lib/sysusers.d/`,
+  systemd's format, with the id written out:
+  `u sshd 74 "sshd privilege separation" /usr/share/empty.sshd`.  What
+  puts an image together writes `/etc/passwd` and `/etc/group` from the
+  lines of the packages in it (`images/initramfs.sh`, until a system has
+  systemd-sysusers), and refuses a name or an id asked for twice.
 
 ## One build, two packages
 
@@ -124,8 +131,8 @@ and may name its builder's store as text.  It is still checked for what
 makes it start here: this system's loader, and libraries among its
 `depends`.
 
-Rust is the other one: rustc, cargo, the standard library and its source,
-as the Rust project publishes them, each archive pinned.  They are in
+Rust is the other one: rustc, cargo, rustfmt, the standard library and
+its source, as the Rust project publishes them, each archive pinned.  They are in
 `/usr/lib/rust`, where rustc finds its libraries beside itself, with
 links in `/usr/bin`.  `elements/bootstrap/rust.bst` builds Rust from
 source with such a download as its seed; that is not ported.
@@ -143,10 +150,10 @@ own `asahi.config`; `boot/linux/aarch64.config` has what bunix adds, each
 line with its reason, and the build fails if one of them is not in the
 final configuration.  The same image boots a virtual machine.
 
-bindgen is the released 0.73.2.  Aurora's source has two patches for it
-(`tools/aurora-bindgen/`), for C layouts it gets wrong; the kernel's
-build checks the layout of everything bindgen generated, and passes
-without them for this configuration.
+bindgen is 0.73.2 with the two patches of Aurora's source
+(`tools/aurora-bindgen/`, here in `files/bindgen/`), for C layouts the
+released one gets wrong.  The kernel's build also checks the layout of
+everything bindgen generated.
 
 ## Dependencies are declared
 
@@ -212,6 +219,7 @@ nix/
   boot.nix       boot/        the kernel and its device trees
   images/                     initramfs.{nix,sh}, init.sh
   tests/<name>/  run.sh
+files/<package>/              patches, and files a package installs as they are
 ```
 
 What a person runs, on a builder:
@@ -226,6 +234,10 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
 
 - **Owners and set-user-id.**  Where the list of them lives, and what
   applies it to an image.
+- **Account ids.**  Each is a number in its package's script, and two
+  packages with the same one are only found out when an image has both.
+  The reader of the declarations is in `initramfs.sh`; the `/usr` image
+  will need it too.
 - **`/etc` and `/var`.**  Which of a package's files outside `/usr` belong
   to its result, and which to the image.  Today a package's `etc/` is
   staged and its `var/` is not.
@@ -248,9 +260,8 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
 
 It is a shell on a console and, given a key, over SSH, with an address
 from DHCP: no init system, no kernel modules, no device manager, no
-login, no CA certificates, no locales or time zones.  Its accounts are
-written in `images/initramfs.sh`, not taken from the packages that need
-them.
+login, no CA certificates, no locales or time zones.  Nothing in it
+reads `sysusers.d`: its accounts are made when the image is.
 
 Its kernel has what a Mac mini needs to reach its disk, Ethernet, a USB-C
 keyboard and a display on USB-C built in, and installs Apple's device

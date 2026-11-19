@@ -12,6 +12,13 @@ for crate in $crates; do
     echo "{\"files\":{},\"package\":\"${checksum%% *}\"}" > vendor/$name/.cargo-checksum.json
 done
 
+# The patches are of bindgen's repository, where the library's crate is
+# the directory bindgen/.
+# --fuzz=0: one that no longer fits exactly is to be looked at, not applied.
+for fix in $patches; do
+    patch --fuzz=0 -p2 -d vendor/bindgen-[0-9]* -i $fix
+done
+
 export CARGO_HOME=$PWD/cargo-home
 mkdir -p $CARGO_HOME
 cat > $CARGO_HOME/config.toml <<END

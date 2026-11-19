@@ -1,7 +1,7 @@
 # Each archive is one part of Rust with an install script of its own.
 # --prefix=/usr/lib/rust: rustc looks for its libraries in ../lib from
 #   where it is, and they are not libraries of the system's.
-for archive in $src $rust_std $cargo $rust_src; do
+for archive in $src $rust_std $cargo $rustfmt $rust_src; do
     rm -rf component
     unpack $archive component
     bash component/install.sh --destdir=$out --prefix=/usr/lib/rust --disable-ldconfig
@@ -17,6 +17,6 @@ rm $rustlib/{install.log,uninstall.sh,components,rust-installer-version} $rustli
 rm $rustlib/*/bin/rust-objcopy
 
 mkdir -p $out/usr/bin
-for program in rustc rustdoc cargo; do
+for program in rustc rustdoc cargo rustfmt; do
     ln -s ../lib/rust/bin/$program $out/usr/bin/$program
 done

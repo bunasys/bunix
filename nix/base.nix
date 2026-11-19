@@ -158,12 +158,15 @@ let
     builtElsewhere = true;
   };
 
-  # Rust: rustc, its standard library, cargo, and the standard library's
-  # source, which the kernel compiles for itself; four archives of one
-  # version (sources.json).  As the Rust project publishes them, in
-  # /usr/lib/rust, where rustc finds its own
-  # libraries beside itself; elements/bootstrap/rust.bst builds the same
-  # version from source, with this as its seed.
+  # Rust: rustc, its standard library, cargo, rustfmt, and the standard
+  # library's source, which the kernel compiles for itself; five archives
+  # of one version (sources.json).  As the Rust project publishes them, in
+  # /usr/lib/rust, where rustc finds its own libraries beside itself;
+  # elements/bootstrap/rust.bst builds the same version from source, with
+  # this as its seed.
+  #
+  # rustfmt: bindgen formats what it writes with it when it is there, and
+  # the kernel's test of bindgen looks for text formatted that way.
   rust = mkSystemPackage {
     name = "rust";
     source = sources."rustc-${system}";
@@ -175,6 +178,7 @@ let
     env = {
       rust_std = fetch sources."rust-std-${system}";
       cargo = fetch sources."cargo-${system}";
+      rustfmt = fetch sources."rustfmt-${system}";
       rust_src = fetch sources.rust-src;
     };
   };
@@ -222,7 +226,9 @@ let
 
   # Makes Rust declarations from C headers; the kernel's Rust code calls
   # its C code through them.  It reads the headers with LLVM's libclang,
-  # which it loads when it runs.
+  # which it loads when it runs.  The patches are Aurora Silicon's, as they
+  # are in tools/aurora-bindgen/ of their kernel (sources.json has the
+  # commit): two kinds of C struct whose layout bindgen 0.73.2 gets wrong.
   bindgen = mkSystemPackage {
     name = "bindgen";
     source = sources.bindgen;
@@ -230,6 +236,10 @@ let
     depends = [ glibc toolchain.gccLibraries llvm ];
     buildDepends = [ rust ];
     env = {
+      patches = [
+        ../files/bindgen/0001-empty-alignment.patch
+        ../files/bindgen/0002-anonymous-tag-members.patch
+      ];
       # The crates bindgen is made of, each pinned; cargo downloads
       # nothing in a build.  The list is bindgen's Cargo.lock, as the
       # `cargo` source of elements/base/bindgen.bst has it.

@@ -17,19 +17,49 @@ cd /build
 
 # ---- The few files that are the system's, not a package's ------------------
 
-# Besides root, the accounts two programs give up their rights to
-# (base/openssh.sh, base/dhcpcd.sh).  A package cannot add a line to a
-# file all of them share; until something reads sysusers.d, they are here.
-cat > passwd <<'END'
-root:x:0:0:root:/root:/bin/sh
-sshd:x:74:74:sshd privilege separation:/usr/share/empty.sshd:/usr/bin/false
-dhcpcd:x:75:75:dhcpcd privilege separation:/usr/share/empty.dhcpcd:/usr/bin/false
-END
-cat > group <<'END'
-root:x:0:
-sshd:x:74:
-dhcpcd:x:75:
-END
+# The accounts: root, and those the packages ask for.  A package that
+# needs one says so in a file of /usr/lib/sysusers.d, in systemd's format:
+#
+#   u <name> <id> "<description>" <home>
+account='^u +([a-z_][a-z0-9_-]*) +([1-9][0-9]*) +"([^":]*)" +(/[^[:space:]:]*)$'
+# systemd-sysusers is what reads those when a system has it.  This one
+# does not yet, so they are read here, and only lines of that one shape:
+# the id written out, and a group of the same name and id.
+echo "root:x:0:0:root:/root:/bin/sh" > passwd
+echo "root:x:0:" > group
+for package in $contents_packages; do
+    for declarations in $package/usr/lib/sysusers.d/*.conf; do
+        [ -e $declarations ] || continue
+        # `|| [ -n ... ]`: a last line that does not end in a newline
+        while read -r line || [ -n "$line" ]; do
+            case $line in ''|'#'*) continue ;; esac
+            if ! [[ $line =~ $account ]]; then
+                echo "initramfs.sh: $declarations: not an account this can make: $line" >&2
+                exit 1
+            fi
+            name=${BASH_REMATCH[1]}
+            id=${BASH_REMATCH[2]}
+            description=${BASH_REMATCH[3]}
+            home=${BASH_REMATCH[4]}
+            echo "$name:x:$id:$id:$description:$home:/usr/bin/false" >> passwd
+            echo "$name:x:$id:" >> group
+        done < $declarations
+    done
+done
+# By id: the packages come in the order of their store paths, which says
+# nothing.
+sort -t: -k3,3n -o passwd passwd
+sort -t: -k3,3n -o group group
+same_name=$(cut -d: -f1 passwd | sort | uniq -d)
+if [ -n "$same_name" ]; then
+    echo "initramfs.sh: the account $same_name is asked for twice" >&2
+    exit 1
+fi
+same_id=$(cut -d: -f3 passwd | sort | uniq -d)
+if [ -n "$same_id" ]; then
+    echo "initramfs.sh: the id $same_id is asked for twice" >&2
+    exit 1
+fi
 echo "127.0.0.1 localhost" > hosts
 # where glibc looks up users and host names: the files above, then DNS
 printf '%s\n' "passwd: files" "group: files" "hosts: files dns" > nsswitch.conf
