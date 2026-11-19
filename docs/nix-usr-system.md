@@ -5,6 +5,8 @@ system with no `/nix` boots, and the store-layout system is gone.  Since
 then: a network, SSH and Rex in the image; clang and Rust as packages;
 one kernel, Aurora Silicon's, built with them; Wi-Fi (iwd, with the
 system bus it needs); and Aurora's boot loader for Apple Silicon Macs.
+On 2026-11-19 it booted a real Mac, a 13-inch MacBook Pro M1, from
+memory, and was logged into over Wi-Fi.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -157,12 +159,48 @@ from the crates of `boot/aura-crates.json` and one from a repository at a
 pinned commit, against Rust's libraries for a machine with no operating
 system (`rust-std-aarch64-none`).  It installs three images in
 `/usr/lib/aura`: Stage 1 with no configuration, which waits for a
-computer on USB.  Nothing puts it on a Mac or in an image yet.
+computer on USB; and beside them aura's tools for that computer, and a
+piece they would otherwise need an assembler for.  Nothing installs it
+on a Mac yet: it is loaded into memory (below).
 
 bindgen is 0.73.2 with the two patches of Aurora's source
 (`tools/aurora-bindgen/`, here in `files/bindgen/`), for C layouts the
 released one gets wrong.  The kernel's build also checks the layout of
 everything bindgen generated.
+
+## On a Mac
+
+`tools/boot-mac.sh t8103-j293` boots bunix on an Apple Silicon Mac from
+another Mac, over a USB-C cable, into memory: the kernel, the device tree
+of that model, and the image.  Nothing of bunix is on the Mac's disk.
+
+The Mac has to be waiting for it, which takes one change to its disk, by
+its owner: a small container beside macOS that holds a boot loader in
+proxy mode.  The Asahi Linux installer makes one and nothing else, in
+expert mode (`curl https://alx.sh | EXPERT=1 sh`, "Tethered boot (m1n1,
+for development)"): it shrinks macOS by 2.5 GB and finishes in the Mac's
+recovery mode.  Holding the power button at start-up then chooses
+between macOS and waiting on USB.  Deleting the container and growing
+macOS back undoes it.
+
+What waits is Asahi's m1n1.  `boot-mac.sh` has it start aura, the one
+built here, and aura starts the kernel.
+
+Firmware is the machine's (below): for Wi-Fi, the files are in the Mac's
+own macOS (`/usr/share/firmware/wifi`), and `asahi_firmware.wifi`,
+Asahi's tool that Aurora's installer carries, makes of them an archive
+with `/vendorfw` in it.
+`BUNIX_FIRMWARE` names that archive; it is put before the image, and the
+kernel is told where to look.  It is not in this repository, nor in any
+package.
+
+Tried on the 13-inch MacBook Pro M1 (J293): the screen and the laptop's
+keyboard are the console, the internal disk is seen (and not touched),
+and Wi-Fi joins a WPA3 network.  A network to another computer over the
+USB cable does not work: in this kernel a Mac's port, as a USB device,
+is seen by the other computer and never configured, as Aurora's own
+notes say of it.  The `usb_link` word of `/init` sets such a link up
+(`images/usb-link.sh`), for the day it does.
 
 ## Dependencies are declared
 
@@ -228,7 +266,7 @@ nix/
   base.nix       base/        after elements/base/; the porting rule is at its top
   boot.nix       boot/        the kernel and its device trees; the boot
                               loader of Apple Silicon Macs
-  images/                     initramfs.{nix,sh}, init.sh
+  images/                     initramfs.{nix,sh}, init.sh, usb-link.sh
   tests/<name>/  run.sh
 files/<package>/              patches, and files a package installs as they are
 ```
@@ -239,6 +277,7 @@ What a person runs, on a builder:
 nix-build nix/base.nix -A util-linux     one package
 bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
+tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```
 
 ## Open questions
@@ -295,8 +334,9 @@ Its kernel has, built in because nothing loads modules, what an M1
 laptop and a Mac mini need to reach the disk, Ethernet, Wi-Fi, a
 keyboard (USB, and the M1 laptops' own), a display on USB-C, and a
 network over a USB cable to another computer; and it installs Apple's
-device trees.  None of that has run on a Mac yet: it has booted a
-virtual machine only.  There is no kernel configuration for x86_64 yet.
+device trees.  What has run on a Mac is in "On a Mac"; the Mac mini's
+parts (Ethernet, the display on USB-C) have not.  There is no kernel
+configuration for x86_64 yet.
 
 Firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
 each Mac's own macOS, and is added to the image when that Mac is booted

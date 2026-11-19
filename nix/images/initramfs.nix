@@ -36,5 +36,5 @@ stagedBuild {
 
   # What packs it.  gen_init_cpio comes with the kernel.
   buildDepends = [ boot.linux tools.bash tools.coreutils tools.findutils tools.grep tools.gzip ];
-  env = { init = ./init.sh; };
+  env = { init = ./init.sh; usb_link = ./usb-link.sh; };
 }

@@ -129,6 +129,9 @@ printf '%s\n' /dev /proc /sys /tmp /run /root /home /etc /usr \
     echo "slink /var/run ../run 777 0 0"
 
     echo "file /init $init 755 0 0"
+    # /init's own helper, which is no package's
+    echo "dir /usr/lib/bunix 755 0 0"
+    echo "file /usr/lib/bunix/usb-link $usb_link 755 0 0"
     for file in $system_files; do
         echo "file /etc/$file /build/$file 644 0 0"
     done

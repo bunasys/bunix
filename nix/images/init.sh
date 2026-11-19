@@ -7,6 +7,12 @@
 #                                   boot that nobody is watching
 #   authorized_key=<type>:<key>     a public key that may log in as root
 #                                   over SSH; without one, sshd is not started
+#   usb_link[=ncm|ecm]              be a serial port and a network adapter
+#                                   to the computer on each USB-C port, and
+#                                   give that computer a root shell on the
+#                                   serial port (usb-link.sh).  For bringing
+#                                   a machine up: whoever holds the cable is
+#                                   root.  Not working on a Mac yet.
 export PATH=/usr/bin
 
 # The kernel keeps a file system of its devices, and mounts it itself only
@@ -26,12 +32,15 @@ hostname bunix
 
 demo=
 authorized_key=
+usb_link=
 # read -a: split into words, and nothing more; a `*` stays a `*`
 read -r -a command_line < /proc/cmdline
 for word in "${command_line[@]}"; do
     case $word in
         demo) demo=yes ;;
         authorized_key=*) authorized_key=${word#authorized_key=} ;;
+        usb_link) usb_link=ncm ;;
+        usb_link=ncm|usb_link=ecm) usb_link=${word#usb_link=} ;;
     esac
 done
 
@@ -76,6 +85,14 @@ start_wifi() {
 
 ip link set lo up
 
+# The link is put together by a program of its own, beside the rest of
+# /init: the ports it needs appear some seconds from now.
+usb_link_state="not asked for (usb_link on the command line)"
+if [ -n "$usb_link" ]; then
+    /usr/lib/bunix/usb-link $usb_link > /run/usb-link.log 2>&1 &
+    usb_link_state="being set up, $usb_link network (/run/usb-link.log); not working on a Mac yet"
+fi
+
 wifi_state="FAILED to start; iwd's log is /run/iwd.log"
 ! start_wifi || wifi_state="iwd is running; join a network with iwctl"
 
@@ -98,6 +115,7 @@ echo "init:       pid $$, bash $BASH_VERSION"
 echo "root:       $(echo /*)"
 echo "sshd:       $sshd_state"
 echo "wifi:       $wifi_state"
+echo "usb link:   $usb_link_state"
 
 [ -z "$demo" ] || power_off
 
