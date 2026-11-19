@@ -315,9 +315,13 @@ What is enforced, and what is not: nothing yet refuses a `/usr` that has
 no signature.  `/usr` is opened by the hash on the kernel's command
 line, and the signature beside it is not asked for at boot; it is there
 for what will ask, extensions and sysupdate.  That the kernel takes a
-signature made with bunix's own key has not been tried here: a test
-system's is of the development key, which only the system, not the
-kernel, has the certificate of.
+signature made with bunix's own key, and no other, was tried in a
+virtual machine with a system for release (`BUNIX_SIGNATURE=...
+tools/boot-vm.sh disk`): given a copy of `/usr` and its signature,
+"verified (with signature)"; with one byte of the signature changed,
+"Root hash verification failed".  A test system's signature is of the
+development key, which only the system, not the kernel, has the
+certificate of.
 
 bunix's key is the one x86 signs with.  x86 still reads it from a file
 (`keys/verity.key`, never committed), which puts it in BuildStream's

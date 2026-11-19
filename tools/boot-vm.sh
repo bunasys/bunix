@@ -17,6 +17,9 @@
 #               watching.  Fails if a unit failed.
 #
 # While it runs, `ssh -p 2022 root@127.0.0.1` logs in (see below).
+#   BUNIX_SIGNATURE   with disk: the signature of a system for release, a
+#                     file in the repository (tools/sign.sh has the
+#                     steps); the disk is then of that system
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT    the Mac's port for it; default 2022
 #
@@ -46,7 +49,12 @@ if [ -n "$on_disk" ]; then
     # what the machine starts from, in memory, and the disk it finds the
     # rest on
     image=$(build /bunix/nix/images/initrd.nix)
-    disk=$(build /bunix/nix/images/disk.nix)
+    # a disk with no signature given is a test system's (images/disk.nix)
+    if [ -n "${BUNIX_SIGNATURE:-}" ]; then
+        disk=$(build /bunix/nix/images/disk.nix --arg signature "/bunix/$BUNIX_SIGNATURE")
+    else
+        disk=$(build /bunix/nix/images/disk.nix)
+    fi
 else
     image=$(build /bunix/nix/images/system.nix)
 fi
