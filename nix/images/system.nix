@@ -1,14 +1,20 @@
 # bunix with systemd as its init system, as an initramfs: an archive the
 # kernel unpacks into memory and runs /init from, which is systemd.
 #
-#   nix-build /bunix/nix/images/system.nix     (result: initramfs.cpio.gz)
+#   nix-build /bunix/nix/images/system.nix
+#
+# The result: initramfs.cpio.gz, the whole system for a machine's memory;
+# and, of the same tree, usr-partition/: /usr as the images of a
+# partition, for a machine's disk (image.sh).  One build for both, at the
+# cost of each being made when only the other is wanted: the tree they
+# are made of is not kept.
 #
 # It is the usr/ and etc/ of `contents`, and of everything they need to
 # run, with bunix's configuration over them: files/rootfs's where the
-# system on x86 has the same (the list is in system.sh), images/system/
-# where this one differs yet.
+# system on x86 has the same (the list is below), images/system/ where
+# this one differs yet.
 # Accounts are made of what the packages ask for, and units enabled as
-# the preset says, when the image is made (system.sh).
+# the preset says, when the image is made (image.sh).
 { system ? builtins.currentSystem }:
 
 let
@@ -20,7 +26,7 @@ let
 in
 stagedBuild {
   name = "bunix-system";
-  run = ./system.sh;
+  run = ./image.sh;
 
   # What the system has.  gccLibraries because glibc loads libgcc_s.so.1
   # when a thread is cancelled or exits early, in a C program too, and
@@ -37,15 +43,33 @@ stagedBuild {
     base.openssh base.rex
     # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)
     base.dbus base.iwd base.wireless-regdb
+    # for a system on a disk: udev told of the device /usr is checked
+    # through
+    base.dm-udev-rules
   ];
 
   # What makes it.  systemd: its own tools make the accounts, enable the
   # units and compile the hardware database, on the tree that is to be the
   # image.  gen_init_cpio comes with the kernel.
-  buildDepends = [ boot.linux base.systemd tools.bash tools.coreutils tools.findutils tools.grep tools.sed tools.gzip ];
+  # erofs-utils: the file system of /usr's image.
+  buildDepends = [ boot.linux base.systemd base.erofs-utils tools.bash tools.coreutils tools.findutils tools.grep tools.sed tools.gzip ];
   env = {
     bunix_files = ./system;
-    usb_link = ./usb-link.sh;
     shared_files = ../../files/rootfs;
+    # What is not listed is not here.  machine-id is empty: the machine
+    # has a new id at every boot, unless its command line gives it one,
+    # and systemd does not take the boot for a first one.
+    same_as_x86 = [
+      "etc/hostname" "etc/hosts" "etc/nsswitch.conf" "etc/shells" "etc/machine-id"
+      "etc/os-release" "etc/resolv.conf" "etc/iwd/main.conf"
+      "usr/lib/os-release"
+      "usr/lib/systemd/network/20-wired.network"
+      "usr/lib/systemd/network/25-wireless.network"
+      "usr/lib/systemd/resolved.conf.d/bunix.conf"
+      "usr/lib/systemd/timesyncd.conf.d/bunix.conf"
+      "usr/lib/systemd/system/console-shell@.service"
+      "usr/lib/systemd/system/systemd-sysusers.service.d/bunix.conf"
+    ];
+    usr_partition = "yes";
   };
 }

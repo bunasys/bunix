@@ -1,5 +1,5 @@
 # What runs is decided by the image: these, and nothing a package would
-# have liked.  Applied when the image is made (images/system.sh).
+# have liked.  Applied when the image is made (images/image.sh).
 enable systemd-networkd.service
 enable systemd-resolved.service
 enable systemd-timesyncd.service

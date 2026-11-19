@@ -339,6 +339,61 @@
     "url": "https://github.com/systemd/systemd/archive/refs/tags/v261.3.tar.gz",
     "sha256": "3f8d3d3969af7214bda600930e14c6a24135eb3dce1ba7f1b980b74e6dc15b72"
   },
+  "popt": {
+    "version": "1.19",
+    "url": "https://ftp.osuosl.org/pub/rpm/popt/releases/popt-1.x/popt-1.19.tar.gz",
+    "sha256": "c25a4838fc8e4c1c8aacb8bd620edb3084a3d63bf8987fdad3ca2758c63240f9"
+  },
+  "device-mapper": {
+    "version": "2.03.44",
+    "url": "https://sourceware.org/pub/lvm2/LVM2.2.03.44.tgz",
+    "sha256": "42f829927d2d459f5733fcdb38a5bf2455a8b84072193092450a9c69d6596eca"
+  },
+  "json-c": {
+    "version": "0.19",
+    "url": "https://github.com/json-c/json-c/archive/refs/tags/json-c-0.19-20260627.tar.gz",
+    "sha256": "f17a6d7d265cf840dfd8f0f46a606d98c6b5b26dc7cfe27275d1546a213086c8"
+  },
+  "cryptsetup": {
+    "version": "2.8.8",
+    "url": "https://cdn.kernel.org/pub/linux/utils/cryptsetup/v2.8/cryptsetup-2.8.8.tar.xz",
+    "sha256": "3acfa685f2dd7fcc832e0b77bc7093aa7da554a51ce8dafbb4138eaa854eee35"
+  },
+  "lz4": {
+    "version": "1.10.0",
+    "url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz",
+    "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+  },
+  "autoconf": {
+    "version": "2.73",
+    "url": "https://mirrors.kernel.org/gnu/autoconf/autoconf-2.73.tar.xz",
+    "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e"
+  },
+  "automake": {
+    "version": "1.19",
+    "url": "https://mirrors.kernel.org/gnu/automake/automake-1.19.tar.xz",
+    "sha256": "e3e2c2e3abf37898138db5b6c1d1dc35c9160c5978be7947d2c741705251d445"
+  },
+  "libtool": {
+    "version": "2.6.2",
+    "url": "https://mirrors.kernel.org/gnu/libtool/libtool-2.6.2.tar.xz",
+    "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e"
+  },
+  "erofs-utils": {
+    "version": "1.9.4",
+    "url": "https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git/snapshot/erofs-utils-1.9.4.tar.gz",
+    "sha256": "7d135aa2550326a5acf20f53c518aea5a8900015ce50700044e40f818c31dd80"
+  },
+  "ca-certificates": {
+    "version": "2026-10-20",
+    "url": "https://curl.se/ca/cacert-2026-10-20.pem",
+    "sha256": "796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe"
+  },
+  "curl": {
+    "version": "8.23.0",
+    "url": "https://curl.se/download/curl-8.23.0.tar.xz",
+    "sha256": "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5"
+  },
   "expat": {
     "version": "2.9.0",
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",

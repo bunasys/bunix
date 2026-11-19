@@ -15,6 +15,8 @@
 #                      -> script = ./autotools.sh; env.configure_arguments
 #   kind: meson with only meson-local
 #                      -> script = ./meson.sh; env.meson_arguments
+#   kind: cmake with only cmake-local
+#                      -> script = ./cmake.sh; env.cmake_arguments
 #   make-args, install-commands (>), kind: manual, or an argument with a
 #   space in it        -> base/x.sh: the lines of autotools.sh or meson.sh,
 #                         and the rest
@@ -156,6 +158,67 @@ let
     env = { configure_arguments = "--disable-static --disable-nls"; };
   };
 
+  # Command-line parsing; cryptsetup's configure requires it.
+  popt = mkSystemPackage {
+    name = "popt";
+    source = sources.popt;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    env = { configure_arguments = "--disable-static --disable-nls"; };
+  };
+
+  # The JSON library cryptsetup keeps its metadata in.
+  json-c = mkSystemPackage {
+    name = "json-c";
+    source = sources.json-c;
+    script = ./cmake.sh;
+    depends = [ glibc ];
+    buildDepends = [ cmake ninja ];
+    env = { cmake_arguments = "-DBUILD_STATIC_LIBS=OFF -DBUILD_TESTING=OFF -DDISABLE_WERROR=ON"; };
+  };
+
+  # libdevmapper and dmsetup, from LVM2: cryptsetup sets up dm-verity
+  # through this library.
+  device-mapper = mkSystemPackage {
+    name = "device-mapper";
+    source = sources.device-mapper;
+    script = ./base/device-mapper.sh;
+    depends = [ glibc ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # The device mapper's udev rules, from LVM2: they name /dev/mapper/*
+  # devices and tell systemd when one is ready.  Without them systemd
+  # waits for ever for /dev/mapper/usr, the /usr of a system on a disk.
+  # A package of its own, of device-mapper's source, so that the rules can
+  # change without rebuilding everything that links libdevmapper, systemd
+  # among it.  The rules run dmsetup.
+  dm-udev-rules = mkSystemPackage {
+    name = "dm-udev-rules";
+    source = sources.device-mapper;
+    script = ./base/dm-udev-rules.sh;
+    depends = [ device-mapper ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # Fast compression: mkfs.erofs compresses a system's /usr with it, which
+  # is read back several times faster than LZMA.
+  lz4 = mkSystemPackage {
+    name = "lz4";
+    source = sources.lz4;
+    script = ./base/lz4.sh;
+    depends = [ glibc ];
+  };
+
+  # Mozilla's certificates of the authorities that vouch for servers, as
+  # the curl project extracts them: what curl and OpenSSL check a server
+  # against.
+  ca-certificates = mkSystemPackage {
+    name = "ca-certificates";
+    source = sources.ca-certificates;
+    script = ./base/ca-certificates.sh;
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -177,6 +240,44 @@ let
     buildDepends = [ pkgconf ];
   };
 
+  # libcryptsetup, which systemd sets up dm-verity with for /usr and the
+  # extension images, and cryptsetup and veritysetup, to open and check
+  # such volumes by hand.  Without integritysetup.  --disable-udev: libudev
+  # is systemd's, which is built against this.
+  cryptsetup = mkSystemPackage {
+    name = "cryptsetup";
+    source = sources.cryptsetup;
+    script = ./autotools.sh;
+    depends = [ glibc popt device-mapper json-c openssl util-linux ];
+    buildDepends = [ pkgconf ];
+    env = { configure_arguments = "--disable-static --disable-nls --disable-asciidoc --disable-integritysetup --disable-ssh-token --disable-external-tokens --disable-udev --disable-selinux --with-crypto_backend=openssl"; };
+  };
+
+  # mkfs.erofs, which systemd-repart runs to make the read-only file
+  # systems of /usr and of extension images.  gccLibraries: it works in
+  # several threads and ends them early, for which glibc loads libgcc_s
+  # by name (docs/nix-usr-system.md, "libgcc_s").
+  erofs-utils = mkSystemPackage {
+    name = "erofs-utils";
+    source = sources.erofs-utils;
+    script = ./base/erofs-utils.sh;
+    depends = [ glibc lz4 tools.xz zlib util-linux toolchain.gccLibraries ];
+    buildDepends = [ pkgconf autoconf automake libtool ];
+  };
+
+  # curl and libcurl, with OpenSSL for TLS and Mozilla's certificates.
+  # The HTTP/2 and HTTP/3 libraries, and the list of public domain
+  # suffixes, are optional, and nothing here needs them.  bash: wcurl and
+  # curl-config are scripts.
+  curl = mkSystemPackage {
+    name = "curl";
+    source = sources.curl;
+    script = ./autotools.sh;
+    depends = [ glibc openssl zlib ca-certificates tools.bash ];
+    buildDepends = [ pkgconf ];
+    env = { configure_arguments = "--with-openssl --with-zlib --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --with-ca-path=/etc/ssl/certs --without-libpsl --without-nghttp2 --without-libidn2 --without-brotli --without-zstd --without-libssh2 --disable-static --disable-manual --disable-docs --disable-ldap"; };
+  };
+
   # Loads kernel modules: modprobe, depmod, lsmod, modinfo, and the
   # library udev loads each device's driver with.  zstd and xz: modules
   # are compressed; openssl: modinfo reads their signatures.  UAPI.9 has
@@ -192,13 +293,13 @@ let
 
   # systemd, configured down to an init system and its network stack: PID
   # 1, journald, udevd, tmpfiles, sysusers, networkd, resolved, timesyncd,
-  # logind, hostnamed, timedated, repart and sysext, and their client
-  # tools (base/systemd.sh says what of the element is not on yet).
+  # logind, hostnamed, timedated, repart, sysext and sysupdate, and their
+  # client tools (base/systemd.sh says what of the element is not on yet).
   systemd = mkSystemPackage {
     name = "systemd";
     source = sources.systemd;
     script = ./base/systemd.sh;
-    depends = [ glibc libcap libxcrypt util-linux openssl kmod acl zlib tools.xz tools.bash ];
+    depends = [ glibc libcap libxcrypt util-linux openssl kmod acl zlib tools.xz tools.bash cryptsetup curl ];
     buildDepends = [ meson ninja gperf pkgconf python-jinja2 ];
   };
 
@@ -364,6 +465,30 @@ let
     depends = [ glibc toolchain.gccLibraries ];
   };
 
+  # GNU autoconf, automake and libtool: they generate the configure script
+  # and makefiles of a source that comes without them (erofs-utils).
+  # autoconf's programs are perl and m4.
+  autoconf = mkSystemPackage {
+    name = "autoconf";
+    source = sources.autoconf;
+    script = ./autotools.sh;
+    depends = [ tools.m4 perl tools.bash ];
+  };
+  automake = mkSystemPackage {
+    name = "automake";
+    source = sources.automake;
+    script = ./autotools.sh;
+    depends = [ autoconf perl tools.bash ];
+  };
+  libtool = mkSystemPackage {
+    name = "libtool";
+    source = sources.libtool;
+    script = ./autotools.sh;
+    # coreutils: libtoolize is run by env.
+    depends = [ glibc tools.m4 tools.bash tools.coreutils ];
+    env = { configure_arguments = "--disable-static"; };
+  };
+
   # A perfect hash generator: systemd's build looks its keywords up with
   # what it writes.
   gperf = mkSystemPackage {
@@ -488,7 +613,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt attr acl;
-  inherit util-linux kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja gperf python-markupsafe python-jinja2 python-zlib meson cmake llvm bindgen;
+  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
+  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf python-markupsafe python-jinja2 python-zlib meson cmake llvm bindgen;
 }

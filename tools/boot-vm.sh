@@ -4,12 +4,17 @@
 # tools/nix-builder/lima.yaml), copied out of its store, and run by QEMU
 # with the Mac's own hypervisor.
 #
-#   tools/boot-vm.sh          root's shell on the console; `poweroff` ends
-#                             it, Ctrl-a x leaves at once
-#   tools/boot-vm.sh check    boots, asks systemd over SSH whether all of
-#                             it started, says so and powers off: for a
-#                             boot that nobody is watching.  Fails if a
-#                             unit failed.
+#   tools/boot-vm.sh [disk] [check] [words for the kernel's command line]
+#
+#   (neither)   the whole system in memory; root's shell on the console.
+#               `poweroff` ends it, Ctrl-a x leaves at once.
+#   disk        the system installed on a disk (nix/images/disk.nix): /usr
+#               read-only from its partition, checked against its hash,
+#               and a root partition that keeps what is written.  The
+#               disk is a new copy at every run.
+#   check       boots, asks systemd over SSH whether all of it started,
+#               says so and powers off: for a boot that nobody is
+#               watching.  Fails if a unit failed.
 #
 # While it runs, `ssh -p 2022 root@127.0.0.1` logs in (see below).
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
@@ -24,8 +29,27 @@ set -eu
 build() {
     limactl shell bunix-builder nix-build "$@" --no-out-link
 }
+# the two words, in either order, before any for the kernel
+on_disk=
+check=
+while [ $# -gt 0 ]; do
+    case $1 in
+        disk) on_disk=yes ;;
+        check) check=yes ;;
+        *) break ;;
+    esac
+    shift
+done
+
 kernel=$(build /bunix/nix/boot.nix -A linux)
-image=$(build /bunix/nix/images/system.nix)
+if [ -n "$on_disk" ]; then
+    # what the machine starts from, in memory, and the disk it finds the
+    # rest on
+    image=$(build /bunix/nix/images/initrd.nix)
+    disk=$(build /bunix/nix/images/disk.nix)
+else
+    image=$(build /bunix/nix/images/system.nix)
+fi
 # the kernel is in a directory named after its release
 vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
 
@@ -37,6 +61,23 @@ mkdir -p "$boot"
 rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz"
 limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
 limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
+
+# usrhash=: the one /usr this kernel will run, by the hash of its image;
+#   systemd finds the partitions by it.
+# mount.usrfstype=: said, so that nothing tries to check and repair a file
+#   system that is read-only and checked block by block.
+# root=: the partition that is the root, by its name.
+disk_arguments=
+disk_words=
+if [ -n "$on_disk" ]; then
+    rm -f "$boot/disk.raw"
+    limactl copy "bunix-builder:$disk/disk.raw" "$boot/disk.raw"
+    # copied out of the store, where nothing can be written
+    chmod u+w "$boot/disk.raw"
+    usrhash=$(limactl shell bunix-builder cat "$disk/usrhash")
+    disk_arguments="-drive file=$boot/disk.raw,format=raw,if=virtio"
+    disk_words="usrhash=$usrhash mount.usrfstype=erofs mount.usrflags=ro root=PARTLABEL=bunix-root rw"
+fi
 
 # A network card behind QEMU's own small network, which gives the guest
 # an address by DHCP.  The Mac's port 2022 is the guest's SSH port:
@@ -65,13 +106,13 @@ run_qemu() {
     exec qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
         -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" \
         -netdev user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22 -device virtio-net-pci,netdev=net \
-        -append "console=ttyAMA0 $authorized_keys $*" -nographic -no-reboot
+        $disk_arguments \
+        -append "console=ttyAMA0 $disk_words $authorized_keys $*" -nographic -no-reboot
 }
 
-if [ "${1:-}" != check ]; then
+if [ -z "$check" ]; then
     run_qemu "$@"
 fi
-shift
 
 # check: the machine runs behind this script, and is asked how it is.
 if [ -z "$authorized_keys" ]; then

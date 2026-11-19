@@ -9,7 +9,9 @@ systemd as the init system, in place of a script.
 On 2026-11-19 it booted a real Mac, a 13-inch MacBook Pro M1, from
 memory, and was logged into over Wi-Fi.  A machine with a partition
 named bunix-root keeps `/var`, `/home` and `/root` on it; the system
-itself is still booted into memory.
+itself is still booted into memory.  In a virtual machine it also boots
+from a disk, with `/usr` read-only on a partition of its own and checked
+against its hash.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -113,7 +115,7 @@ needed.
   systemd's format, with the id written out:
   `u sshd 74 "sshd privilege separation" /usr/share/empty.sshd`.  What
   puts an image together makes the accounts of the packages in it, with
-  systemd-sysusers (`images/system.sh`).
+  systemd-sysusers (`images/image.sh`).
 
 ## One build, two packages
 
@@ -204,14 +206,14 @@ on.  A network to another computer over the
 USB cable does not work: in this kernel a Mac's port, as a USB device,
 is seen by the other computer and never configured, as Aurora's own
 notes say of it.  `/usr/lib/bunix/usb-link` sets such a link up
-(`images/usb-link.sh`), for the day it does.
+(in `images/system/`), for the day it does.
 
 ### A disk
 
 A machine with a partition for it keeps `/var`, `/home` and `/root`
 there: sshd's keys (`/var/lib/sshd`), so the machine is the same machine
-to SSH at every boot, the networks iwd has joined, the journal.  `/usr`
-and `/etc` are still the image's.
+to SSH at every boot, the networks iwd has joined, the journal.  On a
+Mac, so far, `/usr` and `/etc` are still the image's, in memory.
 
 The image mounts nothing: it is for any machine.  Which partition is a
 machine's is said when it is booted: `tools/boot-mac.sh` takes its name
@@ -222,7 +224,8 @@ and the journal on the disk is the machine's by that id.  By name and not by typ
 systemd would find it by itself: another Linux on the same disk has a
 root partition of that type too.
 
-Nothing here makes the partitions; on the first Mac they were made by
+Nothing here makes a Mac's partitions (`images/disk.sh` makes a virtual
+machine's); on the first Mac they were made by
 hand, from bunix itself, in the space its owner had taken from macOS
 beside the 2.5 GB boot container:
 
@@ -244,12 +247,50 @@ partition of its own, in two slots of 2 GB, one running and one to go
 back to, written by systemd-sysupdate; extensions as sysext; and a
 writable root partition with `/etc`, `/var` and `/home`.
 
-The first Mac's disk is laid out for that.  bunix-root has the type and
-the directories of that root partition, and becomes it by gaining `/etc`.
+What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
+
+- **`/usr` as the images of a partition.**  `images/system.nix` makes, of
+  the tree it packs for memory, `/usr` as a read-only file system (erofs)
+  and the hashes of its blocks (dm-verity), with systemd-repart, and the
+  one hash that stands for both.
+- **What starts it.**  `images/initrd.nix`: systemd in memory, which sets
+  up `/usr` from the partitions the kernel's command line names by that
+  hash (`usrhash=`), mounts the root partition (`root=`), and hands over
+  to the systemd in that `/usr`.
+- **An `/etc` that starts empty.**  What the image has for `/etc` is also
+  in `/usr` (`/usr/share/factory/etc`), and systemd-tmpfiles puts in
+  `/etc` what is missing, file by file; the certificates as links into
+  `/usr`, so that an update brings new ones.  The units that run are
+  enabled inside `/usr`, and updated with it.  The accounts and the
+  machine's id are made at the first boot and kept.  What is read before
+  `/etc` is filled has to be right without it: so sysusers is told to
+  make root unlocked, and the machine has a name built into systemd.
+- **udev told of the device.**  `dm-udev-rules`, the device mapper's own
+  rules: without them systemd waits for ever for `/dev/mapper/usr`.
+- **A disk.**  `images/disk.nix`: `/usr`, its hashes and an empty root
+  partition, made by systemd-repart from a description of them, which is
+  what an installer will give it for a real disk.
+
+Not there yet: the hash signed (x86 has a third partition for the
+signature; here there is no key, and the hash on the kernel's command
+line is trusted as the command line is); a `/usr` partition of a slot's
+size (it is as large as its image); the second slot, and sysupdate
+writing into it; extensions; an installer; and any of it on a Mac.
+
+What the check of `/usr` does not cover: `/etc` is on the root partition,
+unchecked, and whoever can write the disk can change what runs through
+it.  And a `/usr` that fails its check, or a disk that is not found,
+ends at root's shell on the console, with no password: as the console
+is anyway, for now, and to change when the hash is signed.
+
+One tree is both systems, in memory and on a disk, so each has a little
+that is for the other: the copy of `/etc` in `/usr`, and the image's own
+`/etc/fstab`, which mounts nothing.
+
+The first Mac's disk is laid out for it.  bunix-root has the type and
+the directories of the root partition, and becomes it by gaining `/etc`.
 bunix-esp is empty, and is for a kernel and a boot loader that need no
-cable.  The free space is the two slots, with their integrity data and
-signatures, for systemd-repart to make.  Not there yet: `/etc` on the
-disk, anything on the ESP, and a `/usr` on disk.
+cable.  The free space is the two slots.
 
 ## Dependencies are declared
 
@@ -289,19 +330,22 @@ package runs by name from inside another (`sed` in a script, `sh` through
 The union of the chosen packages' `usr/` and `etc/` trees, with what they
 `depends` on, as files: no `/nix`, no `depends` files.  The system
 (`nix/images/system.nix`) is one such union, with bunix's configuration
-over it, packed by the kernel's `gen_init_cpio` as an initramfs; the
-`/usr` image, the extensions and their signatures are others, in the
-formats bunix already has.
+over it, packed by the kernel's `gen_init_cpio` as an initramfs, and its
+`/usr` also as the images of a partition; the extensions and the
+signatures are to come, in the formats bunix already has.
 
 systemd is its init system.  bunix's configuration is `files/rootfs`'s
 where the system on x86 has the same (the network's files, the journal,
 the console's unit), and `images/system/` where this one differs yet:
-which units run (one preset file), sshd's unit without PAM and with
+which units run (one preset file, applied when the image is made, the
+result kept in `/usr`), sshd's unit without PAM and with
 its keys in `/var`, a console that is root's shell with no login, root
 without a password, a journal that is on disk only where there is one,
 and an address asked for by the network card's own.  systemd's own tools make the
 accounts, enable the preset's units and compile udev's hardware database
-on the tree before it is packed.  The key that may log in over SSH comes
+on the tree before it is packed.  The same script (`images/image.sh`)
+makes `images/initrd.nix` of fewer packages.  It refuses a file that is
+in two packages, and two accounts that ask for one id.  The key that may log in over SSH comes
 on the kernel's command line as a credential of systemd's, which sshd's
 unit takes: it is for that boot, beside root's own keys.  A build that makes an
 image names its `contents`, and Nix gives it those packages and all they
@@ -322,14 +366,19 @@ nix/
                               stage1.nix stage1/ stage2.nix stage2/
   stage.{nix,sh}              a build with /usr made of system packages
   system-package.{nix,sh}     mkSystemPackage, and what is checked of a result
-  autotools.sh  meson.sh      the recipe of an ordinary package
+  autotools.sh  meson.sh  cmake.sh
+                              the recipe of an ordinary package
   toolchain.nix  toolchain/   glibc, binutils, gcc
   tools.nix      tools/       what a build runs
   base.nix       base/        after elements/base/; the porting rule is at its top
   boot.nix       boot/        the kernel and its device trees; the boot
                               loader of Apple Silicon Macs
-  images/                     system.{nix,sh}, system/ (its own
-                              configuration), usb-link.sh
+  images/                     image.sh: an image of packages and
+                              configuration.  system.nix system/: the
+                              system, for memory and as /usr's partition.
+                              initrd.nix initrd/: what starts a system
+                              that is on a disk.  disk.{nix,sh}: such a
+                              disk
   tests/<name>/  run.sh
 files/<package>/              patches, and files a package installs as they are
 ```
@@ -341,6 +390,7 @@ nix-build nix/base.nix -A util-linux     one package
 bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
+tools/boot-vm.sh disk [check]            the same, installed on a disk
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```
 
@@ -357,10 +407,10 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
   to its result, and which to the image.  Today a package's `etc/` is
   staged and its `var/` is not; recipes remove the `var/` and `run/` they
   install, and systemd-tmpfiles makes what programs keep state in.  `/etc`
-  is the image's and new at every boot, where the goal has it on the
-  root partition: how a package's `etc/` reaches an `/etc` that outlasts
-  an update is open (on x86, a copy in `/usr` and tmpfiles).  sshd's keys
-  are in `/var/lib/sshd` only because `/etc` is not kept.
+  on a disk is filled from a copy in `/usr`, once: a default that changes
+  in a later `/usr` does not reach a file already copied, as on x86.
+  sshd's keys are in `/var/lib/sshd` only because `/etc`, in memory, is
+  not kept.
 - **A package in two parts, for running and for building against.**  An
   image with glibc has its headers and static libraries; one with ncurses
   has its .pc files.  gcc is split by hand (above); the rest are not.
@@ -388,15 +438,14 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 It is systemd with a network (networkd, resolved, timesyncd), Wi-Fi
 (iwd), sshd, and root's shell on the console.  It has no login (PAM is
 not ported: the console asks nobody who they are, and SSH takes keys
-only), no kernel modules, no CA certificates, no locales or time zones,
-no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
-again by itself where there is a disk to remember it on.  The machine's
-id is new at every boot, `/etc` being in memory, unless the command line
-gives it one.  A machine told of a partition that is not there comes up
+only), no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
+again by itself where there is a disk to remember it on.  In memory the
+machine's id is new at every boot, unless the command line gives it one;
+on a disk it is made at the first boot and kept.  A machine told of a partition that is not there comes up
 in memory all the same.
 
-Of systemd, not on yet, each for want of a library: PAM, polkit,
-cryptsetup (dm-verity), curl and so sysupdate, the TPM, EFI, and seccomp,
+Of systemd, not on yet, each for want of a library: PAM, polkit, the
+TPM, EFI, and seccomp,
 without which systemd's own services are not confined to the system
 calls they need (`base/systemd.sh`).
 

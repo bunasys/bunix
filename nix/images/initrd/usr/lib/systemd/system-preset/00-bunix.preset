@@ -1,0 +1,3 @@
+# Nothing of what a package would have liked: what runs here is what
+# systemd's own units for this stage want of each other.
+disable *
