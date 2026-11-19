@@ -29,6 +29,10 @@ stagedBuild {
     # what a person at its shell expects to find
     tools.sed tools.grep tools.gawk tools.findutils tools.diffutils tools.tar tools.gzip
     base.procps-ng base.iputils
+    # e2fsprogs: /init checks the disk's partition with it (init.sh).
+    # Both: for a person making a disk's file systems, its partitions
+    # being util-linux's.
+    base.e2fsprogs base.dosfstools
     # the network, and a way in over it
     base.iproute2 base.dhcpcd base.openssh base.rex
     # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)

@@ -134,6 +134,29 @@ let
     buildDepends = [ pkgconf ];
   };
 
+  # mkfs.ext4 and e2fsck: the file system of a system's writable
+  # partition.  /init runs e2fsck on it at every boot (images/init.sh).
+  e2fsprogs = mkSystemPackage {
+    name = "e2fsprogs";
+    source = sources.e2fsprogs;
+    script = ./base/e2fsprogs.sh;
+    # bash: compile_et and mk_cmds, which build its libraries' users, are
+    # scripts.
+    depends = [ glibc util-linux tools.bash ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # mkfs.fat: the file system of the partition a machine boots from.
+  # --without-iconv: the system has none of glibc's character-set
+  # converters; the table built into it is enough.
+  dosfstools = mkSystemPackage {
+    name = "dosfstools";
+    source = sources.dosfstools;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    env = { configure_arguments = "--enable-compat-symlinks --without-iconv"; };
+  };
+
   # ps, top, free, pgrep and pkill, pidof, sysctl, uptime, vmstat, watch,
   # w.  kill comes from util-linux.
   procps-ng = mkSystemPackage {
@@ -382,6 +405,6 @@ let
 in
 {
   inherit readline zlib bzip2 zstd openssl libmnl expat;
-  inherit util-linux procps-ng iproute2 iputils dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit util-linux e2fsprogs dosfstools procps-ng iproute2 iputils dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
   inherit pkgconf flex bc perl ninja python-zlib meson cmake llvm bindgen;
 }

@@ -1,7 +1,8 @@
 #!/bin/sh
 # Boots bunix on an Apple Silicon Mac, from this Mac, over a USB-C cable.
-# Everything is loaded into the other Mac's memory: nothing is written to
-# its disk, and turning it off undoes it.
+# The system is loaded into the other Mac's memory, and gone when it is
+# turned off.  Its disk is left alone, but for a partition named
+# bunix-root, if it has one: /init keeps /var, /home and /root there.
 #
 #   tools/boot-mac.sh <device tree> [words for the kernel's command line]
 #   tools/boot-mac.sh t8103-j293        a 13-inch MacBook Pro M1

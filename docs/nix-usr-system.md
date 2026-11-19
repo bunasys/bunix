@@ -6,7 +6,9 @@ then: a network, SSH and Rex in the image; clang and Rust as packages;
 one kernel, Aurora Silicon's, built with them; Wi-Fi (iwd, with the
 system bus it needs); and Aurora's boot loader for Apple Silicon Macs.
 On 2026-11-19 it booted a real Mac, a 13-inch MacBook Pro M1, from
-memory, and was logged into over Wi-Fi.
+memory, and was logged into over Wi-Fi.  A machine with a partition
+named bunix-root keeps `/var`, `/home` and `/root` on it; the system
+itself is still booted into memory.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -172,7 +174,8 @@ everything bindgen generated.
 
 `tools/boot-mac.sh t8103-j293` boots bunix on an Apple Silicon Mac from
 another Mac, over a USB-C cable, into memory: the kernel, the device tree
-of that model, and the image.  Nothing of bunix is on the Mac's disk.
+of that model, and the image.  The system is not on the Mac's disk;
+what it keeps from boot to boot may be ("A disk", below).
 
 The Mac has to be waiting for it, which takes one change to its disk, by
 its owner: a small container beside macOS that holds a boot loader in
@@ -195,12 +198,55 @@ kernel is told where to look.  It is not in this repository, nor in any
 package.
 
 Tried on the 13-inch MacBook Pro M1 (J293): the screen and the laptop's
-keyboard are the console, the internal disk is seen (and not touched),
-and Wi-Fi joins a WPA3 network.  A network to another computer over the
+keyboard are the console, the internal disk's bunix-root is checked and
+mounted, and Wi-Fi joins a WPA3 network, by itself from the second time
+on.  A network to another computer over the
 USB cable does not work: in this kernel a Mac's port, as a USB device,
 is seen by the other computer and never configured, as Aurora's own
 notes say of it.  The `usb_link` word of `/init` sets such a link up
 (`images/usb-link.sh`), for the day it does.
+
+### A disk
+
+`/init` looks for a partition named bunix-root.  A machine that has one
+keeps `/var`, `/home` and `/root` on it: sshd's keys (`/var/lib/sshd`),
+so the machine is the same machine to SSH at every boot, the networks
+iwd has joined, the addresses dhcpcd was given.  It is checked at every
+boot (`e2fsck -p`; `/run/e2fsck.log`).  `/usr` and `/etc` are still the
+image's.
+
+The partition is found by its name and not by its type, as systemd will
+find it: another Linux on the same disk has a root partition of that
+type too.
+
+Nothing here makes the partitions; on the first Mac they were made by
+hand, from bunix itself, in the space its owner had taken from macOS
+beside the 2.5 GB boot container:
+
+```
+sfdisk --append /dev/nvme0n1     two lines: 1 GiB, type EFI system,
+                                 name bunix-esp; 28 GiB, type root
+                                 (64-bit Arm), name bunix-root
+mkfs.vfat -F 32 -n BUNIX-ESP /dev/nvme0n1p5
+mkfs.ext4 -L bunix-root /dev/nvme0n1p6
+```
+
+and 5.5 GB were left free.  Deleting the two entries undoes it.
+
+### Where this is going
+
+What bunix is on x86 (`docs/updates.md`,
+`files/rootfs/usr/lib/repart.d`, `sysupdate.d`): `/usr` read-only on a
+partition of its own, in two slots of 2 GB, one running and one to go
+back to, written by systemd-sysupdate; extensions as sysext; and a
+writable root partition with `/etc`, `/var` and `/home`.
+
+The first Mac's disk is laid out for that.  bunix-root has the type and
+the directories of that root partition, and becomes it by gaining `/etc`.
+bunix-esp is empty, and is for a kernel and a boot loader that need no
+cable.  The free space is the two slots, with their integrity data and
+signatures, for systemd-repart to make.  Not there yet: `/etc` on the
+disk, anything on the ESP, a `/usr` on disk, and systemd.
 
 ## Dependencies are declared
 
@@ -287,11 +333,17 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 - **Account ids.**  Each is a number in its package's script, and two
   packages with the same one are only found out when an image has both.
   The reader of the declarations is in `initramfs.sh`; the `/usr` image
-  will need it too.
+  will need it too.  Files on a disk are owned by those numbers now, so
+  one that changes between images is no longer harmless.
 - **`/etc` and `/var`.**  Which of a package's files outside `/usr` belong
   to its result, and which to the image.  Today a package's `etc/` is
   staged and its `var/` is not; recipes remove the `var/` and `run/` they
-  install, and `init.sh` makes the directories programs keep state in.
+  install, and `init.sh` makes the directories programs keep state in,
+  on a disk's `/var` as on the image's (systemd-tmpfiles will).  `/etc`
+  is the image's and new at every boot, where the goal has it on the
+  root partition: how a package's `etc/` reaches an `/etc` that outlasts
+  an update is open (on x86, a copy in `/usr` and tmpfiles).  sshd's keys
+  are in `/var/lib/sshd` only because `/etc` is not kept.
 - **A package in two parts, for running and for building against.**  An
   image with glibc has its headers and static libraries; one with ncurses
   has its .pc files.  gcc is split by hand (above); the rest are not.
@@ -320,12 +372,16 @@ from DHCP: no init system, no kernel modules, no device manager, no
 login, no CA certificates, no locales or time zones.  Nothing in it
 reads `sysusers.d`: its accounts are made when the image is.  `init.sh`
 starts the system bus and iwd; a Wi-Fi network is joined by hand, with
-`iwctl`, and forgotten at the next boot.
+`iwctl`, and forgotten at the next boot unless there is a bunix-root.
+There is no clean shutdown: turning off writes what is pending to the
+disk and makes it read-only, and nothing is stopped or unmounted.
 
 What is there until systemd is: dhcpcd, whose place systemd-networkd and
 systemd-resolved take (the package, its account and its line in
-`init.sh` go); `init.sh` starting the bus and iwd; and the arguments
-that leave systemd's parts out of dbus and iwd.
+`init.sh` go); `init.sh` starting the bus and iwd; the arguments that
+leave systemd's parts out of dbus and iwd; and `init.sh` finding,
+checking and mounting bunix-root, and copying sshd's keys out of it.
+e2fsprogs and dosfstools stay: systemd-repart runs them.
 
 Its kernel has, built in because nothing loads modules, what an M1
 laptop and a Mac mini need to reach the disk, Ethernet, Wi-Fi, a
