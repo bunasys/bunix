@@ -1,4 +1,5 @@
 unpack $src
+version=$(cat meson.version)
 # Built with meson, with more steps than ../meson.sh has; the arguments
 # for UAPI.9's places are as there.
 #
@@ -6,12 +7,18 @@ unpack $src
 # (auto_features), and what is in use is turned on.  cryptsetup is for
 # dm-verity, which /usr and the extension images are checked with; curl,
 # xz and zlib for what downloads and unpacks an update (importd), and so
-# for sysupdate.  Not yet on, for want of what they are built against,
-# each a step of its own: PAM (logins as sessions), polkit, the TPM,
-# everything of EFI (systemd-boot, the UKI stub, ukify), and seccomp:
-# until that one is, the units of systemd's own services that confine
-# them to the system calls they need confine nothing.
+# for sysupdate.  Of EFI: systemd-boot, which starts the newest kernel on
+# the partition a machine boots from, and can count the boots of one
+# that is new and go back to the one before; the
+# stub a kernel, its command line and what starts it are made one file
+# with (a unified kernel image), and ukify, which makes it.  A Mac has
+# EFI by U-Boot.  Not yet on, for want of what they are built against,
+# each a step of its own: PAM (logins as sessions), polkit, the TPM, and
+# seccomp: until that one is, the units of systemd's own services that
+# confine them to the system calls they need confine nothing.
 #
+# sbat-...: what a UKI and systemd-boot say of themselves to what may one
+#   day revoke them (as the element).
 # split-bin=false: /usr/sbin is /usr/bin here; left to find out, systemd
 #   looks at the machine that builds it.
 # fallback-hostname: the machine's name until /etc has one, which on a
@@ -40,7 +47,9 @@ meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet
     -Dlibcryptsetup=enabled -Dlibcurl=enabled \
     -Dsysupdate=enabled -Dsysupdated=enabled -Dimportd=enabled \
     -Dpam=disabled -Dpolkit=disabled \
-    -Defi=false -Dbootloader=disabled -Dukify=disabled -Dtpm=false -Dtpm2=disabled \
+    -Defi=true -Dbootloader=enabled -Dukify=enabled -Dtpm=false -Dtpm2=disabled \
+    -Dsbat-distro=bunix -Dsbat-distro-summary=bunix -Dsbat-distro-pkgname=systemd \
+    -Dsbat-distro-version=$version -Dsbat-distro-url=https://github.com/bunasys/bunix \
     -Dmachined=false -Dportabled=false -Duserdb=false \
     -Dcoredump=false -Doomd=false -Dhibernate=false \
     -Dutmp=false -Dbinfmt=false -Dfirstboot=false -Drandomseed=false \
@@ -52,6 +61,14 @@ ninja -C build -j$jobs
 DESTDIR=$out ninja -C build install
 # /var is the running system's, not a package's
 rm -rf $out/var
+
+# ukify is Python, and a tool of what builds a unified kernel image, not a
+# program of a running system: among the programs it would make systemd
+# need Python to run.  It is kept beside systemd's own helpers, for
+# `python3 /usr/lib/systemd/ukify` (images/uki.sh).
+# (rm: systemd leaves a link there to where the file was)
+rm -f $out/usr/lib/systemd/ukify
+mv $out/usr/bin/ukify $out/usr/lib/systemd/ukify
 
 # What starts a login prompt on every console: there is no login program
 # for one to run (PAM, above), and on a serial console it would take the

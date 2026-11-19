@@ -4,8 +4,11 @@
 # $system_image is the result of images/system.nix; its usr-partition/ has
 # /usr's image, the hashes of its blocks, the root hash and the version
 # (image.sh).
+# $uki is the result of images/uki.nix: what starts that system.
 # $signature is the signature of that hash (tools/sign.sh), and
 # $certificate the certificate of the key it is to be of.
+# $esp_size: the partition a machine boots from.
+# $usr_slot_size, $usr_verity_size: a /usr slot's two larger partitions.
 set -euo pipefail
 cd /build
 export SOURCE_DATE_EPOCH=1728000000
@@ -13,27 +16,12 @@ export SOURCE_DATE_EPOCH=1728000000
 usr=$system_image/usr-partition
 version=$(cat $usr/version)
 usrhash=$(cat $usr/usrhash)
-# The two partitions are found by ids made of the root hash: its first
-# half is /usr's, its second half the hashes' (the Discoverable Partitions
-# Specification).  With the dashes an id is written with.
-as_id() {
-    echo "${1:0:8}-${1:8:4}-${1:12:4}-${1:16:4}-${1:20:12}"
-}
-usr_id=$(as_id ${usrhash:0:32})
-usr_verity_id=$(as_id ${usrhash:32:32})
 
-mkdir -p disk.d tmp
-# /usr and its hashes: the images, block for block.  The labels carry the
-# version: sysupdate reads what is installed from them.
-printf '%s\n' '[Partition]' 'Type=usr' "CopyBlocks=$usr/usr.raw" \
-    "UUID=$usr_id" "Label=bunix_$version" > disk.d/10-usr.conf
-printf '%s\n' '[Partition]' 'Type=usr-verity' "CopyBlocks=$usr/usr-verity.raw" \
-    "UUID=$usr_verity_id" "Label=bunix_${version}_verity" > disk.d/20-usr-verity.conf
-# The signature of the hash: for what is not told the hash on its command
-# line, and so finds /usr by whose it is.  Checked here, where a wrong one
-# costs a build, and not on a machine: that it is of this hash, and made
-# with the key of this certificate.  (-noverify: the certificate is not
-# asked who vouches for it; it is the one given.)
+# ---- The signature, checked ---------------------------------------------------
+
+# Here, where a wrong one costs a build, and not on a machine: that it is
+# of this hash, and made with the key of this certificate.  (-noverify:
+# the certificate is not asked who vouches for it; it is the one given.)
 if ! grep -a -q "\"rootHash\":\"$usrhash\"" $signature; then
     echo "disk.sh: $signature is not the signature of this system's hash, $usrhash" >&2
     exit 1
@@ -45,29 +33,78 @@ if ! openssl smime -verify -binary -noverify -nointern -inform der -in signature
     echo "disk.sh: $signature was not made with the key of $certificate" >&2
     exit 1
 fi
-# 16K: what systemd gives such a partition, and room for a signature that
-# is longer than this one
-printf '%s\n' '[Partition]' 'Type=usr-verity-sig' "CopyBlocks=$signature" \
-    'SizeMinBytes=16K' "Label=bunix_${version}_verity_sig" > disk.d/30-usr-verity-sig.conf
-# The root partition: /etc, /var, /home.  Empty but for what has to be
-# there before systemd can make the rest: the directories that are mounted
-# on, the links of a UAPI.9 root as image.sh has them (/lib64 only where
-# the loader is asked for there), and the journal's directory, without
-# which the journal stays in memory.  Not /root: systemd makes it, for
-# root alone.  No validatefs: a build cannot store the attribute it marks
-# a file system with.
-links='/bin:usr/bin /sbin:usr/bin /lib:usr/lib'
-case $loader in
-    /lib64/*) links="$links /lib64:usr/lib/$triplet" ;;
-esac
-printf '%s\n' '[Partition]' 'Type=root' 'Format=ext4' 'Label=bunix-root' 'SizeMinBytes=512M' \
-    'AddValidateFS=no' \
-    'MakeDirectories=/usr /etc /var /var/log/journal /home /srv /tmp /proc /sys /dev /run' \
-    "MakeSymlinks=$links" > disk.d/50-root.conf
 
-mkdir -p $out
-# --offline: without the loop devices a build does not have
+# ---- The partition a machine boots from ---------------------------------------
+
+# A newly written disk has no entry in the machine's list of what to
+# start, so the machine starts the file every EFI looks for,
+# EFI/BOOT/BOOT<kind>.EFI: systemd-boot, which starts the newest unified
+# kernel image in EFI/Linux.  x86 has shim there, for Secure Boot, which
+# makes an entry for systemd-boot in a directory of bunix's own; here
+# there is no shim, and a Mac's EFI keeps no entries.  So this is for a
+# partition that is bunix's alone: on one shared, EFI/BOOT is whoever's
+# came first.
+mkdir -p tree/esp/EFI/BOOT tree/esp/EFI/Linux tree/esp/loader
+# systemd-bootaa64.efi -> BOOTAA64.EFI
+systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
+[ -f "$systemd_boot" ]
+kind=$(basename $systemd_boot .efi)
+kind=${kind#systemd-boot}
+cp $systemd_boot tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
+# The menu stays hidden, and lists only bunix: no entries for other
+# systems' loaders (as elements/system/esp.bst).
+printf '%s\n' 'timeout 0' 'console-mode keep' 'auto-entries no' > tree/esp/loader/loader.conf
+cp $uki/*.efi tree/esp/EFI/Linux/
+# the time of each file, which the partition keeps: the build's own would
+# make every disk another
+find tree -exec touch -h -d @$SOURCE_DATE_EPOCH {} +
+
+# ---- The partitions -------------------------------------------------------------
+
+# The two partitions of /usr are found by ids made of the root hash: its
+# first half is /usr's, its second half the hashes' (the Discoverable
+# Partitions Specification).  With the dashes an id is written with.
+as_id() {
+    echo "${1:0:8}-${1:8:4}-${1:12:4}-${1:16:4}-${1:20:12}"
+}
+partition() {
+    local file=$1
+    shift
+    printf '%s\n' '[Partition]' "$@" > disk.d/$file
+}
+mkdir -p disk.d
+partition 00-esp.conf Type=esp Format=vfat CopyFiles=/esp:/ \
+    SizeMinBytes=$esp_size SizeMaxBytes=$esp_size
+# Slot A: this system's images, block for block.  The labels carry the
+# version: sysupdate reads what is installed from them.
+partition 10-usr-a.conf Type=usr Label=bunix_$version \
+    UUID=$(as_id ${usrhash:0:32}) CopyBlocks=$usr/usr.raw ReadOnly=yes \
+    SizeMinBytes=$usr_slot_size SizeMaxBytes=$usr_slot_size
+partition 11-usr-a-verity.conf Type=usr-verity Label=bunix_${version}_verity \
+    UUID=$(as_id ${usrhash:32:32}) CopyBlocks=$usr/usr-verity.raw ReadOnly=yes \
+    SizeMinBytes=$usr_verity_size SizeMaxBytes=$usr_verity_size
+# (the signature's partition is 16K whatever is asked: what systemd gives
+# such a partition)
+partition 12-usr-a-verity-sig.conf Type=usr-verity-sig Label=bunix_${version}_verity_sig \
+    CopyBlocks=$signature ReadOnly=yes
+# Slot B: empty, and labelled so, which is where sysupdate writes the
+# next version.
+partition 20-usr-b.conf Type=usr Label=_empty \
+    SizeMinBytes=$usr_slot_size SizeMaxBytes=$usr_slot_size
+partition 21-usr-b-verity.conf Type=usr-verity Label=_empty \
+    SizeMinBytes=$usr_verity_size SizeMaxBytes=$usr_verity_size
+partition 22-usr-b-verity-sig.conf Type=usr-verity-sig Label=_empty
+
+mkdir -p $out tmp
+# --offline: without the loop devices a build does not have.
+# --sector-size=512: the disk's and its file systems', said: left to
+#   itself repart makes a FAT of 4096-byte sectors on a disk of 512-byte
+#   ones, which Linux reads and other things that start machines do not.
+#   A disk of 4096-byte sectors, as a Mac's, is not written from this
+#   file.
+# --seed: what ids not made of the hash are made of.  Of the version, as
+#   system/usr.bst's: two versions' signature partitions are on one disk.
 TMPDIR=/build/tmp systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
-    --definitions=disk.d --seed=$(printf 'bunix disk' | sha256sum | head -c 32) \
+    --sector-size=512 --definitions=disk.d --copy-source=/build/tree \
+    --seed=$(printf 'bunix disk %s' $version | sha256sum | head -c 32) \
     $out/disk.raw
-cp $usr/usrhash $out/usrhash

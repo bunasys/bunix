@@ -1,3 +1,5 @@
 # Nothing is mounted from here: an image is for any machine.  What a
 # machine's root is, and what else it has of its own, is said on the
-# kernel's command line by what boots it (tools/boot-mac.sh, boot-vm.sh).
+# kernel's command line: by what boots a system in memory
+# (tools/boot-mac.sh, boot-vm.sh), or in the kernel image of a system on
+# a disk (images/uki.nix).

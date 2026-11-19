@@ -219,6 +219,17 @@ let
     script = ./base/ca-certificates.sh;
   };
 
+  # Calls into C whose shape is known only when the program runs: Python's
+  # ctypes is made of it.  --disable-multi-os-directory: otherwise it adds
+  # gcc's own name for the directory to --libdir.
+  libffi = mkSystemPackage {
+    name = "libffi";
+    source = sources.libffi;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    env = { configure_arguments = "--disable-static --disable-docs --disable-multi-os-directory"; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -300,7 +311,7 @@ let
     source = sources.systemd;
     script = ./base/systemd.sh;
     depends = [ glibc libcap libxcrypt util-linux openssl kmod acl zlib tools.xz tools.bash cryptsetup curl ];
-    buildDepends = [ meson ninja gperf pkgconf python-jinja2 ];
+    buildDepends = [ meson ninja gperf pkgconf python-jinja2 python-pyelftools python-ctypes ];
   };
 
   # mkfs.ext4 and e2fsck: the file system of a system's writable
@@ -504,7 +515,7 @@ let
     source = sources.python-markupsafe;
     script = ./base/python-module.sh;
     depends = [ tools.python ];
-    env = { module = "markupsafe"; };
+    env = { module_paths = "src/markupsafe"; };
   };
 
   # Jinja2: the template engine systemd's build generates files with
@@ -513,18 +524,75 @@ let
     source = sources.python-jinja2;
     script = ./base/python-module.sh;
     depends = [ tools.python python-markupsafe ];
-    env = { module = "jinja2"; };
+    env = { module_paths = "src/jinja2"; };
   };
 
-  # Python's zlib module.  The Python that builds run (tools.nix) is built
-  # before any library, and has only the modules that need none; one that
-  # needs a library is a package like this, laid over it.  From Python's
-  # own source.
+  # pyelftools: systemd's build turns the ELF programs of systemd-boot
+  # into EFI ones with it.
+  python-pyelftools = mkSystemPackage {
+    name = "python-pyelftools";
+    source = sources.python-pyelftools;
+    script = ./base/python-module.sh;
+    depends = [ tools.python ];
+    env = { module_paths = "elftools"; };
+  };
+
+  # pefile: ukify puts a unified kernel image together with it.
+  python-pefile = mkSystemPackage {
+    name = "python-pefile";
+    source = sources.python-pefile;
+    script = ./base/python-module.sh;
+    depends = [ tools.python ];
+    env = { module_paths = "pefile.py peutils.py ordlookup"; };
+  };
+
+  # mcopy, which systemd-repart fills a FAT partition with: the one a
+  # machine boots from.
+  mtools = mkSystemPackage {
+    name = "mtools";
+    source = sources.mtools;
+    script = ./autotools.sh;
+    # bash: a few of its programs are scripts.
+    depends = [ glibc tools.bash ];
+    # bzip2: its source is packed with it
+    buildDepends = [ bzip2 ];
+    env = { configure_arguments = "--without-x"; };
+  };
+
+  # Python's modules that need a library.  The Python that builds run
+  # (tools.nix) is built before any library, and has only the modules that
+  # need none; each of the others is a package like these, of Python's own
+  # source, laid over it (base/python-extension.sh).
+
+  # zlib: meson reads gzip when it starts.  HAVE_ZLIB_COPY: without it, no
+  # copy() of a stream.
   python-zlib = mkSystemPackage {
     name = "python-zlib";
     source = sources.python;
-    script = ./base/python-zlib.sh;
+    script = ./base/python-extension.sh;
     depends = [ glibc tools.python zlib ];
+    env = {
+      module = "zlib";
+      c_files = "Modules/zlibmodule.c";
+      flags = "-DHAVE_ZLIB_COPY=1 -lz";
+      try = "import zlib; zlib.decompressobj().copy()";
+    };
+  };
+
+  # ctypes, calls into C from Python: systemd's build makes EFI programs
+  # of systemd-boot's with a script that uses it.  The three HAVE_... are
+  # what libffi has had for years.
+  python-ctypes = mkSystemPackage {
+    name = "python-ctypes";
+    source = sources.python;
+    script = ./base/python-extension.sh;
+    depends = [ glibc tools.python libffi ];
+    env = {
+      module = "_ctypes";
+      c_files = "Modules/_ctypes/_ctypes.c Modules/_ctypes/callbacks.c Modules/_ctypes/callproc.c Modules/_ctypes/stgdict.c Modules/_ctypes/cfield.c";
+      flags = "-DHAVE_FFI_PREP_CIF_VAR=1 -DHAVE_FFI_PREP_CLOSURE_LOC=1 -DHAVE_FFI_CLOSURE_ALLOC=1 -lffi -ldl";
+      try = "import ctypes; ctypes.CDLL(None).getpid()";
+    };
   };
 
   # The build system dbus uses, and systemd will.  It is Python, and ninja
@@ -613,7 +681,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
+  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt libffi attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf python-markupsafe python-jinja2 python-zlib meson cmake llvm bindgen;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-zlib python-ctypes meson cmake llvm bindgen;
 }

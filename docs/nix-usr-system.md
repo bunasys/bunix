@@ -10,8 +10,10 @@ On 2026-11-19 it booted a real Mac, a 13-inch MacBook Pro M1, from
 memory, and was logged into over Wi-Fi.  A machine with a partition
 named bunix-root keeps `/var`, `/home` and `/root` on it; the system
 itself is still booted into memory.  In a virtual machine it also boots
-from a disk, with `/usr` read-only on a partition of its own and checked
-against its hash.
+from a disk, as a machine with EFI starts one: systemd-boot, a unified
+kernel image, `/usr` read-only on a partition of its own and checked
+against its hash, a second slot for an update, and a root partition
+made at the first boot.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -253,10 +255,16 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   the tree it packs for memory, `/usr` as a read-only file system (erofs)
   and the hashes of its blocks (dm-verity), with systemd-repart, and the
   one hash that stands for both.
-- **What starts it.**  `images/initrd.nix`: systemd in memory, which sets
-  up `/usr` from the partitions the kernel's command line names by that
-  hash (`usrhash=`), mounts the root partition (`root=`), and hands over
-  to the systemd in that `/usr`.
+- **What starts it.**  A machine with EFI: a virtual machine's so far;
+  a Mac's is to be U-Boot's, and has started nothing yet.  systemd-boot, on the partition
+  the machine boots from, starts the newest unified kernel image there
+  (`images/uki.nix`): the kernel, `images/initrd.nix`, and a command line
+  with the hash of the one `/usr` that kernel runs (`usrhash=`), as one
+  EFI program.  `images/initrd.nix` is systemd in memory, which sets up
+  `/usr` from the partitions that hash names, makes the root partition
+  if the disk has none, mounts it, by its name, and hands over to the
+  systemd in that `/usr`.  The kernel image has no device tree: a
+  machine that needs one gets it from what started its EFI.
 - **An `/etc` that starts empty.**  What the image has for `/etc` is also
   in `/usr` (`/usr/share/factory/etc`), and systemd-tmpfiles puts in
   `/etc` what is missing, file by file; the certificates as links into
@@ -267,10 +275,17 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   make root unlocked, and the machine has a name built into systemd.
 - **udev told of the device.**  `dm-udev-rules`, the device mapper's own
   rules: without them systemd waits for ever for `/dev/mapper/usr`.
-- **A disk.**  `images/disk.nix`: `/usr`, its hashes and an empty root
-  partition, made by systemd-repart from a description of them, which is
-  what an installer will give it for a real disk.
-
+- **A disk.**  `images/disk.nix`, after x86's: the partition a machine
+  boots from, with systemd-boot and the kernel image; `/usr` slot A, with
+  the system's image, its hashes and the signature; slot B, empty, for
+  the next update; and no root partition, which systemd-repart makes at
+  the first boot in the space that is left
+  (`system/usr/lib/repart.d`).  For a disk that is bunix's alone:
+  systemd-repart knows a root partition by its type, and on a disk
+  shared with another system it would take that system's for this one,
+  and grow whichever it takes into the space beside it.  There, as on
+  the first Mac, what installs bunix has to make every partition itself,
+  the slots first.
 - **The hash signed.**  A third partition beside `/usr` and its hashes:
   the root hash, signed.  The kernel has bunix's certificate built in
   (`keys/verity.crt`) and checks such signatures against it; the system
@@ -279,9 +294,15 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   what no command line names, extensions above all, and is what sysupdate
   puts beside a new `/usr`.
 
-Not there yet: a `/usr` partition of a slot's size (it is as large as
-its image); the second slot, and sysupdate writing into it; extensions;
-an installer; and any of it on a Mac.
+Not there yet: sysupdate writing a new version into the second slot;
+systemd-boot counting a new version's boots and going back when it does
+not come up (nothing names a kernel image as untried, or says a boot
+was good); the kernel image signed (what would check it is Secure Boot,
+which a Mac's EFI does not have, so whoever can write the boot
+partition chooses what runs); extensions; an installer; and any of it
+on a Mac, which needs U-Boot first, and has only been said, not tried:
+that U-Boot's EFI lets systemd-boot rename a file, as counting boots
+needs, and reads a disk of 4096-byte sectors made this way.
 
 ### Who signs
 
@@ -431,14 +452,26 @@ nix/
   base.nix       base/        after elements/base/; the porting rule is at its top
   boot.nix       boot/        the kernel and its device trees; the boot
                               loader of Apple Silicon Macs
-  images/                     image.sh: an image of packages and
-                              configuration.  system.nix system/: the
-                              system, for memory and as /usr's partition.
-                              initrd.nix initrd/: what starts a system
-                              that is on a disk.  disk.{nix,sh}: such a
-                              disk
+  images/                     what is made of packages (below)
   tests/<name>/  run.sh
 files/<package>/              patches, and files a package installs as they are
+```
+
+What `images/` makes, and of what:
+
+```
+system.nix  (image.sh)  ->  initramfs.cpio.gz: the system, for memory
+                            usr-partition/: its /usr as a partition's
+                            images, with usrhash, version, os-release
+initrd.nix  (image.sh)  ->  initramfs.cpio.gz: what starts a system
+                            that is on a disk
+uki.nix     (uki.sh)    <-  boot.linux, initrd.nix, system.nix's hash
+                        ->  bunix_<version>.efi
+disk.nix    (disk.sh)   <-  system.nix's usr-partition/, uki.nix, a
+                            signature (tools/sign.sh; for a test system,
+                            development-signature.sh makes it)
+                        ->  disk.raw
+system/  initrd/            bunix's own configuration of the first two
 ```
 
 What a person runs, on a builder:
@@ -448,7 +481,7 @@ nix-build nix/base.nix -A util-linux     one package
 bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
-tools/boot-vm.sh disk [check]            the same, installed on a disk
+tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```
@@ -488,9 +521,16 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
   been ported.
 - **Python's modules.**  The Python that builds run has only the modules
   that need no library.  zlib's is a package of its own, compiled from
-  Python's source and laid over it (`base/python-zlib.sh`); whether the
-  next ones go the same way, or a system's Python is built whole, is
-  open.
+  Python's source and laid over it (`base/python-extension.sh`), and
+  ctypes after it; whether the next ones go the same way, or a system's
+  Python is built whole, is open.
+
+- **A disk is not the same disk twice.**  `images/disk.nix` built again
+  of the same things differs (`nix-build --check` says so), in the
+  partition a machine boots from: a FAT file system has a serial number
+  and times of its own making.  x86's is the same.  What matters of it
+  is the same: `/usr`'s image and its hash are, and so is the kernel
+  image.
 
 ## What the image that boots lacks
 
@@ -504,7 +544,7 @@ on a disk it is made at the first boot and kept.  A machine told of a partition 
 in memory all the same.
 
 Of systemd, not on yet, each for want of a library: PAM, polkit, the
-TPM, EFI, and seccomp,
+TPM, and seccomp,
 without which systemd's own services are not confined to the system
 calls they need (`base/systemd.sh`).
 

@@ -8,10 +8,12 @@
 #
 #   (neither)   the whole system in memory; root's shell on the console.
 #               `poweroff` ends it, Ctrl-a x leaves at once.
-#   disk        the system installed on a disk (nix/images/disk.nix): /usr
-#               read-only from its partition, checked against its hash,
-#               and a root partition that keeps what is written.  The
-#               disk is a new copy at every run.
+#   disk        the system installed on a disk (nix/images/disk.nix),
+#               started as a machine with EFI starts it: systemd-boot,
+#               the unified kernel image, /usr read-only from its
+#               partition and checked against its hash, and a root
+#               partition, made at the first boot, that keeps what is
+#               written.  The disk is a new copy at every run.
 #   check       boots, asks systemd over SSH whether all of it started,
 #               says so and powers off: for a boot that nobody is
 #               watching.  Fails if a unit failed.
@@ -23,7 +25,8 @@
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT    the Mac's port for it; default 2022
 #
-# Needs: limactl with the bunix-builder VM, and qemu-system-aarch64.
+# Needs: limactl with the bunix-builder VM, and qemu-system-aarch64 with
+# the EFI firmware that comes with it (share/qemu/edk2-aarch64-code.fd).
 set -eu
 
 # nix-build prints the store path of what it built, and nothing else, on
@@ -44,47 +47,36 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-kernel=$(build /bunix/nix/boot.nix -A linux)
-if [ -n "$on_disk" ]; then
-    # what the machine starts from, in memory, and the disk it finds the
-    # rest on
-    image=$(build /bunix/nix/images/initrd.nix)
-    # a disk with no signature given is a test system's (images/disk.nix)
-    if [ -n "${BUNIX_SIGNATURE:-}" ]; then
-        disk=$(build /bunix/nix/images/disk.nix --arg signature "/bunix/$BUNIX_SIGNATURE")
-    else
-        disk=$(build /bunix/nix/images/disk.nix)
-    fi
-else
-    image=$(build /bunix/nix/images/system.nix)
-fi
-# the kernel is in a directory named after its release
-vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
-
 boot=${TMPDIR:-/tmp}/bunix-boot
 mkdir -p "$boot"
 # Not over the copies of the last run: every file of the store has the
 # same date, and a copy is skipped when the date and the size are what
 # they were, as a kernel image's size is from build to build.
-rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz"
-limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
-limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
+rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz" "$boot/disk.raw"
 
-# usrhash=: the one /usr this kernel will run, by the hash of its image;
-#   systemd finds the partitions by it.
-# mount.usrfstype=: said, so that nothing tries to check and repair a file
-#   system that is read-only and checked block by block.
-# root=: the partition that is the root, by its name.
-disk_arguments=
-disk_words=
 if [ -n "$on_disk" ]; then
-    rm -f "$boot/disk.raw"
+    # Small slots: less to copy out of the builder.  A disk with no
+    # signature given is a test system's (images/disk.nix).
+    if [ -n "${BUNIX_SIGNATURE:-}" ]; then
+        disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
+            --argstr usrSlotSize 512M --argstr usrVeritySize 8M \
+            --arg signature "/bunix/$BUNIX_SIGNATURE")
+    else
+        disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
+            --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
+    fi
     limactl copy "bunix-builder:$disk/disk.raw" "$boot/disk.raw"
-    # copied out of the store, where nothing can be written
+    # copied out of the store, where nothing can be written; and with room
+    # after its partitions for the root partition the first boot makes
     chmod u+w "$boot/disk.raw"
-    usrhash=$(limactl shell bunix-builder cat "$disk/usrhash")
-    disk_arguments="-drive file=$boot/disk.raw,format=raw,if=virtio"
-    disk_words="usrhash=$usrhash mount.usrfstype=erofs mount.usrflags=ro root=PARTLABEL=bunix-root rw"
+    truncate -s +2G "$boot/disk.raw"
+else
+    kernel=$(build /bunix/nix/boot.nix -A linux)
+    image=$(build /bunix/nix/images/system.nix)
+    # the kernel is in a directory named after its release
+    vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
+    limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
+    limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
 fi
 
 # A network card behind QEMU's own small network, which gives the guest
@@ -98,24 +90,42 @@ public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
 
 # The key that may log in is this user's, given on the kernel's command
 # line as what systemd calls a credential, which sshd's unit takes
-# (images/system/.../sshd.service).  In base64, since the command line cannot
-# carry the spaces of a key's line.
-authorized_keys=
+# (images/system/.../sshd.service).  In base64: a key's line has spaces.
+key_word=
 if [ -f "$public_key_file" ]; then
-    authorized_keys="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
+    key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
 else
     echo "boot-vm.sh: no public key in $public_key_file; nobody can log in over SSH" >&2
 fi
 
-# -accel hvf: the Mac's hypervisor; the guest runs on the real processor
-# console=ttyAMA0: the kernel's and systemd's messages, and root's shell,
-#   on QEMU's serial port, which -nographic connects to this terminal
-run_qemu() {
+# -accel hvf: the Mac's hypervisor; the guest runs on the real processor.
+# -nographic: the guest's serial port is this terminal.
+qemu() {
     exec qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
-        -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" \
         -netdev user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22 -device virtio-net-pci,netdev=net \
-        $disk_arguments \
-        -append "console=ttyAMA0 $disk_words $authorized_keys $*" -nographic -no-reboot
+        -nographic -no-reboot "$@"
+}
+
+# run_qemu [words for the kernel's command line]
+#
+# console=ttyAMA0: the kernel's and systemd's messages, and root's shell,
+#   on the serial port.
+#
+# In memory, QEMU itself starts the kernel, and gives it its command line.
+# On a disk, QEMU starts EFI firmware (the one that comes with it), which
+# finds systemd-boot on the disk; the command line is in the kernel
+# image, and the words here are added to it the way a machine's firmware
+# hands such things over (SMBIOS).
+run_qemu() {
+    kernel_words="console=ttyAMA0 $key_word $*"
+    if [ -z "$on_disk" ]; then
+        qemu -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" -append "$kernel_words"
+    fi
+    firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+    # QEMU reads a single comma as the end of the value
+    smbios_words=$(printf %s "$kernel_words" | sed 's/,/,,/g')
+    qemu -bios "$firmware" -drive "file=$boot/disk.raw,format=raw,if=virtio" \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 }
 
 if [ -z "$check" ]; then
@@ -123,7 +133,7 @@ if [ -z "$check" ]; then
 fi
 
 # check: the machine runs behind this script, and is asked how it is.
-if [ -z "$authorized_keys" ]; then
+if [ -z "$key_word" ]; then
     echo "boot-vm.sh: check asks over SSH, and has no key to log in with" >&2
     exit 1
 fi

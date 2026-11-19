@@ -187,6 +187,8 @@ rm -f $factory/passwd* $factory/group* $factory/shadow* $factory/gshadow* \
 #   usr-partition/usr.raw, usr-verity.raw    the two partitions' contents
 #   usr-partition/usrhash                    the root hash
 #   usr-partition/version                    what their labels are to say
+#   usr-partition/os-release                 what the system says it is,
+#                                            for what starts it (uki.sh)
 # Only read from the tree: the archive below is the same with or without.
 mkdir -p $out
 if [ -n "${usr_partition:-}" ]; then
@@ -212,6 +214,7 @@ if [ -n "${usr_partition:-}" ]; then
     sed -n 's/.*"roothash":"\([0-9a-f]*\)".*/\1/p' repart.json | head -n 1 > $out/usr-partition/usrhash
     [ -s $out/usr-partition/usrhash ]
     echo $version > $out/usr-partition/version
+    cp $root/usr/lib/os-release $out/usr-partition/os-release
 fi
 
 # ---- The archive -------------------------------------------------------------

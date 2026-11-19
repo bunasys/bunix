@@ -1,8 +1,9 @@
 # What a machine with bunix on its disk starts from: a small system in
 # memory, systemd's own, whose one job is to find the rest.  It sets up
 # /usr from the partitions the kernel's command line names by their hash
-# (usrhash=, dm-verity), mounts the root partition (root=), and hands
-# over to the systemd that is in that /usr.
+# (usrhash=, dm-verity); makes the root partition if the disk has none
+# yet (as that /usr says: system/usr/lib/repart.d), mounts it (root=);
+# and hands over to the systemd in that /usr.
 #
 #   nix-build /bunix/nix/images/initrd.nix     (result: initramfs.cpio.gz)
 #
@@ -23,9 +24,9 @@ stagedBuild {
   name = "bunix-initrd";
   run = ./image.sh;
 
-  # systemd, with udev and what sets up dm-verity; what checks a file
-  # system before it is mounted; and a shell and its tools for a person,
-  # should it stop here.
+  # systemd, with udev and what sets up dm-verity; what makes the root
+  # partition's file system and checks it before it is mounted; and a
+  # shell and its tools for a person, should it stop here.
   contents = [
     base.systemd tools.bash tools.coreutils base.util-linux toolchain.gccLibraries
     base.e2fsprogs base.dm-udev-rules tools.sed tools.grep
