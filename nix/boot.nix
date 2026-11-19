@@ -2,8 +2,9 @@
 #
 #   nix-build /bunix/nix/boot.nix -A linux
 #
-# Built with the system's compiler and tools, without the compiler flags
-# the other groups give every package: the kernel chooses its own.
+# Built with clang (base.nix: llvm) and the system's tools, without the
+# compiler flags the other groups give every package: the kernel chooses
+# its own.
 { system ? builtins.currentSystem }:
 
 let
@@ -17,15 +18,21 @@ let
     inherit (tools) buildEnvironment;
   };
 
+  # Aurora Silicon's kernel (aurorasilicon.org): Linux with the drivers of
+  # Apple Silicon Macs that are not in Linux yet, and their device trees.
+  # The one kernel of bunix: it boots a virtual machine as well.
   linux = mkSystemPackage {
     name = "linux";
     source = sources.linux;
     script = ./boot/linux.sh;
     # glibc: for gen_init_cpio, the one program in it
     depends = [ toolchain.glibc ];
-    # flex and bc for the kernel's own configuration and build tools; perl
-    # because arm64's kernel generates some of its assembly with perl scripts
-    buildDepends = [ base.flex base.bc base.perl ];
+    # llvm: the kernel is built with clang.
+    # rust and bindgen: parts of this kernel are written in Rust.
+    # flex, bc and perl: the kernel's own configuration and build tools.
+    # openssl: asahi.config has the kernel keep a keyring of certificates,
+    # and what puts them into the image is built with OpenSSL.
+    buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ];
     env = { options_directory = ./boot/linux; };
   };
 in

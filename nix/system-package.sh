@@ -14,7 +14,8 @@
 #     $configure_for_usr is the arguments that put an autoconf package where
 #     UAPI.9 has things;
 #   - `unpack <tarball> [directory]` unpacks one, without its top directory;
-#   - make runs in parallel (MAKEFLAGS);
+#   - make runs in parallel (MAKEFLAGS); $jobs is how many to run at once,
+#     for a build tool that is not make;
 #   - SOURCE_DATE_EPOCH is set, for programs that record when they were
 #     built.
 #
@@ -63,22 +64,26 @@ fail() {
 # archive of them (!<arch>): strip also takes other formats it knows and
 # writes them back as it sees fit, and turned a kernel image into something
 # no machine boots.  7 is the length of "!<arch>".
-#
-# Not from a program built elsewhere: it is shipped as the file that was
-# published and pinned.
-find "$out" -type f | while read -r file; do
-    [ -z "$built_elsewhere" ] || break
-    magic=""
-    read -r -N 7 magic < "$file" 2> /dev/null || true
-    case $magic in
-        $'\177ELF'*|'!<arch>')
-            # installed read-only, as some packages do, it could not be
-            # rewritten
-            chmod u+w "$file"
-            strip --strip-debug "$file"
-            ;;
-    esac
-done
+strip_debugging_information() {
+    local file magic
+    find "$out" -type f | while read -r file; do
+        magic=""
+        read -r -N 7 magic < "$file" 2> /dev/null || true
+        case $magic in
+            $'\177ELF'*|'!<arch>')
+                # installed read-only, as some packages do, it could not be
+                # rewritten
+                chmod u+w "$file"
+                strip --strip-debug "$file"
+                ;;
+        esac
+    done
+}
+# A program built elsewhere is shipped as the file that was published and
+# pinned.
+if [ -z "$built_elsewhere" ]; then
+    strip_debugging_information
+fi
 
 # .la files record the build directory and the paths of build-time
 # libraries, which only mislead later builds.
@@ -94,7 +99,7 @@ find "$out" -name '*.la' -delete
 # asked of it is that it starts here: that it asks for this system's
 # loader.
 if [ -n "$built_elsewhere" ]; then
-    with_another_loader=$(find "$out/usr/bin" -type f | while read -r program; do
+    with_another_loader=$(find "$out" -type f -perm -u+x | while read -r program; do
         asks_for=$(readelf -l "$program" 2> /dev/null | sed -n 's/.*program interpreter: \(.*\)\]/\1/p')
         [ -z "$asks_for" ] || [ "$asks_for" = "$loader" ] || echo "$program asks for the loader $asks_for"
     done)

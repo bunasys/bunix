@@ -75,9 +75,9 @@
     "sha256": "9aa0cc780dec156b8282844833b342ab7cb08c25d2cd9a1869cdd0df31deff48"
   },
   "linux": {
-    "version": "6.18.52",
-    "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.52.tar.xz",
-    "sha256": "2b69564f7d4fea0c859b1959ba33709ee6e9139bd100e30a853b57159a8221b8"
+    "version": "7.3.0-aurora-9125b31",
+    "url": "https://codeload.github.com/aurora-silicon/linux/tar.gz/9125b31475836ce0a6634df45b539c6d604f36a5",
+    "sha256": "9a3969b52c6f41017b36e8bc805b63b0215fddf31b91fc5d45dd7854ab3c4f7b"
   },
   "m4": {
     "version": "1.4.21",
@@ -193,5 +193,65 @@
     "version": "0.1.0-preview.21",
     "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-amd64.tar.gz",
     "sha256": "41988e86e87e8b0b47c8bca7652d9959178360f7789785232090784e38e23cb5"
+  },
+  "ninja": {
+    "version": "1.13.2",
+    "url": "https://github.com/ninja-build/ninja/archive/v1.13.2.tar.gz",
+    "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17"
+  },
+  "cmake": {
+    "version": "4.4.5",
+    "url": "https://github.com/Kitware/CMake/releases/download/v4.4.5/cmake-4.4.5.tar.gz",
+    "sha256": "a0c54c88abb8078dd8eccadb717fc6bb194bf18e7d44c86309910288886e04e2"
+  },
+  "zstd": {
+    "version": "1.5.7",
+    "url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+    "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+  },
+  "llvm": {
+    "version": "23.1.5",
+    "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.5/llvm-project-23.1.5.src.tar.xz",
+    "sha256": "fb50b1eac93ddeb3aa8dab4cfe324dff74f4a9c2bdee6160c9e36188f8d06a6e"
+  },
+  "rustc-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustc-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "acdcdfe09ae1f103aa9a2b7f88903a9588bc2e99288af10e6fbf5514e2e49f25"
+  },
+  "rustc-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustc-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "2ff05ff9c08a90861e7f6e4065b40a8b87463b4576186fd613871c3e37f2091f"
+  },
+  "rust-std-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "e25668477083d6a9ddb87b9beb9c00742225f38233ccb4bfba3afa7a07427f52"
+  },
+  "rust-std-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "109b074225bf5b9ea3820890876bfdf4ed161adbfaf94b2b4b5984c85ee5d958"
+  },
+  "cargo-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/cargo-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "5156832e0c1254e9b49a79edabdc6d4c35f32f8fc1cf3ca700f268ff96087ab0"
+  },
+  "cargo-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/cargo-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "53f3521949404d595efb06a55c12c5658d4ed1c75566f33d3d514eaebe70bd8a"
+  },
+  "rust-src": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-src-1.99.1.tar.xz",
+    "sha256": "e485a88c45db546b73571df7bebfcb4454ba4fb552c492e25fc5b00eeb5bf22d"
+  },
+  "bindgen": {
+    "version": "0.73.2",
+    "url": "https://static.crates.io/crates/bindgen-cli/bindgen-cli-0.73.2.crate",
+    "sha256": "5622e043625b6d1f32c84f53699690a44d1419e657879de26eb252699f5ebb7c"
   }
 }

@@ -1,7 +1,9 @@
 # The system out of Nix: /usr, and no store
 
-Status: 2026-11-18.  All six steps of the order of work are done: a
-system with no `/nix` boots, and the store-layout system is gone.
+Status: 2026-11-19.  All six steps of the order of work are done: a
+system with no `/nix` boots, and the store-layout system is gone.  Since
+then: a network, SSH and Rex in the image; clang and Rust as packages; and
+one kernel, Aurora Silicon's, built with them.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -52,6 +54,10 @@ tools have them; the packages after do not, and their authors never
 meet the idea.  Those are built with `buildEnvironment`: the system's
 compiler and tools, as BuildStream's elements are with
 `bootstrap/build-env.bst`.
+
+The compiler of those packages is gcc.  The kernel is the first thing
+built with clang (below); the direction is clang for everything but
+glibc, a group of packages at a time.
 
 The tools are GNU's, and an image ships the same ones: GNU coreutils in
 place of uutils', and no BusyBox.  What BusyBox supplied (grep, sed, awk,
@@ -118,6 +124,30 @@ and may name its builder's store as text.  It is still checked for what
 makes it start here: this system's loader, and libraries among its
 `depends`.
 
+Rust is the other one: rustc, cargo, the standard library and its source,
+as the Rust project publishes them, each archive pinned.  They are in
+`/usr/lib/rust`, where rustc finds its libraries beside itself, with
+links in `/usr/bin`.  `elements/bootstrap/rust.bst` builds Rust from
+source with such a download as its seed; that is not ported.
+
+## clang, and the kernel
+
+LLVM, clang and lld are one package, `llvm`, built from source by gcc.
+bindgen is built by cargo from its crates, each pinned
+(`base/bindgen-crates.json`), with no network.
+
+There is one kernel: Aurora Silicon's, which is Linux with the drivers
+and device trees of Apple Silicon Macs.  It is built with clang and
+LLVM's linker (`LLVM=1`), with its Rust drivers, on top of the source's
+own `asahi.config`; `boot/linux/aarch64.config` has what bunix adds, each
+line with its reason, and the build fails if one of them is not in the
+final configuration.  The same image boots a virtual machine.
+
+bindgen is the released 0.73.2.  Aurora's source has two patches for it
+(`tools/aurora-bindgen/`), for C layouts it gets wrong; the kernel's
+build checks the layout of everything bindgen generated, and passes
+without them for this configuration.
+
 ## Dependencies are declared
 
 Nix learns what a bootstrap package needs at run time by finding store
@@ -169,6 +199,7 @@ an image with glibc has its headers and static libraries too.
 ```
 nix/
   fetch.nix  sources.json     a pinned download; every source, as data
+                              (but bindgen's crates: base/bindgen-crates.json)
   architecture.nix            the library directory's name and the loader's path
   bootstrap/                  the store: seed.nix sh.nix package.{nix,sh}
                               stage1.nix stage1/ stage2.nix stage2/
@@ -178,7 +209,7 @@ nix/
   toolchain.nix  toolchain/   glibc, binutils, gcc
   tools.nix      tools/       what a build runs
   base.nix       base/        after elements/base/; the porting rule is at its top
-  boot.nix       boot/        the kernel
+  boot.nix       boot/        the kernel and its device trees
   images/                     initramfs.{nix,sh}, init.sh
   tests/<name>/  run.sh
 ```
@@ -219,9 +250,13 @@ It is a shell on a console and, given a key, over SSH, with an address
 from DHCP: no init system, no kernel modules, no device manager, no
 login, no CA certificates, no locales or time zones.  Its accounts are
 written in `images/initramfs.sh`, not taken from the packages that need
-them.  Its kernel is mainline's arm64
-default with 16K pages: it has almost none of Apple Silicon's drivers and
-installs no device trees, so it boots a virtual machine and not a Mac.
+them.
+
+Its kernel has what a Mac mini needs to reach its disk, Ethernet, a USB-C
+keyboard and a display on USB-C built in, and installs Apple's device
+trees.  None of that has run on a Mac yet: it has booted a virtual
+machine only.  The USB-A ports need firmware the image does not have.
+There is no kernel configuration for x86_64 yet.
 
 ## Order of work
 

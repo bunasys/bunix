@@ -1,6 +1,6 @@
 # Packages of a bunix system, after elements/base/: each is built with the
 # system's own compiler and tools (tools.nix), and nothing of the bootstrap.
-# The exceptions are at the end, under "Programs built elsewhere".
+# The exceptions are under "Programs built elsewhere".
 #
 #   nix-build /bunix/nix/base.nix -A util-linux
 #
@@ -23,6 +23,7 @@ let
   toolchain = import ./toolchain.nix { inherit system; };
   tools = import ./tools.nix { inherit system; };
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
+  fetch = import ./fetch.nix;
   inherit (toolchain) glibc;
   inherit (tools) ncurses;
 
@@ -91,6 +92,15 @@ let
     env = { configure_arguments = "--disable-static"; };
   };
 
+  # Zstandard compression: the zstd command and libzstd.  zstdgrep and
+  # zstdless are shell scripts.
+  zstd = mkSystemPackage {
+    name = "zstd";
+    source = sources.zstd;
+    script = ./base/zstd.sh;
+    depends = [ glibc tools.bash ];
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -148,6 +158,27 @@ let
     builtElsewhere = true;
   };
 
+  # Rust: rustc, its standard library, cargo, and the standard library's
+  # source, which the kernel compiles for itself; four archives of one
+  # version (sources.json).  As the Rust project publishes them, in
+  # /usr/lib/rust, where rustc finds its own
+  # libraries beside itself; elements/bootstrap/rust.bst builds the same
+  # version from source, with this as its seed.
+  rust = mkSystemPackage {
+    name = "rust";
+    source = sources."rustc-${system}";
+    script = ./base/rust.sh;
+    # gcc: rustc links what it compiles with it.  zlib: the LLVM inside
+    # rustc reads compressed sections with it.
+    depends = [ glibc toolchain.gccLibraries toolchain.gcc zlib ];
+    builtElsewhere = true;
+    env = {
+      rust_std = fetch sources."rust-std-${system}";
+      cargo = fetch sources."cargo-${system}";
+      rust_src = fetch sources.rust-src;
+    };
+  };
+
   # ---- Build tools -----------------------------------------------------------
 
   # pkg-config: tells a build the flags to compile and link against a
@@ -157,6 +188,56 @@ let
     source = sources.pkgconf;
     script = ./base/pkgconf.sh;
     depends = [ glibc ];
+  };
+
+  # The build tool CMake generates for
+  ninja = mkSystemPackage {
+    name = "ninja";
+    source = sources.ninja;
+    script = ./base/ninja.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+  };
+
+  # The build system LLVM uses
+  cmake = mkSystemPackage {
+    name = "cmake";
+    source = sources.cmake;
+    script = ./base/cmake.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+  };
+
+  # LLVM, clang and lld: the compiler and linker the kernel is built with,
+  # on both architectures, and the libclang that bindgen reads C headers
+  # with.  Its major version is that of the LLVM inside the Rust compiler,
+  # as the kernel's build expects.  clang takes the C library, the
+  # start-up files and libgcc from where gcc has them; a build that links
+  # programs with it has gcc too.
+  llvm = mkSystemPackage {
+    name = "llvm";
+    source = sources.llvm;
+    script = ./base/llvm.sh;
+    depends = [ glibc toolchain.gccLibraries zlib zstd ];
+    buildDepends = [ cmake ninja ];
+  };
+
+  # Makes Rust declarations from C headers; the kernel's Rust code calls
+  # its C code through them.  It reads the headers with LLVM's libclang,
+  # which it loads when it runs.
+  bindgen = mkSystemPackage {
+    name = "bindgen";
+    source = sources.bindgen;
+    script = ./base/bindgen.sh;
+    depends = [ glibc toolchain.gccLibraries llvm ];
+    buildDepends = [ rust ];
+    env = {
+      # The crates bindgen is made of, each pinned; cargo downloads
+      # nothing in a build.  The list is bindgen's Cargo.lock, as the
+      # `cargo` source of elements/base/bindgen.bst has it.
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./base/bindgen-crates.json));
+    };
   };
 
   # Generates scanners; the kernel's configuration tool is built with one.
@@ -188,7 +269,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 openssl libmnl;
-  inherit util-linux iproute2 dhcpcd openssh rex;
-  inherit pkgconf flex bc perl;
+  inherit readline zlib bzip2 zstd openssl libmnl;
+  inherit util-linux iproute2 dhcpcd openssh rex rust;
+  inherit pkgconf flex bc perl ninja cmake llvm bindgen;
 }
