@@ -3,8 +3,8 @@
 Status: 2026-11-19.  All six steps of the order of work are done: a
 system with no `/nix` boots, and the store-layout system is gone.  Since
 then: a network, SSH and Rex in the image; clang and Rust as packages;
-one kernel, Aurora Silicon's, built with them; and Wi-Fi (iwd, with the
-system bus it needs).
+one kernel, Aurora Silicon's, built with them; Wi-Fi (iwd, with the
+system bus it needs); and Aurora's boot loader for Apple Silicon Macs.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -151,6 +151,14 @@ own `asahi.config`; `boot/linux/aarch64.config` has what bunix adds, each
 line with its reason, and the build fails if one of them is not in the
 final configuration.  The same image boots a virtual machine.
 
+Aura, Aurora's boot loader (from m1n1), is a package too (`boot.nix`):
+built by clang and LLVM's linker, its Rust part by cargo with no network,
+from the crates of `boot/aura-crates.json` and one from a repository at a
+pinned commit, against Rust's libraries for a machine with no operating
+system (`rust-std-aarch64-none`).  It installs three images in
+`/usr/lib/aura`: Stage 1 with no configuration, which waits for a
+computer on USB.  Nothing puts it on a Mac or in an image yet.
+
 bindgen is 0.73.2 with the two patches of Aurora's source
 (`tools/aurora-bindgen/`, here in `files/bindgen/`), for C layouts the
 released one gets wrong.  The kernel's build also checks the layout of
@@ -207,7 +215,8 @@ an image with glibc has its headers and static libraries too.
 ```
 nix/
   fetch.nix  sources.json     a pinned download; every source, as data
-                              (but bindgen's crates: base/bindgen-crates.json)
+                              (but crates: base/bindgen-crates.json,
+                              boot/aura-crates.json)
   architecture.nix            the library directory's name and the loader's path
   bootstrap/                  the store: seed.nix sh.nix package.{nix,sh}
                               stage1.nix stage1/ stage2.nix stage2/
@@ -217,7 +226,8 @@ nix/
   toolchain.nix  toolchain/   glibc, binutils, gcc
   tools.nix      tools/       what a build runs
   base.nix       base/        after elements/base/; the porting rule is at its top
-  boot.nix       boot/        the kernel and its device trees
+  boot.nix       boot/        the kernel and its device trees; the boot
+                              loader of Apple Silicon Macs
   images/                     initramfs.{nix,sh}, init.sh
   tests/<name>/  run.sh
 files/<package>/              patches, and files a package installs as they are
@@ -260,8 +270,12 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
   The claim is "nearly all" until many more have been ported.
 - **meson.**  dbus is the one package built with it, and has the
   arguments for UAPI.9's places in its own script; a second one moves
-  them where `$configure_for_usr` is.  The Python that builds run has no
-  zlib, which meson is patched around (`base/meson.sh`).
+  them where `$configure_for_usr` is.
+- **Python's modules.**  The Python that builds run has only the modules
+  that need no library.  zlib's is a package of its own, compiled from
+  Python's source and laid over it (`base/python-zlib.sh`); whether the
+  next ones go the same way, or a system's Python is built whole, is
+  open.
 
 ## What the image that boots lacks
 

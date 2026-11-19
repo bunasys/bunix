@@ -264,6 +264,21 @@
     "url": "https://static.crates.io/crates/bindgen-cli/bindgen-cli-0.73.2.crate",
     "sha256": "5622e043625b6d1f32c84f53699690a44d1419e657879de26eb252699f5ebb7c"
   },
+  "rust-std-aarch64-none": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-aarch64-unknown-none-softfloat.tar.xz",
+    "sha256": "6ff3ecba5ae285c5286ad6f5024994d818cee569c59d980aa2edc9e5fa3bcd4e"
+  },
+  "aura": {
+    "version": "1.0.0b13.1",
+    "url": "https://codeload.github.com/aurora-silicon/aura/tar.gz/5dcf62d0bf28e42c0e3f4ece44908643ffd40837",
+    "sha256": "a9a8c81ac7631931688adffbb6c2899ffaf28ef5b1a807e78a9f87dbb46c505d"
+  },
+  "aura-fatfs": {
+    "version": "7d505fb",
+    "url": "https://codeload.github.com/aurora-silicon/fatfs/tar.gz/7d505fbfa37a945af5549517f47c1d2e87a8333e",
+    "sha256": "b6fd473d43aa9a62f04c3c4560ae75c42ab86906ad833b439077eb5f80d1a5e2"
+  },
   "expat": {
     "version": "2.9.0",
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",

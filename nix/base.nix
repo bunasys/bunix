@@ -222,6 +222,19 @@ let
     };
   };
 
+  # Rust's core libraries for a 64-bit Arm processor with no operating
+  # system under the program, and no use of its floating-point registers
+  # (the softfloat target): what a boot loader is compiled against
+  # (boot.nix).  The same archive whatever the builder is, of rust's
+  # version; it adds a directory to rust's.
+  rust-std-aarch64-none = mkSystemPackage {
+    name = "rust-std-aarch64-none";
+    source = sources.rust-std-aarch64-none;
+    script = ./base/rust-std-aarch64-none.sh;
+    depends = [ rust ];
+    builtElsewhere = true;
+  };
+
   # ---- Build tools -----------------------------------------------------------
 
   # pkg-config: tells a build the flags to compile and link against a
@@ -241,13 +254,24 @@ let
     depends = [ glibc toolchain.gccLibraries ];
   };
 
+  # Python's zlib module.  The Python that builds run (tools.nix) is built
+  # before any library, and has only the modules that need none; one that
+  # needs a library is a package like this, laid over it.  From Python's
+  # own source.
+  python-zlib = mkSystemPackage {
+    name = "python-zlib";
+    source = sources.python;
+    script = ./base/python-zlib.sh;
+    depends = [ glibc tools.python zlib ];
+  };
+
   # The build system dbus uses, and systemd will.  It is Python, and ninja
-  # does the building.
+  # does the building.  python-zlib: it reads gzip when it starts.
   meson = mkSystemPackage {
     name = "meson";
     source = sources.meson;
     script = ./base/meson.sh;
-    depends = [ tools.python ninja ];
+    depends = [ tools.python python-zlib ninja ];
   };
 
   # The build system LLVM uses
@@ -328,6 +352,6 @@ let
 in
 {
   inherit readline zlib bzip2 zstd openssl libmnl expat;
-  inherit util-linux iproute2 dhcpcd openssh dbus iwd wireless-regdb rex rust;
-  inherit pkgconf flex bc perl ninja meson cmake llvm bindgen;
+  inherit util-linux iproute2 dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit pkgconf flex bc perl ninja python-zlib meson cmake llvm bindgen;
 }

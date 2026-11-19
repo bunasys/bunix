@@ -1,10 +1,11 @@
-# What makes a bunix system boot, after elements/system/: the kernel.
+# What makes a bunix system boot, after elements/system/: the kernel, and
+# the boot loader of Apple Silicon Macs.
 #
 #   nix-build /bunix/nix/boot.nix -A linux
 #
 # Built with clang (base.nix: llvm) and the system's tools, without the
-# compiler flags the other groups give every package: the kernel chooses
-# its own.
+# compiler flags the other groups give every package: the kernel and the
+# boot loader choose their own.
 { system ? builtins.currentSystem }:
 
 let
@@ -12,6 +13,7 @@ let
   tools = import ./tools.nix { inherit system; };
   base = import ./base.nix { inherit system; };
   sources = builtins.fromJSON (builtins.readFile ./sources.json);
+  fetch = import ./fetch.nix;
 
   mkSystemPackage = import ./system-package.nix {
     inherit system;
@@ -35,7 +37,35 @@ let
     buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ];
     env = { options_directory = ./boot/linux; };
   };
+
+  # Aura, Aurora Silicon's boot loader for Apple Silicon Macs (from m1n1):
+  # what the Mac's own firmware starts, and what starts the kernel with
+  # the device tree of the machine.  At the version Aurora's own systems
+  # pin.  It runs on the bare machine and needs nothing of the system.
+  aura = mkSystemPackage {
+    name = "aura";
+    source = sources.aura;
+    script = ./boot/aura.sh;
+    # llvm: built with clang and LLVM's linker.  rust: part of it is Rust,
+    # compiled for a machine with no operating system.  python-zlib: its
+    # build's own tools are Python, and one of them compresses.
+    buildDepends = [ base.llvm base.rust base.rust-std-aarch64-none base.python-zlib ];
+    env = {
+      # The crates its Rust part is made of, each pinned; cargo downloads
+      # nothing in a build.  The list is rust/Cargo.lock of the source.
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./boot/aura-crates.json));
+      # the one crate that Cargo.lock takes from a repository
+      fatfs = fetch sources.aura-fatfs;
+      # Each commit is the last part of its source's address: aura labels
+      # itself with its own, and cargo is told the crate's.
+      aura_commit = baseNameOf sources.aura.url;
+      fatfs_commit = baseNameOf sources.aura-fatfs.url;
+    };
+  };
 in
 {
-  inherit linux;
+  inherit linux aura;
 }
