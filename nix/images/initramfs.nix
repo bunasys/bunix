@@ -30,6 +30,8 @@ stagedBuild {
     tools.sed tools.grep tools.gawk tools.findutils tools.diffutils tools.tar tools.gzip
     # the network, and a way in over it
     base.iproute2 base.dhcpcd base.openssh base.rex
+    # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)
+    base.iwd base.wireless-regdb
   ];
 
   # What packs it.  gen_init_cpio comes with the kernel.

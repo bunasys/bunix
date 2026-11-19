@@ -101,6 +101,15 @@ let
     depends = [ glibc tools.bash ];
   };
 
+  # The XML parser dbus-daemon reads its policy files with
+  expat = mkSystemPackage {
+    name = "expat";
+    source = sources.expat;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    env = { configure_arguments = "--disable-static --without-docbook --without-examples --without-tests"; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -141,6 +150,36 @@ let
     script = ./base/openssh.sh;
     depends = [ glibc openssl zlib ];
     env = { sshd_config = ../files/rootfs/etc/ssh/sshd_config; };
+  };
+
+  # D-Bus, the system bus: iwd is spoken to over it, and does not start
+  # without it.  Without the parts for systemd, which is not here yet.
+  dbus = mkSystemPackage {
+    name = "dbus";
+    source = sources.dbus;
+    script = ./base/dbus.sh;
+    depends = [ glibc expat ];
+    buildDepends = [ meson ninja pkgconf ];
+  };
+
+  # iwd, the wireless daemon: scans, authenticates and keeps the link up,
+  # and leaves addresses to whatever hands them out.  iwctl is its client.
+  # The chip's firmware is not a package (boot/linux/aarch64.config).
+  iwd = mkSystemPackage {
+    name = "iwd";
+    source = sources.iwd;
+    script = ./base/iwd.sh;
+    depends = [ glibc readline ncurses dbus ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # The wireless regulatory database: which channels and transmit powers
+  # are legal where.  The kernel loads it as it loads firmware, and checks
+  # its signature against keys built into it.
+  wireless-regdb = mkSystemPackage {
+    name = "wireless-regdb";
+    source = sources.wireless-regdb;
+    script = ./base/wireless-regdb.sh;
   };
 
   # ---- Programs built elsewhere ----------------------------------------------
@@ -200,6 +239,15 @@ let
     source = sources.ninja;
     script = ./base/ninja.sh;
     depends = [ glibc toolchain.gccLibraries ];
+  };
+
+  # The build system dbus uses, and systemd will.  It is Python, and ninja
+  # does the building.
+  meson = mkSystemPackage {
+    name = "meson";
+    source = sources.meson;
+    script = ./base/meson.sh;
+    depends = [ tools.python ninja ];
   };
 
   # The build system LLVM uses
@@ -279,7 +327,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl;
-  inherit util-linux iproute2 dhcpcd openssh rex rust;
-  inherit pkgconf flex bc perl ninja cmake llvm bindgen;
+  inherit readline zlib bzip2 zstd openssl libmnl expat;
+  inherit util-linux iproute2 dhcpcd openssh dbus iwd wireless-regdb rex rust;
+  inherit pkgconf flex bc perl ninja meson cmake llvm bindgen;
 }

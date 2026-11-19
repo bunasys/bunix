@@ -263,5 +263,30 @@
     "version": "0.73.2",
     "url": "https://static.crates.io/crates/bindgen-cli/bindgen-cli-0.73.2.crate",
     "sha256": "5622e043625b6d1f32c84f53699690a44d1419e657879de26eb252699f5ebb7c"
+  },
+  "expat": {
+    "version": "2.9.0",
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
+    "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051"
+  },
+  "meson": {
+    "version": "1.12.1",
+    "url": "https://github.com/mesonbuild/meson/releases/download/1.12.1/meson-1.12.1.tar.gz",
+    "sha256": "ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743"
+  },
+  "dbus": {
+    "version": "1.16.4",
+    "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.4.tar.xz",
+    "sha256": "d08b05526c2cb7966a5fb79210d6112b1aca3d135f315c1b302e14b4b0297dac"
+  },
+  "iwd": {
+    "version": "3.12",
+    "url": "https://cdn.kernel.org/pub/linux/network/wireless/iwd-3.12.tar.xz",
+    "sha256": "d89a5e45c7180170e19be828f9e944a768c593758094fc57a358d0e7c4cb1a49"
+  },
+  "wireless-regdb": {
+    "version": "2026.09.03",
+    "url": "https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2026.09.03.tar.xz",
+    "sha256": "b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d"
   }
 }

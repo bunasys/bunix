@@ -54,9 +54,31 @@ start_sshd() {
     /usr/bin/sshd
 }
 
+# Wi-Fi: iwd, and the bus it is spoken to over.  It joins a network when
+# told to (`iwctl station wlan0 connect <name>`), and dhcpcd then asks that
+# network for an address as it does any other.
+start_wifi() {
+    mkdir -p /run/dbus /var/lib/dbus /var/lib/iwd
+    # the bus wants the machine to have an identity
+    dbus-uuidgen --ensure || return 1
+    # --nosyslog: nothing here reads the system's log; what the bus has to
+    # say goes to the console
+    dbus-daemon --system --nosyslog || return 1
+    # By its full path: it is not among the programs of /usr/bin.  It does
+    # not leave the foreground by itself, and would write over the console.
+    /usr/lib/iwd/iwd > /run/iwd.log 2>&1 &
+    # it gives up at once if the kernel lacks something it needs
+    sleep 1
+    kill -0 $!
+}
+
 # ---- The network, and a way in over it -------------------------------------
 
 ip link set lo up
+
+wifi_state="FAILED to start; iwd's log is /run/iwd.log"
+! start_wifi || wifi_state="iwd is running; join a network with iwctl"
+
 # where dhcpcd keeps the addresses it was given
 mkdir -p /var/lib/dhcpcd
 # -b: do not wait for an address before going on; -q: say only what fails
@@ -75,6 +97,7 @@ echo "page size:  $(getconf PAGESIZE)"
 echo "init:       pid $$, bash $BASH_VERSION"
 echo "root:       $(echo /*)"
 echo "sshd:       $sshd_state"
+echo "wifi:       $wifi_state"
 
 [ -z "$demo" ] || power_off
 

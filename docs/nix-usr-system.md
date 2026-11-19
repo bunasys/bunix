@@ -2,8 +2,9 @@
 
 Status: 2026-11-19.  All six steps of the order of work are done: a
 system with no `/nix` boots, and the store-layout system is gone.  Since
-then: a network, SSH and Rex in the image; clang and Rust as packages; and
-one kernel, Aurora Silicon's, built with them.
+then: a network, SSH and Rex in the image; clang and Rust as packages;
+one kernel, Aurora Silicon's, built with them; and Wi-Fi (iwd, with the
+system bus it needs).
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -240,7 +241,8 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
   will need it too.
 - **`/etc` and `/var`.**  Which of a package's files outside `/usr` belong
   to its result, and which to the image.  Today a package's `etc/` is
-  staged and its `var/` is not.
+  staged and its `var/` is not; recipes remove the `var/` and `run/` they
+  install, and `init.sh` makes the directories programs keep state in.
 - **A package in two parts, for running and for building against.**  An
   image with glibc has its headers and static libraries; one with ncurses
   has its .pc files.  gcc is split by hand (above); the rest are not.
@@ -253,21 +255,39 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
 - **Locales and time zones.**  glibc has none compiled: only the C locale
   works, and no zone can be named.
 - **How many recipes port unchanged.**  Of the first seven from
-  `elements/base/`, six did; util-linux needed one argument.  The claim
-  is "nearly all" until many more have been ported.
+  `elements/base/`, six did; util-linux needed one argument.  Those that
+  have parts for systemd (dbus, iwd) are ported with them off for now.
+  The claim is "nearly all" until many more have been ported.
+- **meson.**  dbus is the one package built with it, and has the
+  arguments for UAPI.9's places in its own script; a second one moves
+  them where `$configure_for_usr` is.  The Python that builds run has no
+  zlib, which meson is patched around (`base/meson.sh`).
 
 ## What the image that boots lacks
 
 It is a shell on a console and, given a key, over SSH, with an address
 from DHCP: no init system, no kernel modules, no device manager, no
 login, no CA certificates, no locales or time zones.  Nothing in it
-reads `sysusers.d`: its accounts are made when the image is.
+reads `sysusers.d`: its accounts are made when the image is.  `init.sh`
+starts the system bus and iwd; a Wi-Fi network is joined by hand, with
+`iwctl`, and forgotten at the next boot.
 
-Its kernel has what a Mac mini needs to reach its disk, Ethernet, a USB-C
-keyboard and a display on USB-C built in, and installs Apple's device
-trees.  None of that has run on a Mac yet: it has booted a virtual
-machine only.  The USB-A ports need firmware the image does not have.
-There is no kernel configuration for x86_64 yet.
+What is there until systemd is: dhcpcd, whose place systemd-networkd and
+systemd-resolved take (the package, its account and its line in
+`init.sh` go); `init.sh` starting the bus and iwd; and the arguments
+that leave systemd's parts out of dbus and iwd.
+
+Its kernel has, built in because nothing loads modules, what an M1
+laptop and a Mac mini need to reach the disk, Ethernet, Wi-Fi, a
+keyboard (USB, and the M1 laptops' own), a display on USB-C, and a
+network over a USB cable to another computer; and it installs Apple's
+device trees.  None of that has run on a Mac yet: it has booted a
+virtual machine only.  There is no kernel configuration for x86_64 yet.
+
+Firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
+each Mac's own macOS, and is added to the image when that Mac is booted
+(`boot/linux/aarch64.config`); the USB-A ports of a Mac mini need
+firmware too, and have none.  The regulatory database is a package.
 
 ## Order of work
 

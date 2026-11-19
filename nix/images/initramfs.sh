@@ -124,6 +124,10 @@ printf '%s\n' /dev /proc /sys /tmp /run /root /home /etc /usr \
         /lib64/*) echo "slink /lib64 usr/lib/$triplet 777 0 0" ;;
     esac
 
+    # where /run was before there was one: iwd looks for the bus in
+    # /var/run/dbus, and cannot be told otherwise
+    echo "slink /var/run ../run 777 0 0"
+
     echo "file /init $init 755 0 0"
     for file in $system_files; do
         echo "file /etc/$file /build/$file 644 0 0"
