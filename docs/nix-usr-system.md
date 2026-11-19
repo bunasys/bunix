@@ -271,17 +271,69 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   partition, made by systemd-repart from a description of them, which is
   what an installer will give it for a real disk.
 
-Not there yet: the hash signed (x86 has a third partition for the
-signature; here there is no key, and the hash on the kernel's command
-line is trusted as the command line is); a `/usr` partition of a slot's
-size (it is as large as its image); the second slot, and sysupdate
-writing into it; extensions; an installer; and any of it on a Mac.
+- **The hash signed.**  A third partition beside `/usr` and its hashes:
+  the root hash, signed.  The kernel has bunix's certificate built in
+  (`keys/verity.crt`) and checks such signatures against it; the system
+  has the certificates it takes in `/usr/lib/verity.d`.  `/usr` itself is
+  held by the hash on the kernel's command line; the signature is for
+  what no command line names, extensions above all, and is what sysupdate
+  puts beside a new `/usr`.
+
+Not there yet: a `/usr` partition of a slot's size (it is as large as
+its image); the second slot, and sysupdate writing into it; extensions;
+an installer; and any of it on a Mac.
+
+### Who signs
+
+A key that is secret is no build's to read: what a build reads is in the
+builder's store, for every user of the builder, and stays there.  So a
+system is built, then signed, then put together.
+
+- **Built.**  No secret goes in.  The result has `/usr`'s image and the
+  root hash (`usr-partition/usrhash`).
+- **Signed.**  `tools/sign.sh <root hash>` asks a password manager
+  (1Password's `op`) for bunix's key when it signs, hands it to openssl
+  through a pipe, and writes the signature: what systemd-repart would
+  have written, to the byte.  Only the hash is signed, not the image.
+  The signature is not secret, and is the same whenever it is made.
+- **Put together.**  The signature is an input like any other
+  (`images/disk.nix`: `signature`).  It is checked there, against the
+  hash and against bunix's certificate, before it goes on a disk.
+
+The steps, as commands, are at the top of `tools/sign.sh`.
+
+A test build would need a signature for every change.  So a disk made
+with no signature given is a test system's: its hash is signed in a
+build, by the same script, with a key that is in the repository for
+everyone to read (`nix/development-key/`), and the system takes that
+key's signatures as well as bunix's, and says so of itself
+(`VARIANT_ID=development` in `/usr/lib/os-release`).  A system for
+release takes bunix's only, and does not take a test build's image as
+bunix's.  The kernel has bunix's certificate only, in both.
+
+What is enforced, and what is not: nothing yet refuses a `/usr` that has
+no signature.  `/usr` is opened by the hash on the kernel's command
+line, and the signature beside it is not asked for at boot; it is there
+for what will ask, extensions and sysupdate.  That the kernel takes a
+signature made with bunix's own key has not been tried here: a test
+system's is of the development key, which only the system, not the
+kernel, has the certificate of.
+
+bunix's key is the one x86 signs with.  x86 still reads it from a file
+(`keys/verity.key`, never committed), which puts it in BuildStream's
+cache; `docs/updates.md` has moving that off the build host as work to
+do.  While that file is in a checkout that a builder is given to read
+(`tools/nix-builder/lima.yaml` gives it the whole repository), the key
+is within a build's reach whatever this side does: it belongs outside
+the checkout, once the password manager has it.  The certificate is
+also the kernel's built-in one, which is more than a key for images
+should be vouching for, as on x86.
 
 What the check of `/usr` does not cover: `/etc` is on the root partition,
 unchecked, and whoever can write the disk can change what runs through
 it.  And a `/usr` that fails its check, or a disk that is not found,
 ends at root's shell on the console, with no password: as the console
-is anyway, for now, and to change when the hash is signed.
+is anyway, for now, and to change with logins.
 
 One tree is both systems, in memory and on a disk, so each has a little
 that is for the other: the copy of `/etc` in `/usr`, and the image's own
@@ -358,6 +410,8 @@ an image with glibc has its headers and static libraries too.
 
 ```
 nix/
+  development-key/            the key test builds are signed with, which
+                              is not secret
   fetch.nix  sources.json     a pinned download; every source, as data
                               (but crates: base/bindgen-crates.json,
                               boot/aura-crates.json)
@@ -391,6 +445,7 @@ bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
 tools/boot-vm.sh disk [check]            the same, installed on a disk
+tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```
 

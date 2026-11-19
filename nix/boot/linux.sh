@@ -39,6 +39,9 @@ kernel_make() {
         "$@"
 }
 
+# where the configuration says the kernel's built-in certificate is
+install -D -m 644 $verity_certificate bunix/verity.crt
+
 kernel_make $default_configuration
 scripts/kconfig/merge_config.sh -m .config $wanted_options
 kernel_make olddefconfig

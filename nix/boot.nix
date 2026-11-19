@@ -35,7 +35,11 @@ let
     # openssl: asahi.config has the kernel keep a keyring of certificates,
     # and what puts them into the image is built with OpenSSL.
     buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ];
-    env = { options_directory = ./boot/linux; };
+    env = {
+      options_directory = ./boot/linux;
+      # whose signature on an image's hash the kernel takes: public
+      verity_certificate = ../keys/verity.crt;
+    };
   };
 
   # Aura, Aurora Silicon's boot loader for Apple Silicon Macs (from m1n1):

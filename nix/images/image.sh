@@ -13,6 +13,10 @@
 #                        a disk: its /usr is made into the images of a
 #                        /usr partition as well ("/usr as a partition",
 #                        below), in usr-partition/ of the result
+#   $certificates        whose signature on an image's hash this system
+#                        takes: certificates, for /usr/lib/verity.d
+#   $variant             what the system says it is, if it is not the one
+#                        for release: VARIANT_ID in /usr/lib/os-release
 set -euo pipefail
 cd /build
 
@@ -68,6 +72,14 @@ cp -a --no-preserve=ownership $bunix_files/. $root/
 chmod -R u+w $root
 # a file of passwords is root's alone to read
 [ ! -e $root/etc/shadow ] || chmod 600 $root/etc/shadow
+
+# whose signature on an image's hash this system takes
+for certificate in ${certificates:-}; do
+    # a file in the store is <hash>-<name>
+    name=$(basename $certificate)
+    install -D -m 644 $certificate $root/usr/lib/verity.d/${name#*-}
+done
+[ -z "${variant:-}" ] || echo "VARIANT_ID=$variant" >> $root/usr/lib/os-release
 
 # the links of a UAPI.9 root; /lib64 only where the loader is asked for
 # there
@@ -165,9 +177,11 @@ rm -f $factory/passwd* $factory/group* $factory/shadow* $factory/gshadow* \
 # LZMA, and /usr is read at every start of a program), and beside it the
 # hashes of its blocks (dm-verity), by which the kernel checks every block
 # it reads.  One number stands for all of it, the root hash: a kernel told
-# that number (usrhash=) runs this /usr and no other.  A signature of the
-# hash is a third partition on x86, and is not made here yet: there is no
-# key.
+# that number (usrhash=) runs this /usr and no other.
+#
+# The hash signed is a third partition, by which what is not told the
+# hash knows the image is bunix's.  It is not made here: a signature is
+# made of the hash alone, afterwards, by what has the key (tools/sign.sh).
 #
 # In the result, for what puts them on a disk (disk.sh):
 #   usr-partition/usr.raw, usr-verity.raw    the two partitions' contents

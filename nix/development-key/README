@@ -1,0 +1,10 @@
+development.key, development.crt: a key that signs the images of test
+builds, and its certificate.  NOT SECRET: it is here for everyone to read,
+and so proves nothing about who made an image.  A system built for
+release does not take its signatures (images/system.nix: signing), and a
+system that does says so of itself (VARIANT_ID=development in
+/usr/lib/os-release).
+
+The key that signs systems for release is not in this repository and is
+no build's to read: tools/sign.sh asks a password manager for it when it
+signs.  Its certificate is keys/verity.crt, at the top of the repository.

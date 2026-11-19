@@ -1,6 +1,7 @@
 .stage*.log
-# the Secure Boot signing key: private
-keys/
+# the signing keys: everything here is private but the certificates
+keys/*
+!keys/*.crt
 out/
 files/hudhud/shields/target/
 __pycache__/

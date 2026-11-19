@@ -15,7 +15,16 @@
 # this one differs yet.
 # Accounts are made of what the packages ask for, and units enabled as
 # the preset says, when the image is made (image.sh).
-{ system ? builtins.currentSystem }:
+#
+#   signing  whose signatures on an image's hash this system takes.
+#            "development" (the default): the development key's, which is
+#            not secret (nix/development-key/README), as well as bunix's;
+#            and the system says so of itself (VARIANT_ID).  For test
+#            builds.
+#            "release": bunix's only.
+{ system ? builtins.currentSystem, signing ? "development" }:
+
+assert signing == "development" || signing == "release";
 
 let
   toolchain = import ../toolchain.nix { inherit system; };
@@ -71,5 +80,7 @@ stagedBuild {
       "usr/lib/systemd/system/systemd-sysusers.service.d/bunix.conf"
     ];
     usr_partition = "yes";
-  };
+    certificates = [ ../../keys/verity.crt ]
+      ++ (if signing == "development" then [ ../development-key/development.crt ] else []);
+  } // (if signing == "development" then { variant = "development"; } else {});
 }
