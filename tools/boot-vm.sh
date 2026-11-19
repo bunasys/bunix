@@ -28,6 +28,10 @@ vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmli
 
 boot=${TMPDIR:-/tmp}/bunix-boot
 mkdir -p "$boot"
+# Not over the copies of the last run: every file of the store has the
+# same date, and a copy is skipped when the date and the size are what
+# they were, as a kernel image's size is from build to build.
+rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz"
 limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
 limactl copy "bunix-builder:$initramfs/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
 

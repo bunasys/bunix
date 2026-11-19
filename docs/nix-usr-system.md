@@ -260,7 +260,7 @@ nix/
                               stage1.nix stage1/ stage2.nix stage2/
   stage.{nix,sh}              a build with /usr made of system packages
   system-package.{nix,sh}     mkSystemPackage, and what is checked of a result
-  autotools.sh                the recipe of an ordinary package
+  autotools.sh  meson.sh      the recipe of an ordinary package
   toolchain.nix  toolchain/   glibc, binutils, gcc
   tools.nix      tools/       what a build runs
   base.nix       base/        after elements/base/; the porting rule is at its top
@@ -307,9 +307,6 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
   `elements/base/`, six did; util-linux needed one argument.  Those that
   have parts for systemd (dbus, iwd) are ported with them off for now.
   The claim is "nearly all" until many more have been ported.
-- **meson.**  dbus is the one package built with it, and has the
-  arguments for UAPI.9's places in its own script; a second one moves
-  them where `$configure_for_usr` is.
 - **Python's modules.**  The Python that builds run has only the modules
   that need no library.  zlib's is a package of its own, compiled from
   Python's source and laid over it (`base/python-zlib.sh`); whether the

@@ -13,8 +13,11 @@
 #   build-depends      -> buildDepends, without bootstrap/build-env.bst
 #   kind: autotools with only conf-local
 #                      -> script = ./autotools.sh; env.configure_arguments
+#   kind: meson with only meson-local
+#                      -> script = ./meson.sh; env.meson_arguments
 #   make-args, install-commands (>), kind: manual, or an argument with a
-#   space in it        -> base/x.sh: autotools.sh's four lines, and the rest
+#   space in it        -> base/x.sh: the lines of autotools.sh or meson.sh,
+#                         and the rest
 #   overlap-whitelist  -> nothing: two packages with one file is an error
 # and a comment for every flag that is not the element's.
 { system ? builtins.currentSystem }:
@@ -129,6 +132,33 @@ let
     script = ./base/iproute2.sh;
     depends = [ glibc libmnl ];
     buildDepends = [ pkgconf ];
+  };
+
+  # ps, top, free, pgrep and pkill, pidof, sysctl, uptime, vmstat, watch,
+  # w.  kill comes from util-linux.
+  procps-ng = mkSystemPackage {
+    name = "procps-ng";
+    source = sources.procps-ng;
+    script = ./autotools.sh;
+    depends = [ glibc ncurses ];
+    buildDepends = [ pkgconf ];
+    env = { configure_arguments = "--disable-static --disable-nls --disable-kill --without-systemd --enable-watch8bit"; };
+  };
+
+  # ping.  Only ping: arping and clockdiff need root's raw sockets.  This
+  # ping asks first for the ICMP sockets the kernel gives ordinary users
+  # (where net.ipv4.ping_group_range lets it, which /init sees to), so it
+  # is given no set-user-id bit and no capability, and is built without
+  # the library for dropping them.  NO_SETCAP_OR_SUID, which the element
+  # lacks, is iputils' default; said, because the sentence above rests
+  # on it.
+  iputils = mkSystemPackage {
+    name = "iputils";
+    source = sources.iputils;
+    script = ./meson.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-DBUILD_PING=true -DBUILD_ARPING=false -DBUILD_CLOCKDIFF=false -DBUILD_TRACEPATH=false -DBUILD_MANS=false -DUSE_CAP=false -DUSE_IDN=false -DUSE_GETTEXT=false -DNO_SETCAP_OR_SUID=true"; };
   };
 
   # A DHCP client: asks the network for an address, a route and name
@@ -352,6 +382,6 @@ let
 in
 {
   inherit readline zlib bzip2 zstd openssl libmnl expat;
-  inherit util-linux iproute2 dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit util-linux procps-ng iproute2 iputils dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
   inherit pkgconf flex bc perl ninja python-zlib meson cmake llvm bindgen;
 }

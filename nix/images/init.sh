@@ -84,6 +84,10 @@ start_wifi() {
 # ---- The network, and a way in over it -------------------------------------
 
 ip link set lo up
+# Every account may ping: ping then needs no rights of root's.  The
+# kernel's own setting is that none may; systemd is what changes it on
+# other systems.
+sysctl -q -w net.ipv4.ping_group_range="0 2147483647"
 
 # The link is put together by a program of its own, beside the rest of
 # /init: the ports it needs appear some seconds from now.

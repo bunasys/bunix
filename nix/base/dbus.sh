@@ -1,6 +1,6 @@
 unpack $src
-# The first package built with meson; its arguments for UAPI.9's places
-# are here until a second one needs them.  After them, the element's
+# Built with meson, with more steps than ../meson.sh has; the arguments
+# for UAPI.9's places are as there, but for --libexecdir (below).  After them, the element's
 # arguments, with systemd's parts off.
 # --libexecdir: its helper that starts services gets a directory of its
 #   own.  It is installed without set-user-id, which a build cannot give:
@@ -16,7 +16,7 @@ meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet
     -Dx11_autolaunch=disabled -Dmodular_tests=disabled -Dinstalled_tests=false \
     -Ddoxygen_docs=disabled -Dducktype_docs=disabled -Dxml_docs=disabled \
     -Dqt_help=disabled
-ninja -C build
+ninja -C build -j$jobs
 DESTDIR=$out ninja -C build install
 # /var and /run are the running system's, not a package's
 rm -rf $out/var $out/run

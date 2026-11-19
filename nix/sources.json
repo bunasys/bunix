@@ -279,6 +279,16 @@
     "url": "https://codeload.github.com/aurora-silicon/fatfs/tar.gz/7d505fbfa37a945af5549517f47c1d2e87a8333e",
     "sha256": "b6fd473d43aa9a62f04c3c4560ae75c42ab86906ad833b439077eb5f80d1a5e2"
   },
+  "procps-ng": {
+    "version": "4.0.7",
+    "url": "https://downloads.sourceforge.net/project/procps-ng/Production/procps-ng-4.0.7.tar.xz",
+    "sha256": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d"
+  },
+  "iputils": {
+    "version": "20250605",
+    "url": "https://github.com/iputils/iputils/releases/download/20250605/iputils-20250605.tar.xz",
+    "sha256": "6f213700dbf96b5cc4499ca70cb15ecd69c09f405b06785bb4a1a10b572b6276"
+  },
   "expat": {
     "version": "2.9.0",
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
