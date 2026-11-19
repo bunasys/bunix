@@ -113,6 +113,49 @@ let
     env = { configure_arguments = "--disable-static --without-docbook --without-examples --without-tests"; };
   };
 
+  # POSIX capabilities: a part of root's rights, given or given up.
+  # systemd requires it.
+  libcap = mkSystemPackage {
+    name = "libcap";
+    source = sources.libcap;
+    script = ./base/libcap.sh;
+    depends = [ glibc ];
+  };
+
+  # crypt(), which glibc no longer has: password hashing.  perl generates
+  # its tables.  --disable-werror: glibc's strchr returns const for a
+  # const string, which this source's build with -Werror does not expect
+  # yet.
+  libxcrypt = mkSystemPackage {
+    name = "libxcrypt";
+    source = sources.libxcrypt;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    buildDepends = [ pkgconf perl ];
+    env = { configure_arguments = "--disable-static --disable-werror --enable-hashes=strong,glibc --disable-obsolete-api --disable-failure-tokens"; };
+  };
+
+  # Extended attributes of files: libattr, which libacl is built with, and
+  # getfattr and setfattr.
+  attr = mkSystemPackage {
+    name = "attr";
+    source = sources.attr;
+    script = ./autotools.sh;
+    depends = [ glibc ];
+    env = { configure_arguments = "--disable-static --disable-nls"; };
+  };
+
+  # Access control lists, and getfacl and setfacl.  systemd gives the
+  # person at the machine its sound, cameras and keys with them, and takes
+  # them back.
+  acl = mkSystemPackage {
+    name = "acl";
+    source = sources.acl;
+    script = ./autotools.sh;
+    depends = [ glibc attr ];
+    env = { configure_arguments = "--disable-static --disable-nls"; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -134,8 +177,33 @@ let
     buildDepends = [ pkgconf ];
   };
 
+  # Loads kernel modules: modprobe, depmod, lsmod, modinfo, and the
+  # library udev loads each device's driver with.  zstd and xz: modules
+  # are compressed; openssl: modinfo reads their signatures.  UAPI.9 has
+  # modules in /usr/lib/modules.
+  kmod = mkSystemPackage {
+    name = "kmod";
+    source = sources.kmod;
+    script = ./meson.sh;
+    depends = [ glibc zstd tools.xz openssl ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dmoduledir=/usr/lib/modules -Dzstd=enabled -Dxz=enabled -Dzlib=disabled -Dopenssl=enabled -Dmanpages=false -Ddocs=false -Dbuild-tests=false -Dbashcompletiondir=no -Dzshcompletiondir=no"; };
+  };
+
+  # systemd, configured down to an init system and its network stack: PID
+  # 1, journald, udevd, tmpfiles, sysusers, networkd, resolved, timesyncd,
+  # logind, hostnamed, timedated, repart and sysext, and their client
+  # tools (base/systemd.sh says what of the element is not on yet).
+  systemd = mkSystemPackage {
+    name = "systemd";
+    source = sources.systemd;
+    script = ./base/systemd.sh;
+    depends = [ glibc libcap libxcrypt util-linux openssl kmod acl zlib tools.xz tools.bash ];
+    buildDepends = [ meson ninja gperf pkgconf python-jinja2 ];
+  };
+
   # mkfs.ext4 and e2fsck: the file system of a system's writable
-  # partition.  /init runs e2fsck on it at every boot (images/init.sh).
+  # partition.  systemd checks and makes file systems with it.
   e2fsprogs = mkSystemPackage {
     name = "e2fsprogs";
     source = sources.e2fsprogs;
@@ -170,7 +238,7 @@ let
 
   # ping.  Only ping: arping and clockdiff need root's raw sockets.  This
   # ping asks first for the ICMP sockets the kernel gives ordinary users
-  # (where net.ipv4.ping_group_range lets it, which /init sees to), so it
+  # (where net.ipv4.ping_group_range lets it, which systemd sees to), so it
   # is given no set-user-id bit and no capability, and is built without
   # the library for dropping them.  NO_SETCAP_OR_SUID, which the element
   # lacks, is iputils' default; said, because the sentence above rests
@@ -184,17 +252,6 @@ let
     env = { meson_arguments = "-DBUILD_PING=true -DBUILD_ARPING=false -DBUILD_CLOCKDIFF=false -DBUILD_TRACEPATH=false -DBUILD_MANS=false -DUSE_CAP=false -DUSE_IDN=false -DUSE_GETTEXT=false -DNO_SETCAP_OR_SUID=true"; };
   };
 
-  # A DHCP client: asks the network for an address, a route and name
-  # servers.  Not an element of elements/base/, where systemd-networkd
-  # does this; it is here until systemd is.  Its hooks are shell scripts
-  # that run sed and coreutils.
-  dhcpcd = mkSystemPackage {
-    name = "dhcpcd";
-    source = sources.dhcpcd;
-    script = ./base/dhcpcd.sh;
-    depends = [ glibc tools.bash tools.coreutils tools.sed ];
-  };
-
   # OpenSSH: ssh, scp, sftp, ssh-keygen and ssh-agent, and sshd: keys
   # only, no passwords (files/rootfs/etc/ssh/sshd_config).
   openssh = mkSystemPackage {
@@ -206,12 +263,12 @@ let
   };
 
   # D-Bus, the system bus: iwd is spoken to over it, and does not start
-  # without it.  Without the parts for systemd, which is not here yet.
+  # without it.  systemd starts it when something first speaks.
   dbus = mkSystemPackage {
     name = "dbus";
     source = sources.dbus;
     script = ./base/dbus.sh;
-    depends = [ glibc expat ];
+    depends = [ glibc expat systemd ];
     buildDepends = [ meson ninja pkgconf ];
   };
 
@@ -305,6 +362,33 @@ let
     source = sources.ninja;
     script = ./base/ninja.sh;
     depends = [ glibc toolchain.gccLibraries ];
+  };
+
+  # A perfect hash generator: systemd's build looks its keywords up with
+  # what it writes.
+  gperf = mkSystemPackage {
+    name = "gperf";
+    source = sources.gperf;
+    script = ./autotools.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+  };
+
+  # MarkupSafe: string escaping for Jinja2
+  python-markupsafe = mkSystemPackage {
+    name = "python-markupsafe";
+    source = sources.python-markupsafe;
+    script = ./base/python-module.sh;
+    depends = [ tools.python ];
+    env = { module = "markupsafe"; };
+  };
+
+  # Jinja2: the template engine systemd's build generates files with
+  python-jinja2 = mkSystemPackage {
+    name = "python-jinja2";
+    source = sources.python-jinja2;
+    script = ./base/python-module.sh;
+    depends = [ tools.python python-markupsafe ];
+    env = { module = "jinja2"; };
   };
 
   # Python's zlib module.  The Python that builds run (tools.nix) is built
@@ -404,7 +488,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat;
-  inherit util-linux e2fsprogs dosfstools procps-ng iproute2 iputils dhcpcd openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja python-zlib meson cmake llvm bindgen;
+  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt attr acl;
+  inherit util-linux kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit pkgconf flex bc perl ninja gperf python-markupsafe python-jinja2 python-zlib meson cmake llvm bindgen;
 }

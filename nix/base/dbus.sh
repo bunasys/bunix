@@ -1,15 +1,17 @@
 unpack $src
 # Built with meson, with more steps than ../meson.sh has; the arguments
-# for UAPI.9's places are as there, but for --libexecdir (below).  After them, the element's
-# arguments, with systemd's parts off.
+# for UAPI.9's places are as there, but for --libexecdir (below).  After
+# them, the element's arguments.
 # --libexecdir: its helper that starts services gets a directory of its
-#   own.  It is installed without set-user-id, which a build cannot give:
-#   the bus starts no service by itself here, and nothing asks it to yet.
+#   own.  It is installed without set-user-id, which a build cannot give;
+#   systemd starts what the bus is asked for, and the helper is not used.
 # runtime_dir, system_socket: /run, not the old /var/run.
 # dbus_user: the bus gives up root's rights for this account.
 meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet \
     --libexecdir=lib/dbus-1.0 --sysconfdir=/etc --localstatedir=/var --buildtype=release \
-    -Dsystemd=disabled -Druntime_dir=/run -Dsystem_socket=/run/dbus/system_bus_socket \
+    --wrap-mode=nodownload \
+    -Dsystemd=enabled -Dsystemd_system_unitdir=/usr/lib/systemd/system \
+    -Druntime_dir=/run -Dsystem_socket=/run/dbus/system_bus_socket \
     -Ddbus_user=messagebus \
     -Dmessage_bus=true -Dtools=true -Duser_session=false \
     -Dselinux=disabled -Dapparmor=disabled -Dlibaudit=disabled \

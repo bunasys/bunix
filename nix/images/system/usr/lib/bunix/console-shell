@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+# The console (console-shell@.service, files/rootfs's): root's shell
+# straight away.  There is no login program here yet to ask who is there.
+exec /usr/bin/bash --login

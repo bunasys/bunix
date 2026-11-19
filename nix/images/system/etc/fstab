@@ -1,0 +1,4 @@
+# The root file system is the initramfs, unpacked into memory, and nothing
+# here is mounted over it: an image is for any machine.  A machine that
+# has a partition to keep /var, /home and /root on is told so on the
+# kernel's command line, with systemd.mount-extra= (tools/boot-mac.sh).

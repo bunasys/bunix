@@ -65,5 +65,5 @@ install -d $out/usr/lib/modules/$release/dtb/$device_trees
 install -m 644 arch/$kernel_arch/boot/dts/$device_trees/*.dtb $out/usr/lib/modules/$release/dtb/$device_trees/
 
 # built with the kernel, for making the initramfs it unpacks
-# (images/initramfs.sh)
+# (images/system.sh)
 install -D -m 755 usr/gen_init_cpio $out/usr/bin/gen_init_cpio

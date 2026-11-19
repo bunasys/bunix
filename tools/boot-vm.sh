@@ -1,12 +1,15 @@
 #!/bin/sh
 # Boots bunix in a virtual machine on an Apple Silicon Mac: the kernel and
-# the initramfs are built in the builder (the Lima VM of
+# the image are built in the builder (the Lima VM of
 # tools/nix-builder/lima.yaml), copied out of its store, and run by QEMU
 # with the Mac's own hypervisor.
 #
-#   tools/boot-vm.sh          a shell on the console; `exit` powers off,
-#                             Ctrl-a x leaves at once
-#   tools/boot-vm.sh demo     boots, says what booted, powers off
+#   tools/boot-vm.sh          root's shell on the console; `poweroff` ends
+#                             it, Ctrl-a x leaves at once
+#   tools/boot-vm.sh check    boots, asks systemd over SSH whether all of
+#                             it started, says so and powers off: for a
+#                             boot that nobody is watching.  Fails if a
+#                             unit failed.
 #
 # While it runs, `ssh -p 2022 root@127.0.0.1` logs in (see below).
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
@@ -22,7 +25,7 @@ build() {
     limactl shell bunix-builder nix-build "$@" --no-out-link
 }
 kernel=$(build /bunix/nix/boot.nix -A linux)
-initramfs=$(build /bunix/nix/images/initramfs.nix)
+image=$(build /bunix/nix/images/system.nix)
 # the kernel is in a directory named after its release
 vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
 
@@ -33,32 +36,75 @@ mkdir -p "$boot"
 # they were, as a kernel image's size is from build to build.
 rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz"
 limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
-limactl copy "bunix-builder:$initramfs/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
+limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
 
 # A network card behind QEMU's own small network, which gives the guest
-# an address by DHCP.  The Mac's port 2222 is the guest's SSH port:
+# an address by DHCP.  The Mac's port 2022 is the guest's SSH port:
 #
 #   ssh -p 2022 -o UserKnownHostsFile=/dev/null root@127.0.0.1
 #
-# (no known_hosts: the guest makes new host keys at every boot).  The key
-# that may log in is this user's, given on the kernel's command line.
+# (no known_hosts: the guest makes new host keys at every boot).
 ssh_port=${BUNIX_SSH_PORT:-2022}
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
 
-authorized_key=
-key_type=
-key=
-# `|| true`: read fails on a last line without a newline, having read it
-[ ! -f "$public_key_file" ] || read -r key_type key _ < "$public_key_file" || true
-case $key_type in
-    ssh-*|ecdsa-*|sk-*) authorized_key="authorized_key=$key_type:$key" ;;
-    *) echo "boot-vm.sh: no public key in $public_key_file (a line \"<type> <key>\"); the guest will not start sshd" >&2 ;;
-esac
+# The key that may log in is this user's, given on the kernel's command
+# line as what systemd calls a credential, which sshd's unit takes
+# (images/system/.../sshd.service).  In base64, since the command line cannot
+# carry the spaces of a key's line.
+authorized_keys=
+if [ -f "$public_key_file" ]; then
+    authorized_keys="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
+else
+    echo "boot-vm.sh: no public key in $public_key_file; nobody can log in over SSH" >&2
+fi
 
 # -accel hvf: the Mac's hypervisor; the guest runs on the real processor
-# console=ttyAMA0: the kernel's messages and the shell on QEMU's serial
-#   port, which -nographic connects to this terminal
-exec qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 2G \
-    -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" \
-    -netdev user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22 -device virtio-net-pci,netdev=net \
-    -append "console=ttyAMA0 quiet $authorized_key $*" -nographic -no-reboot
+# console=ttyAMA0: the kernel's and systemd's messages, and root's shell,
+#   on QEMU's serial port, which -nographic connects to this terminal
+run_qemu() {
+    exec qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
+        -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" \
+        -netdev user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22 -device virtio-net-pci,netdev=net \
+        -append "console=ttyAMA0 $authorized_keys $*" -nographic -no-reboot
+}
+
+if [ "${1:-}" != check ]; then
+    run_qemu "$@"
+fi
+shift
+
+# check: the machine runs behind this script, and is asked how it is.
+if [ -z "$authorized_keys" ]; then
+    echo "boot-vm.sh: check asks over SSH, and has no key to log in with" >&2
+    exit 1
+fi
+run_qemu quiet "$@" < /dev/null > "$boot/console.log" 2>&1 &
+qemu=$!
+# however this script ends, the machine does not stay behind it, holding
+# the port for the next one
+trap 'kill $qemu 2> /dev/null || true' EXIT
+
+in_guest() {
+    ssh -p "$ssh_port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o ConnectTimeout=3 -o LogLevel=ERROR root@127.0.0.1 "$@"
+}
+# about a minute
+tries_left=30
+until in_guest true 2> /dev/null; do
+    tries_left=$((tries_left - 1))
+    # kill -0: is it still there?  It ends at once if the port is taken.
+    if [ $tries_left = 0 ] || ! kill -0 $qemu 2> /dev/null; then
+        echo "boot-vm.sh: the guest did not answer on SSH; its console is in $boot/console.log" >&2
+        exit 1
+    fi
+    sleep 2
+done
+# --wait: until systemd has started everything, or given up on some of it.
+# `|| true`: it fails for every state but running, and the state is judged
+# below.
+state=$(in_guest systemctl is-system-running --wait || true)
+in_guest 'uname -srm; systemctl --no-pager --failed' || true
+echo "systemd: $state"
+in_guest systemctl poweroff || true
+wait $qemu || true
+[ "$state" = running ]

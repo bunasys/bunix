@@ -1,8 +1,8 @@
 #!/bin/sh
 # Boots bunix on an Apple Silicon Mac, from this Mac, over a USB-C cable.
 # The system is loaded into the other Mac's memory, and gone when it is
-# turned off.  Its disk is left alone, but for a partition named
-# bunix-root, if it has one: /init keeps /var, /home and /root there.
+# turned off.  Its disk is left alone, but for a partition the caller
+# names (BUNIX_ROOT), where systemd keeps /var, /home and /root.
 #
 #   tools/boot-mac.sh <device tree> [words for the kernel's command line]
 #   tools/boot-mac.sh t8103-j293        a 13-inch MacBook Pro M1
@@ -14,11 +14,14 @@
 # What this does: builds the kernel, the image and aura in the builder
 # (tools/nix-builder/lima.yaml) and copies them out; has the waiting boot
 # loader start aura; has aura start the kernel with the Mac's device tree
-# and the image.  The console is then on the Mac's own screen and
+# and the image.  Root's shell is then on the Mac's own screen and
 # keyboard, and, once it is on a network, `ssh root@<its address>`.
 #
 #   BUNIX_SSH_KEY     the public key that may log in; default
 #                     ~/.ssh/id_ed25519.pub
+#   BUNIX_ROOT        the name of a partition of that Mac's disk to keep
+#                     /var, /home and /root on, as bunix-root.  Without
+#                     it nothing outlasts the boot.
 #   BUNIX_FIRMWARE    an archive of that Mac's own firmware (a cpio with
 #                     /vendorfw in it, made from its macOS), put before the
 #                     image.  Without it the Mac has no Wi-Fi.
@@ -40,7 +43,7 @@ build() {
 }
 kernel=$(build /bunix/nix/boot.nix -A linux)
 aura=$(build /bunix/nix/boot.nix -A aura)
-initramfs=$(build /bunix/nix/images/initramfs.nix)
+image=$(build /bunix/nix/images/system.nix)
 # the kernel is in a directory named after its release
 modules=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*")
 
@@ -52,7 +55,7 @@ mkdir -p "$boot"
 rm -f "$boot/Image" "$boot/device-tree.dtb" "$boot/initramfs.cpio.gz"
 limactl copy "bunix-builder:$modules/vmlinuz" "$boot/Image"
 limactl copy "bunix-builder:$modules/dtb/apple/$device_tree.dtb" "$boot/device-tree.dtb"
-limactl copy "bunix-builder:$initramfs/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
+limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
 # A copy out of the store is read-only, as the store is; so is one left
 # by a run that was interrupted.
 [ ! -d "$boot/aura" ] || chmod -R u+w "$boot/aura"
@@ -80,16 +83,31 @@ if [ -n "${BUNIX_FIRMWARE:-}" ]; then
     firmware_words=firmware_class.path=/vendorfw
 fi
 
-# as tools/boot-vm.sh: the key is given on the kernel's command line
+# as tools/boot-vm.sh: the key is given on the kernel's command line, as a
+# credential of systemd's
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
-authorized_key=
-key_type=
-key=
-[ ! -f "$public_key_file" ] || read -r key_type key _ < "$public_key_file" || true
-case $key_type in
-    ssh-*|ecdsa-*|sk-*) authorized_key="authorized_key=$key_type:$key" ;;
-    *) echo "boot-mac.sh: no public key in $public_key_file (a line \"<type> <key>\"); the Mac will not start sshd" >&2 ;;
-esac
+authorized_keys=
+if [ -f "$public_key_file" ]; then
+    authorized_keys="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
+else
+    echo "boot-mac.sh: no public key in $public_key_file; nobody can log in over SSH" >&2
+fi
+
+# What outlasts a boot is on a partition of the Mac's disk, if the caller
+# names one: systemd is told to mount it, and to put /var, /home and
+# /root on it (docs/nix-usr-system.md, "A disk").  The image itself
+# mounts nothing: it is for any machine.
+# nofail, and ten seconds for the disk to appear: a wrong name, or a
+#   partition that will not mount, leaves a system in memory to look at
+#   it from, where otherwise systemd would stop for an emergency shell
+#   that this system does not have.
+disk_words=
+if [ -n "${BUNIX_ROOT:-}" ]; then
+    disk_words="systemd.mount-extra=PARTLABEL=$BUNIX_ROOT:/sysroot:ext4:nofail,x-systemd.device-timeout=10s"
+    for directory in var home root; do
+        disk_words="$disk_words systemd.mount-extra=/sysroot/$directory:/$directory:none:bind,nofail"
+    done
+fi
 
 # The boot loader is two serial ports, named after the Mac's serial
 # number and ending in 1 and 3; the first is the one to talk to.  Other
@@ -106,6 +124,12 @@ if [ -z "${AURADEVICE:-}" ]; then
 fi
 export AURADEVICE
 
+# The machine's id: what systemd names the machine's journal by, and asks
+# for its address with.  /etc is new at every boot, and so would the id
+# be; this one is made of the Mac's serial number, which is in the name of
+# the boot loader's port.
+machine_id=$(printf %s "${AURADEVICE##*usbmodem}" | md5 -q)
+
 # --stub: the few instructions that start aura, assembled when aura was
 #   built; this Mac has no assembler for them.
 "$python" "$boot/aura/proxyclient/tools/chainload.py" \
@@ -115,11 +139,12 @@ export AURADEVICE
 # --capture: where what aura says while it hands over is kept; without it
 #   the tool wants a terminal to stay on, and the port is gone the moment
 #   the kernel takes it.
-# console=tty0 last: /init's messages and its shell are on the Mac's
-#   screen; the serial console before it is for a debug cable.
+# console=tty0 last: systemd's messages are on the Mac's screen; the
+#   serial console before it is for a debug cable.  Root's shell is on
+#   both.
 "$python" "$boot/aura/proxyclient/tools/linux.py" --compression none \
     --capture "$boot/handover.log" --capture-seconds 3 \
-    -b "console=ttySAC0,1500000 console=tty0 $authorized_key $firmware_words $*" \
+    -b "console=ttySAC0,1500000 console=tty0 systemd.machine_id=$machine_id $authorized_keys $disk_words $firmware_words $*" \
     "$boot/Image" "$boot/device-tree.dtb" "$image" ||
     echo "boot-mac.sh: the tool ended with an error; if its last words were \"Ready to boot\", the port went away under it, as it does" >&2
 

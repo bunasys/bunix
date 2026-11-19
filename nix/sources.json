@@ -179,11 +179,6 @@
     "url": "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.xz",
     "sha256": "5c1789d290bba048a6135ed1ab81b0402dd0fb528d1f1421765c42b1fc3d6289"
   },
-  "dhcpcd": {
-    "version": "10.5.2",
-    "url": "https://github.com/NetworkConfiguration/dhcpcd/releases/download/v10.5.2/dhcpcd-10.5.2.tar.xz",
-    "sha256": "3e476657fdb6eeb38b277da3a48d0ac0113ecce5858ebdcddff2b629faed52b4"
-  },
   "rex-aarch64-linux": {
     "version": "0.1.0-preview.21",
     "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-arm64.tar.gz",
@@ -298,6 +293,51 @@
     "version": "4.2",
     "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz",
     "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527"
+  },
+  "libcap": {
+    "version": "2.78",
+    "url": "https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz",
+    "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11"
+  },
+  "libxcrypt": {
+    "version": "4.5.2",
+    "url": "https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz",
+    "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071"
+  },
+  "gperf": {
+    "version": "3.3",
+    "url": "https://mirrors.kernel.org/gnu/gperf/gperf-3.3.tar.gz",
+    "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8"
+  },
+  "kmod": {
+    "version": "34.3",
+    "url": "https://cdn.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.3.tar.xz",
+    "sha256": "985554de49c21a58abd68c6cda2251384e1e5bb08b3b14c7f02b51f4c90c2958"
+  },
+  "attr": {
+    "version": "2.6.0",
+    "url": "https://download.savannah.nongnu.org/releases/attr/attr-2.6.0.tar.xz",
+    "sha256": "6c8a2148a7b85043b68492bce43316b0e2e214fc4e628c7ede078e76e216330b"
+  },
+  "acl": {
+    "version": "2.4.0",
+    "url": "https://download.savannah.nongnu.org/releases/acl/acl-2.4.0.tar.xz",
+    "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3"
+  },
+  "python-markupsafe": {
+    "version": "3.0.4",
+    "url": "https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8/markupsafe-3.0.4.tar.gz",
+    "sha256": "2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6"
+  },
+  "python-jinja2": {
+    "version": "3.1.6",
+    "url": "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz",
+    "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"
+  },
+  "systemd": {
+    "version": "261.3",
+    "url": "https://github.com/systemd/systemd/archive/refs/tags/v261.3.tar.gz",
+    "sha256": "3f8d3d3969af7214bda600930e14c6a24135eb3dce1ba7f1b980b74e6dc15b72"
   },
   "expat": {
     "version": "2.9.0",

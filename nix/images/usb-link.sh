@@ -1,8 +1,9 @@
 #!/usr/bin/bash
 # usb-link [ncm|ecm]: makes this machine a USB device to the computer at
 # the other end of each USB-C cable: a serial port with a root shell on
-# it, and a network adapter (ncm, or the older ecm).  /init runs it when
-# the kernel's command line has usb_link; it can be run again by hand.
+# it, and a network adapter (ncm, or the older ecm).  In the image as
+# /usr/lib/bunix/usb-link, to be run by hand, as root.  For bringing a
+# machine up: whoever holds the cable is root.
 #
 # Not working on a Mac yet: with this kernel the other computer sees the
 # device and never configures it (docs/nix-usr-system.md, "On a Mac").
