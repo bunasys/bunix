@@ -16,7 +16,8 @@
 #               written.  The disk is a new copy at every run.
 #   check       boots, asks systemd over SSH whether all of it started,
 #               says so and powers off: for a boot that nobody is
-#               watching.  Fails if a unit failed.
+#               watching.  Fails if a unit failed, or if nothing keeps
+#               the clock by the network's.
 #
 # While it runs, `ssh -p 2022 root@127.0.0.1` logs in (see below).
 #   BUNIX_SIGNATURE   with disk: the signature of a system for release, a
@@ -164,6 +165,13 @@ done
 state=$(in_guest systemctl is-system-running --wait || true)
 in_guest 'uname -srm; systemctl --no-pager --failed' || true
 echo "systemd: $state"
+# The clock: a machine with none of its own starts before every signature
+# was made, and takes no update until the network has told it the time
+# (docs/nix-usr-system.md).  A system where nothing asks for the time
+# would start all the same, so this is asked apart.
+timesync=$(in_guest systemctl is-active systemd-timesyncd.service || true)
+echo "systemd-timesyncd: $timesync"
 in_guest systemctl poweroff || true
 wait $qemu || true
 [ "$state" = running ]
+[ "$timesync" = active ]
