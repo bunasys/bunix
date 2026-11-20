@@ -8,4 +8,9 @@ enable iwd.service
 # a root shell on the screen, and on the serial port of a virtual machine
 # and of a Mac
 enable console-shell@.service tty1 ttyAMA0 ttySAC0
+# On a disk, a new version is given three boots to show that it starts
+# (sysupdate.d/90-uki.transfer).  This says what "starts" is: no unit
+# failed.  A boot that passes it is marked good, and one that never does
+# is gone back from.
+enable systemd-boot-check-no-failures.service
 disable *

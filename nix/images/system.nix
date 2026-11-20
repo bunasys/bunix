@@ -22,9 +22,17 @@
 #            and the system says so of itself (VARIANT_ID).  For test
 #            builds.
 #            "release": bunix's only.
-{ system ? builtins.currentSystem, signing ? "development" }:
+#   version  what the system says its version is, and what its update
+#            files are named by: an update is a system with a later one.
+#            The release's (nix/release.nix), unless a test asks for
+#            another, to have something to update to.
+{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix }:
 
 assert signing == "development" || signing == "release";
+# Digits and dots: the version is part of the names of partitions and of
+# files, where "+", "_" and "-" say where it ends (boot counting, and the
+# patterns of system/usr/lib/sysupdate.d).
+assert builtins.match "[0-9]+([.][0-9]+)*" version != null;
 
 let
   toolchain = import ../toolchain.nix { inherit system; };
@@ -78,7 +86,11 @@ stagedBuild {
       "usr/lib/systemd/timesyncd.conf.d/bunix.conf"
       "usr/lib/systemd/system/console-shell@.service"
       "usr/lib/systemd/system/systemd-sysusers.service.d/bunix.conf"
+      # whose signature on a list of update files is taken: the release
+      # key's (docs/updates.md)
+      "usr/lib/systemd/import-pubring.pgp"
     ];
+    inherit version;
     usr_partition = "yes";
     certificates = [ ../../keys/verity.crt ]
       ++ (if signing == "development" then [ ../development-key/development.crt ] else []);

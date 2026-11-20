@@ -6,7 +6,8 @@
 #
 #   nix-build /bunix/nix/images/uki.nix
 #
-#   signing  as images/system.nix takes it: the /usr named is that
+#   signing, version
+#            as images/system.nix takes them: the /usr named is that
 #            system's
 #
 # Not signed: what would check it is Secure Boot, which a Mac's EFI
@@ -16,7 +17,7 @@
 #
 # No device tree in it: a machine that needs one gets it from what
 # started its EFI.
-{ system ? builtins.currentSystem, signing ? "development" }:
+{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix }:
 
 let
   tools = import ../tools.nix { inherit system; };
@@ -33,7 +34,7 @@ stagedBuild {
   env = {
     linux = boot.linux;
     initrd = import ./initrd.nix { inherit system; };
-    system_image = import ./system.nix { inherit system signing; };
+    system_image = import ./system.nix { inherit system signing version; };
     # root=: the root partition by its name, not by its type, as systemd
     # would find it by itself: another Linux on the same disk has a root
     # partition of that type too, and it is not this system's to mount.

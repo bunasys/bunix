@@ -1,6 +1,6 @@
-# What differs between the architectures of a bunix system, as far as a
-# build of a system package is concerned (stage.nix gives both to every
-# build, as $triplet and $loader).
+# What differs between the architectures of a bunix system: for a build
+# of a system package, the first two (stage.nix gives them to every
+# build, as $triplet and $loader); for what makes images, the third.
 #
 #   import ./architecture.nix "aarch64-linux"
 #
@@ -8,6 +8,10 @@
 #            project.conf has it
 #   loader   the path every program asks for its loader by; fixed by the
 #            architecture's ABI, the same on every distribution
+#   partitionArchitecture
+#            the architecture as the types of partitions name it
+#            (usr-arm64), and as systemd does for %a in the files that
+#            say where updates come from; in the names of update files
 system:
 
 let
@@ -15,10 +19,12 @@ let
     aarch64-linux = {
       triplet = "aarch64-linux-gnu";
       loader = "/lib/ld-linux-aarch64.so.1";
+      partitionArchitecture = "arm64";
     };
     x86_64-linux = {
       triplet = "x86_64-linux-gnu";
       loader = "/lib64/ld-linux-x86-64.so.2";
+      partitionArchitecture = "x86-64";
     };
   };
 in

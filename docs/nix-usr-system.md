@@ -294,10 +294,32 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   what no command line names, extensions above all, and is what sysupdate
   puts beside a new `/usr`.
 
-Not there yet: sysupdate writing a new version into the second slot;
-systemd-boot counting a new version's boots and going back when it does
-not come up (nothing names a kernel image as untried, or says a boot
-was good); the kernel image signed (what would check it is Secure Boot,
+- **Updates, and the way back.**  `images/update.nix` is one version as
+  the files a machine downloads: the three partitions of a `/usr` slot,
+  each named by the id its partition is to have, and the kernel image.
+  A disk is made of the same files.  The system says where to get them
+  (`system/usr/lib/sysupdate.d`, after x86's, with `%a` for the
+  architecture, in the kernel image's name too, which x86's published
+  one does not have yet): sysupdate writes a
+  new `/usr` into the slot that is not running, and its kernel image last,
+  with three tries in its name.  systemd-boot counts them down;
+  `systemd-boot-check-no-failures` says what a good boot is (no unit
+  failed), and `systemd-bless-boot` then takes the tries off the name.  A
+  version that never gets there in three starts is gone back from; one
+  that starts with a unit failed runs, and uses up a try at each start.
+  `tools/update-test.sh` goes through all of it in a virtual machine: an
+  update, the restart into it, an update that cannot start, its three
+  tries, and the return.
+
+Not there yet: the list of an update's files checked against the
+release key (the system has no `sqv` yet, so it refuses every update
+until told not to ask, as the test tells it); a version that does not
+start restarted without a person (it waits in the initrd's emergency
+shell); anything that runs an update by itself, which has to clear away
+a download that was cut off first (`systemd-sysupdate vacuum`: sysupdate
+refuses to go on over one) and should not update from a version not yet
+marked good; a test system's update files told from a release's by
+more than the name of the build's result; the kernel image signed (what would check it is Secure Boot,
 which a Mac's EFI does not have, so whoever can write the boot
 partition chooses what runs); extensions; an installer; and any of it
 on a Mac, which needs U-Boot first, and has only been said, not tried:
@@ -318,8 +340,9 @@ system is built, then signed, then put together.
   have written, to the byte.  Only the hash is signed, not the image.
   The signature is not secret, and is the same whenever it is made.
 - **Put together.**  The signature is an input like any other
-  (`images/disk.nix`: `signature`).  It is checked there, against the
-  hash and against bunix's certificate, before it goes on a disk.
+  (`images/update.nix`: `signature`, which `images/disk.nix` passes on).
+  It is checked there, against the hash and against bunix's certificate,
+  before it is one of a version's files, and so before it goes on a disk.
 
 The steps, as commands, are at the top of `tools/sign.sh`.
 
@@ -467,9 +490,11 @@ initrd.nix  (image.sh)  ->  initramfs.cpio.gz: what starts a system
                             that is on a disk
 uki.nix     (uki.sh)    <-  boot.linux, initrd.nix, system.nix's hash
                         ->  bunix_<version>.efi
-disk.nix    (disk.sh)   <-  system.nix's usr-partition/, uki.nix, a
+update.nix  (update.sh) <-  system.nix's usr-partition/, uki.nix, a
                             signature (tools/sign.sh; for a test system,
                             development-signature.sh makes it)
+                        ->  one version's files, as they are downloaded
+disk.nix    (disk.sh)   <-  update.nix
                         ->  disk.raw
 system/  initrd/            bunix's own configuration of the first two
 ```
@@ -482,6 +507,7 @@ bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
 tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
+tools/update-test.sh                     on a disk: update it, and go back from a bad update
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```

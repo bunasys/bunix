@@ -1,0 +1,27 @@
+# The system itself, on a disk (docs/updates.md, step 2; after
+# files/rootfs/usr/lib/sysupdate.d, which is x86's): /usr in three
+# partitions -- its image, the hashes of its blocks, the signature of its
+# root hash -- written into the slot that is not running, and then the
+# kernel image that starts it (90-uki.transfer).
+#
+# %a is the machine's architecture as partition types name it (arm64,
+# x86-64), so these files are the same for both.  @u is the partition's id, which is
+# made of the root hash: a kernel image finds its /usr by it (usrhash=),
+# so after going back, the older kernel image still mounts its own /usr.
+#
+# A system that runs from memory has no slots, and nothing here finds
+# any on it.
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.usr-%a.@u.raw
+
+[Target]
+Type=partition
+Path=auto
+MatchPattern=bunix_@v
+MatchPartitionType=usr
+ReadOnly=1

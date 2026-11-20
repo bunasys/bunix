@@ -17,6 +17,9 @@
 #                        takes: certificates, for /usr/lib/verity.d
 #   $variant             what the system says it is, if it is not the one
 #                        for release: VARIANT_ID in /usr/lib/os-release
+#   $version             of a system that is updated (images/system.nix):
+#                        IMAGE_VERSION and SYSEXT_LEVEL in
+#                        /usr/lib/os-release.  Needed with $usr_partition.
 set -euo pipefail
 cd /build
 
@@ -80,6 +83,12 @@ for certificate in ${certificates:-}; do
     install -D -m 644 $certificate $root/usr/lib/verity.d/${name#*-}
 done
 [ -z "${variant:-}" ] || echo "VARIANT_ID=$variant" >> $root/usr/lib/os-release
+# The release: what updates are compared with (sysupdate.d's %A), and
+# what an extension image must have been built for (as
+# elements/system/rootfs.bst).
+if [ -n "${version:-}" ]; then
+    printf 'IMAGE_VERSION=%s\nSYSEXT_LEVEL=%s\n' $version $version >> $root/usr/lib/os-release
+fi
 
 # the links of a UAPI.9 root; /lib64 only where the loader is asked for
 # there
@@ -183,16 +192,16 @@ rm -f $factory/passwd* $factory/group* $factory/shadow* $factory/gshadow* \
 # hash knows the image is bunix's.  It is not made here: a signature is
 # made of the hash alone, afterwards, by what has the key (tools/sign.sh).
 #
-# In the result, for what puts them on a disk (disk.sh):
+# In the result, for what makes a version's files of them (update.sh):
 #   usr-partition/usr.raw, usr-verity.raw    the two partitions' contents
 #   usr-partition/usrhash                    the root hash
-#   usr-partition/version                    what their labels are to say
+#   usr-partition/version                    what their labels and their
+#                                            files' names are to say
 #   usr-partition/os-release                 what the system says it is,
 #                                            for what starts it (uki.sh)
 # Only read from the tree: the archive below is the same with or without.
 mkdir -p $out
 if [ -n "${usr_partition:-}" ]; then
-    version=$(sed -n 's/^VERSION_ID=//p' $root/usr/lib/os-release)
     mkdir -p usr.d tmp images $out/usr-partition
     # SplitName: each partition as a file of its own, images/x.<name>.raw.
     # CopyFiles=/usr/:/ : /usr's contents at the top of the partition,
