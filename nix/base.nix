@@ -17,6 +17,10 @@
 #                      -> script = ./meson.sh; env.meson_arguments
 #   kind: cmake with only cmake-local
 #                      -> script = ./cmake.sh; env.cmake_arguments
+#   kind: cargo with only cargo-install-local
+#                      -> script = ./cargo.sh; env.cargo_arguments; its
+#                         cargo2 source -> base/x-crates.json, env.crates
+#   environment        -> env, under the same names
 #   make-args, install-commands (>), kind: manual, or an argument with a
 #   space in it        -> base/x.sh: the lines of autotools.sh or meson.sh,
 #                         and the rest
@@ -631,6 +635,8 @@ let
   # which it loads when it runs.  The patches are Aurora Silicon's, as they
   # are in tools/aurora-bindgen/ of their kernel (sources.json has the
   # commit): two kinds of C struct whose layout bindgen 0.73.2 gets wrong.
+  # bindgen.sh is cargo.sh's lines and the patches: a fix to one is a fix
+  # to the other.
   bindgen = mkSystemPackage {
     name = "bindgen";
     source = sources.bindgen;
@@ -649,6 +655,45 @@ let
         url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
         inherit (crate) sha256;
       }) (builtins.fromJSON (builtins.readFile ./base/bindgen-crates.json));
+    };
+  };
+
+  # Botan 3: the C++ cryptography library behind Sequoia (sqv).
+  # Sequoia's other backends fit for use, OpenSSL and Nettle, reach C
+  # through bindgen; Botan's Rust bindings are written by hand.  A static
+  # library only: it is linked into the programs, and nothing of it is in
+  # a system.
+  botan = mkSystemPackage {
+    name = "botan";
+    source = sources.botan;
+    script = ./base/botan.sh;
+    depends = [ glibc ];
+    buildDepends = [ tools.python ];
+  };
+
+  # sqv: Sequoia's verifier of OpenPGP signatures.  systemd-sysupdate
+  # checks the signature of an update's list of files (SHA256SUMS.gpg) by
+  # running `gpg`; bunix's gpg is a small script that hands that check to
+  # sqv (files/rootfs/usr/bin/gpg; docs/updates.md says why not GnuPG).
+  # gccLibraries: Botan is C++.
+  sqv = mkSystemPackage {
+    name = "sqv";
+    source = sources.sqv;
+    script = ./cargo.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ rust pkgconf botan ];
+    env = {
+      cargo_arguments = "--no-default-features --features crypto-botan";
+      # Botan's Rust bindings do not say that the C++ library is to be
+      # linked.  The element links libstdc++.a into the program, x86's
+      # system having no libstdc++.so; this one has (images/system.nix).
+      RUSTFLAGS = "-C link-arg=-lstdc++";
+      # sqv's Cargo.lock, as the `cargo2` source of elements/base/sqv.bst
+      # has it
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./base/sqv-crates.json));
     };
   };
 
@@ -683,5 +728,5 @@ in
 {
   inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt libffi attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-zlib python-ctypes meson cmake llvm bindgen;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-zlib python-ctypes meson cmake llvm bindgen botan sqv;
 }

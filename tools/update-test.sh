@@ -11,27 +11,35 @@
 # that is not the one published with it, so it cannot start.  The Mac serves
 # their files, and the machine is told to look there.  Then:
 #
-#   1. the installed version refuses the next one while its list of files
-#      is not signed; told not to ask, it updates: the next /usr goes into
-#      the empty slot, its kernel image beside the old one, with three tries
-#   2. the machine restarts into the next version, from the second slot,
+#   1. the installed version takes the list of files bunix 0.4.0 was
+#      published with, as signed by the release key, by the certificate it
+#      comes with (downloaded from where releases are); and not that list
+#      with a byte changed
+#   2. it refuses the next version while the list of its files is not
+#      signed, is signed by a key the machine does not know, or was changed
+#      after it was signed; and nothing of that version is written
+#   3. with the list signed as it should be, it updates: the next /usr goes
+#      into the empty slot, its kernel image beside the old one, with three
+#      tries
+#   4. the machine restarts into the next version, from the second slot,
 #      and marks it good once all of it has started
-#   3. it updates to the broken one, over the first slot
-#   4. the broken one is started three times, and does not come up
-#   5. the fourth start is the next version again, and the broken one is
+#   5. it updates to the broken one, over the first slot
+#   6. the broken one is started three times, and does not come up
+#   7. the fourth start is the next version again, and the broken one is
 #      marked bad
 #
-# NOT tested here: an update whose list of files is signed by the release
-# key.  The system has nothing yet that checks an OpenPGP signature (sqv,
-# as x86 has), so it refuses every update, which step 1 sees, and is then
-# told not to ask (Verify=no).
+# The lists of steps 2 to 5 are signed here, with keys made for this run,
+# and the machine is told which of them to take, in /etc, where an
+# administrator would say it.  NOT tested: a list past the day it says it
+# is good until.
 #
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT   the Mac's port for the machine's SSH; default 2022
 #   BUNIX_HTTP_PORT  the Mac's port the files are served on; default 8643
 #
-# Needs: what tools/boot-vm.sh needs, and python3 (the server).
+# Needs: what tools/boot-vm.sh needs, python3 (the server), gpg (the
+# signatures), and the internet (step 1).
 set -eu
 
 ssh_port=${BUNIX_SSH_PORT:-2022}
@@ -53,6 +61,22 @@ fail() {
     echo "the machine's console is in $work/console.log" >&2
     exit 1
 }
+# However this script ends, nothing of it stays behind: the server and the
+# machine, holding their ports; gpg's agents; the keys.
+server=
+qemu=
+signing_keys=
+clean_up() {
+    kill $server $qemu 2> /dev/null || true
+    # waited for, so that the shell does not report them as ended
+    wait 2> /dev/null || true
+    [ -n "$signing_keys" ] || return 0
+    for who in signer stranger; do
+        gpgconf --homedir "$signing_keys/$who" --kill gpg-agent 2> /dev/null || true
+    done
+    rm -rf "$signing_keys"
+}
+trap clean_up EXIT
 
 # A machine of tools/boot-vm.sh still running has the SSH port, and would
 # answer in place of this test's, and be updated in its stead.
@@ -100,17 +124,46 @@ broken_uki=$(basename "$work"/served/broken/*.efi)
 rm "$work/served/broken/$broken_uki"
 limactl copy "bunix-builder:$stray_uki/bunix_$broken.efi" "$work/served/broken/$broken_uki"
 
-# The list a machine reads to learn what there is: each file and its hash.
-for served in next broken; do
-    (cd "$work/served/$served" && shasum -a 256 * > SHA256SUMS)
+# ---- The lists of files, and who signs them ------------------------------------
+
+# Two keys, each in a directory of its own: the signer's, which the
+# machine is told to take, and a stranger's.  (In /tmp: gpg talks to its
+# agent through a socket there, whose path has to be short.)
+#
+# Made as of an hour ago, and what they sign as of a minute ago: a
+# signature from the future is refused, and the machine's clock may be a
+# little behind this Mac's.  gpg says at every use that its time is not
+# the real one; that goes to a log.
+signing_keys=$(mktemp -d /tmp/bunix-update-test.XXXXXX)
+an_hour_ago=$(($(date +%s) - 3600))
+for who in signer stranger; do
+    mkdir -m 700 "$signing_keys/$who"
+    gpg --homedir "$signing_keys/$who" --batch --quiet --passphrase '' \
+        --faked-system-time $an_hour_ago \
+        --quick-generate-key "bunix update test: $who" ed25519 sign never 2>> "$work/gpg.log" \
+        || fail "gpg made no key for the $who; see $work/gpg.log"
 done
+# write_list <served directory>: the list a machine reads to learn what
+# there is, each file and its hash.  Any signature it had is gone with the
+# old list.
+write_list() {
+    (cd "$work/served/$1" && rm -f SHA256SUMS SHA256SUMS.gpg && shasum -a 256 * > SHA256SUMS)
+}
+# sign_list <who> <served directory>
+sign_list() {
+    rm -f "$work/served/$2/SHA256SUMS.gpg"
+    a_minute_ago=$(($(date +%s) - 60))
+    gpg --homedir "$signing_keys/$1" --batch --quiet --faked-system-time $a_minute_ago \
+        --detach-sign --output "$work/served/$2/SHA256SUMS.gpg" "$work/served/$2/SHA256SUMS" \
+        2>> "$work/gpg.log" \
+        || fail "gpg did not sign the list of $2 as the $1; see $work/gpg.log"
+}
+write_list broken
+sign_list signer broken
 
 python3 -m http.server "$http_port" --bind 127.0.0.1 --directory "$work/served" \
     > "$work/server.log" 2>&1 &
 server=$!
-qemu=
-# however this script ends, neither stays behind it, holding its port
-trap 'kill $server $qemu 2> /dev/null || true' EXIT
 
 # ---- The machine ---------------------------------------------------------------
 
@@ -177,9 +230,12 @@ look_for_updates_in() {
         sed -e 's#^Path=https.*#Path=http://10.0.2.2:$http_port/$1/#' \$file > /etc/sysupdate.d/\$file
     done"
 }
-# and (see the top) not to ask for the signature of the list of files
-do_not_ask_for_signatures() {
-    in_guest "sed -i -e 's#^\[Transfer\]#[Transfer]\nVerify=no#' /etc/sysupdate.d/*.transfer"
+# take_lists_signed_by <who>: and whose signature on a list of files to
+# take, as a certificate where systemd looks before it looks in /usr
+take_lists_signed_by() {
+    gpg --homedir "$signing_keys/$1" --export > "$work/$1.pgp"
+    [ -s "$work/$1.pgp" ] || fail "gpg gave no certificate of the $1's key"
+    in_guest "mkdir -p /etc/systemd && cat > /etc/systemd/import-pubring.pgp" < "$work/$1.pgp"
 }
 # try_update <name of its log>: to whatever is newest where the machine
 # was last told to look
@@ -189,6 +245,24 @@ try_update() {
 update() {
     try_update "$1" || fail "the update did not go through; see $work/update-$1.log"
 }
+# expect_refusal <name of the log> <what is wrong with the list of files>
+#     <what the log is to say>
+#
+# Of $next: that the update fails, for that reason and not another (a
+# server that is down fails it too), and that nothing of $next is on the
+# disk.
+expect_refusal() {
+    if try_update "$1"; then
+        fail "an update whose list of files $2 was taken"
+    fi
+    grep -q -F "$3" "$work/update-$1.log" \
+        || fail "the update failed, but not because its list of files $2; see $work/update-$1.log"
+    on_disk=$(in_guest 'ls /boot/EFI/Linux; lsblk -n -o PARTLABEL') || fail "could not look at the machine's disk"
+    case $on_disk in
+        *"$next"*) fail "something of $next was written, though its list of files $2" ;;
+    esac
+    echo "  refused: the list of files $2"
+}
 # expect_kernel_image <file name> <what is wrong if it is not there>
 expect_kernel_image() {
     kernel_images=$(in_guest ls /boot/EFI/Linux) || fail "could not list the machine's kernel images"
@@ -197,26 +271,49 @@ expect_kernel_image() {
 
 # ---- The test ------------------------------------------------------------------
 
-echo "1. $installed updates to $next"
+echo "1. $installed takes what the release key signed"
 start_and_expect "$installed"
-look_for_updates_in next
-if try_update unsigned; then
-    fail "an update whose list of files is not signed was taken"
+# Asked of the system's gpg directly, as systemd asks it, with the
+# certificate the system comes with: sysupdate could only be told to look
+# at a release if it were of this architecture and later than this
+# version.
+in_guest "cd /tmp && for file in SHA256SUMS SHA256SUMS.gpg; do
+    curl -sS -f -L -O https://github.com/bunasys/bunix/releases/download/v0.4.0/\$file || exit 1
+done" || fail "could not download the list of files of bunix 0.4.0 and its signature"
+check_published_list='gpg --keyring=/usr/lib/systemd/import-pubring.pgp --verify /tmp/SHA256SUMS.gpg - < /tmp/SHA256SUMS'
+in_guest "$check_published_list" > "$work/release-key.log" 2>&1 \
+    || fail "the list bunix 0.4.0 was published with was not taken; see $work/release-key.log"
+in_guest "echo >> /tmp/SHA256SUMS"
+if in_guest "$check_published_list" > "$work/release-key-changed.log" 2>&1; then
+    fail "the list bunix 0.4.0 was published with was taken with a byte added"
 fi
-grep -q 'cannot verify' "$work/update-unsigned.log" \
-    || fail "the update failed, but not for want of a signature; see $work/update-unsigned.log"
-kernel_images=$(in_guest ls /boot/EFI/Linux) || fail "could not list the machine's kernel images"
-case $kernel_images in
-    *"$next"*) fail "a kernel image of $next was written before its list was checked" ;;
-esac
-echo "  refused while its list of files is unsigned"
-do_not_ask_for_signatures
+echo "  taken as published, refused with a byte added"
+
+echo "2. $installed refuses $next while its list of files cannot be trusted"
+look_for_updates_in next
+take_lists_signed_by signer
+
+write_list next
+expect_refusal unsigned "is not signed" "cannot verify"
+
+sign_list stranger next
+expect_refusal stranger "is signed by a key the machine does not know" "Signature verification failed"
+
+# any change will do: a line for a file that is not there
+sign_list signer next
+no_hash=$(printf '%064d' 0)
+echo "$no_hash  added-after-signing" >> "$work/served/next/SHA256SUMS"
+expect_refusal changed "was changed after it was signed" "Signature verification failed"
+
+echo "3. $installed updates to $next"
+write_list next
+sign_list signer next
 update next
 expect_kernel_image "bunix_$next+3-0.efi" "no kernel image of $next with three tries"
 in_guest lsblk -n -o PARTLABEL | grep -q -x -F "bunix_$next" \
     || fail "no /usr partition labelled bunix_$next"
 
-echo "2. restart into $next"
+echo "4. restart into $next"
 stop_machine reboot
 start_and_expect "$next"
 # Marked good, and for the reason the system gives (no unit failed), not
@@ -227,13 +324,12 @@ in_guest systemctl is-active --quiet systemd-bless-boot.service \
     || fail "the boot of $next was not marked good"
 expect_kernel_image "bunix_$next.efi" "$next still has tries in its name"
 
-echo "3. $next updates to $broken, which cannot start"
+echo "5. $next updates to $broken, which cannot start"
 look_for_updates_in broken
-do_not_ask_for_signatures
 update broken
 expect_kernel_image "bunix_$broken+3-0.efi" "no kernel image of $broken with three tries"
 
-echo "4. $broken is tried three times"
+echo "6. $broken is tried three times"
 stop_machine reboot
 for try in 1 2 3; do
     start_machine
@@ -247,7 +343,7 @@ for try in 1 2 3; do
     wait $qemu 2> /dev/null || true
 done
 
-echo "5. the machine goes back to $next"
+echo "7. the machine goes back to $next"
 start_and_expect "$next"
 expect_kernel_image "bunix_$broken+0-3.efi" "$broken is not marked bad"
 

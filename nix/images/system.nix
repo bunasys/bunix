@@ -63,6 +63,9 @@ stagedBuild {
     # for a system on a disk: udev told of the device /usr is checked
     # through
     base.dm-udev-rules
+    # and what checks the signature of an update's list of files, for
+    # the gpg below
+    base.sqv
   ];
 
   # What makes it.  systemd: its own tools make the accounts, enable the
@@ -89,6 +92,9 @@ stagedBuild {
       # whose signature on a list of update files is taken: the release
       # key's (docs/updates.md)
       "usr/lib/systemd/import-pubring.pgp"
+      # the gpg systemd runs to check it, which is not GnuPG: a script
+      # that hands the check to sqv
+      "usr/bin/gpg"
     ];
     inherit version;
     usr_partition = "yes";

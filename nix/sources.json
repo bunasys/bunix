@@ -254,6 +254,16 @@
     "url": "https://static.rust-lang.org/dist/rust-src-1.99.1.tar.xz",
     "sha256": "e485a88c45db546b73571df7bebfcb4454ba4fb552c492e25fc5b00eeb5bf22d"
   },
+  "botan": {
+    "version": "3.13.0",
+    "url": "https://botan.randombit.net/releases/Botan-3.13.0.tar.xz",
+    "sha256": "12f5a8358890bbee82edfe9d2e7769b0a610b6dd0e0698aea13d20a675d84620"
+  },
+  "sqv": {
+    "version": "1.5.0",
+    "url": "https://static.crates.io/crates/sequoia-sqv/sequoia-sqv-1.5.0.crate",
+    "sha256": "d4eb1f22746894dd654a8fa50576200d047f0de0e1ae2a361d7ebe263d351bc8"
+  },
   "bindgen": {
     "version": "0.73.2",
     "url": "https://static.crates.io/crates/bindgen-cli/bindgen-cli-0.73.2.crate",

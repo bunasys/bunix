@@ -307,13 +307,20 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   failed), and `systemd-bless-boot` then takes the tries off the name.  A
   version that never gets there in three starts is gone back from; one
   that starts with a unit failed runs, and uses up a try at each start.
-  `tools/update-test.sh` goes through all of it in a virtual machine: an
-  update, the restart into it, an update that cannot start, its three
-  tries, and the return.
+  The list of a version's files is signed (OpenPGP), and checked before
+  anything is written: systemd runs `gpg` for that, which here is x86's
+  small script around Sequoia's `sqv` (`base.sqv`, with Botan linked in).
+  `tools/update-test.sh` goes through all of it in a virtual machine:
+  the list bunix 0.4.0 was published with, taken by the certificate the
+  system comes with; lists that are unsigned, signed by a stranger, or
+  changed after signing, each refused; an update, the restart into it,
+  an update that cannot start, its three tries, and the return.
 
-Not there yet: the list of an update's files checked against the
-release key (the system has no `sqv` yet, so it refuses every update
-until told not to ask, as the test tells it); a version that does not
+Not there yet: what publishes a version (`tools/publish.sh` is x86's);
+a machine whose clock is behind (one with no clock of its own starts at
+the first of November 2026, before any signature was made, and takes no
+update until the network has told it the time: what runs updates has to
+wait for that); a version that does not
 start restarted without a person (it waits in the initrd's emergency
 shell); anything that runs an update by itself, which has to clear away
 a download that was cut off first (`systemd-sysupdate vacuum`: sysupdate
@@ -462,13 +469,14 @@ nix/
                               is not secret
   fetch.nix  sources.json     a pinned download; every source, as data
                               (but crates: base/bindgen-crates.json,
-                              boot/aura-crates.json)
+                              base/sqv-crates.json, boot/aura-crates.json)
   architecture.nix            the library directory's name and the loader's path
+  release.nix                 the version being built
   bootstrap/                  the store: seed.nix sh.nix package.{nix,sh}
                               stage1.nix stage1/ stage2.nix stage2/
   stage.{nix,sh}              a build with /usr made of system packages
   system-package.{nix,sh}     mkSystemPackage, and what is checked of a result
-  autotools.sh  meson.sh  cmake.sh
+  autotools.sh  meson.sh  cmake.sh  cargo.sh
                               the recipe of an ordinary package
   toolchain.nix  toolchain/   glibc, binutils, gcc
   tools.nix      tools/       what a build runs
