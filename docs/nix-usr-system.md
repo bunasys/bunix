@@ -271,8 +271,8 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   `/usr`, so that an update brings new ones.  The units that run are
   enabled inside `/usr`, and updated with it.  The accounts and the
   machine's id are made at the first boot and kept.  What is read before
-  `/etc` is filled has to be right without it: so sysusers is told to
-  make root unlocked, and the machine has a name built into systemd.
+  `/etc` is filled has to be right without it: so the machine has a name
+  built into systemd.
 - **udev told of the device.**  `dm-udev-rules`, the device mapper's own
   rules: without them systemd waits for ever for `/dev/mapper/usr`.
 - **A disk.**  `images/disk.nix`, after x86's: the partition a machine
@@ -387,8 +387,8 @@ should be vouching for, as on x86.
 What the check of `/usr` does not cover: `/etc` is on the root partition,
 unchecked, and whoever can write the disk can change what runs through
 it.  And a `/usr` that fails its check, or a disk that is not found,
-ends at root's shell on the console, with no password: as the console
-is anyway, for now, and to change with logins.
+ends at root's shell on the console, with no password: the initrd has no
+login, whatever the system on the disk asks at its own console.
 
 One tree is both systems, in memory and on a disk, so each has a little
 that is for the other: the copy of `/etc` in `/usr`, and the image's own
@@ -445,9 +445,9 @@ systemd is its init system.  bunix's configuration is `files/rootfs`'s
 where the system on x86 has the same (the network's files, the journal,
 the console's unit), and `images/system/` where this one differs yet:
 which units run (one preset file, applied when the image is made, the
-result kept in `/usr`), sshd's unit without PAM and with
-its keys in `/var`, a console that is root's shell with no login, root
-without a password, a journal that is on disk only where there is one,
+result kept in `/usr`), sshd's unit with
+its keys in `/var`, a console script with bash where x86's has fish,
+a journal that is on disk only where there is one,
 and an address asked for by the network card's own.  systemd's own tools make the
 accounts, enable the preset's units and compile udev's hardware database
 on the tree before it is packed.  The same script (`images/image.sh`)
@@ -515,6 +515,8 @@ bash nix/tests/run.sh                    every test
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
 tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
+BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
+                                         and accounts tried on it
 tools/update-test.sh                     on a disk: update it, and go back from a bad update
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
@@ -523,7 +525,10 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ## Open questions
 
 - **Owners and set-user-id.**  Where the list of them lives, and what
-  applies it to an image.
+  applies it to an image.  Until then nothing is set-user-id, where x86
+  has `passwd` so: a user cannot change their own password (root can,
+  for anyone), and PAM's helper cannot check one for a program that is
+  not root's.
 - **Account ids.**  Each is a number in its package's script, and two
   packages with the same one are only found out when an image has both.
   systemd's own accounts get the numbers sysusers gives them when the
@@ -569,15 +574,20 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ## What the image that boots lacks
 
 It is systemd with a network (networkd, resolved, timesyncd), Wi-Fi
-(iwd), sshd, and root's shell on the console.  It has no login (PAM is
-not ported: the console asks nobody who they are, and SSH takes keys
-only), no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
+(iwd), sshd, and accounts as x86 has them: PAM with x86's rules
+(`files/rootfs/usr/lib/pam.d`), logins that are sessions of logind's,
+shadow's tools, and a console that is root's shell until root has a
+password and a login prompt from then on
+(`BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk
+check` goes through them on a running system).  SSH takes keys only.  A
+user has no way up yet: run0 asks polkit, which is not a package here.
+It has no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
 again by itself where there is a disk to remember it on.  In memory the
 machine's id is new at every boot, unless the command line gives it one;
 on a disk it is made at the first boot and kept.  A machine told of a partition that is not there comes up
 in memory all the same.
 
-Of systemd, not on yet, each for want of a library: PAM, polkit, the
+Of systemd, not on yet, each for want of a library: the
 TPM, and seccomp,
 without which systemd's own services are not confined to the system
 calls they need (`base/systemd.sh`).

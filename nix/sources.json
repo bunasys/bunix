@@ -254,6 +254,16 @@
     "url": "https://static.rust-lang.org/dist/rust-src-1.99.1.tar.xz",
     "sha256": "e485a88c45db546b73571df7bebfcb4454ba4fb552c492e25fc5b00eeb5bf22d"
   },
+  "linux-pam": {
+    "version": "1.7.3",
+    "url": "https://github.com/linux-pam/linux-pam/releases/download/v1.7.3/Linux-PAM-1.7.3.tar.xz",
+    "sha256": "2ce4765fd49df6693771ef2941f81e33d8ee14b94a81a5c7b369aa3b137b85a5"
+  },
+  "shadow": {
+    "version": "4.20.3",
+    "url": "https://github.com/shadow-maint/shadow/releases/download/4.20.3/shadow-4.20.3.tar.xz",
+    "sha256": "623be9429f64fa2165bfc5957c6a642ec309c5cf23c0d53855c99f7591922297"
+  },
   "botan": {
     "version": "3.13.0",
     "url": "https://botan.randombit.net/releases/Botan-3.13.0.tar.xz",

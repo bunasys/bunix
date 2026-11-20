@@ -73,8 +73,6 @@ fi
 cp -a --no-preserve=ownership $bunix_files/. $root/
 # a copy out of the store is read-only, as the store is
 chmod -R u+w $root
-# a file of passwords is root's alone to read
-[ ! -e $root/etc/shadow ] || chmod 600 $root/etc/shadow
 
 # whose signature on an image's hash this system takes
 for certificate in ${certificates:-}; do

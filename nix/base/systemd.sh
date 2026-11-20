@@ -12,10 +12,15 @@ version=$(cat meson.version)
 # that is new and go back to the one before; the
 # stub a kernel, its command line and what starts it are made one file
 # with (a unified kernel image), and ukify, which makes it.  A Mac has
-# EFI by U-Boot.  Not yet on, for want of what they are built against,
-# each a step of its own: PAM (logins as sessions), polkit, the TPM, and
-# seccomp: until that one is, the units of systemd's own services that
-# confine them to the system calls they need confine nothing.
+# EFI by U-Boot.  PAM: pam_systemd puts logins into logind's sessions,
+# and gives systemd's manager for each user (user@.service) and run0
+# their logins.  polkit on, as the element: nothing is linked, and
+# systemd asks polkit once that is a package; until then a privileged
+# request of a user other than root is refused all the same.  Not
+# yet on, for want of what they are built against, each a step of its
+# own: the TPM, and seccomp: until that one is, the units of systemd's
+# own services that confine them to the system calls they need confine
+# nothing.
 #
 # sbat-...: what a UKI and systemd-boot say of themselves to what may one
 #   day revoke them (as the element).
@@ -46,7 +51,7 @@ meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet
     -Dlogind=true -Dhostnamed=true -Dtimedated=true -Dlocaled=false \
     -Dlibcryptsetup=enabled -Dlibcurl=enabled \
     -Dsysupdate=enabled -Dsysupdated=enabled -Dimportd=enabled \
-    -Dpam=disabled -Dpolkit=disabled \
+    -Dpam=enabled -Dpamconfdir=/usr/lib/pam.d -Dpolkit=enabled \
     -Defi=true -Dbootloader=enabled -Dukify=enabled -Dtpm=false -Dtpm2=disabled \
     -Dsbat-distro=bunix -Dsbat-distro-summary=bunix -Dsbat-distro-pkgname=systemd \
     -Dsbat-distro-version=$version -Dsbat-distro-url=https://github.com/bunasys/bunix \
@@ -70,7 +75,18 @@ rm -rf $out/var
 rm -f $out/usr/lib/systemd/ukify
 mv $out/usr/bin/ukify $out/usr/lib/systemd/ukify
 
-# What starts a login prompt on every console: there is no login program
-# for one to run (PAM, above), and on a serial console it would take the
-# keys meant for root's shell.  To come back with PAM.
+# What starts a login prompt on every console: the consoles are
+# console-shell@.service's, which is root's shell or a login prompt (as
+# on x86), and on a serial console a second prompt would take its keys.
 rm $out/usr/lib/systemd/system-generators/systemd-getty-generator
+
+# systemd's examples of PAM rules (system-auth, other), which its
+# tmpfiles rule copies to /etc/pam.d, where they would be read in place of
+# bunix's own in /usr/lib/pam.d: SHA-512 hashes, and an "other" that lets
+# any program through (as elements/system/rootfs.bst).
+rm -rf $out/usr/share/factory/etc/pam.d
+sed -i '\|^C! /etc/pam.d |d' $out/usr/lib/tmpfiles.d/etc.conf
+if grep -q pam.d $out/usr/lib/tmpfiles.d/etc.conf; then
+    echo "systemd.sh: systemd's tmpfiles still copy its PAM rules to /etc" >&2
+    exit 1
+fi

@@ -141,6 +141,24 @@ let
     env = { configure_arguments = "--disable-static --disable-werror --enable-hashes=strong,glibc --disable-obsolete-api --disable-failure-tokens"; };
   };
 
+  # Linux-PAM: how login, sshd, run0 and systemd's user manager check
+  # passwords and open sessions (pam_systemd registers them with logind:
+  # /run/user/<uid>, a user's own services).  Its modules only; bunix's
+  # rules are files/rootfs/usr/lib/pam.d, which PAM reads after
+  # /etc/pam.d, so an update brings new defaults and an administrator's
+  # own files still win.
+  # logind off: it is for two modules this system does not use, and
+  # systemd is built on PAM, not the other way round.
+  # bash: pam_namespace_helper is a script.
+  linux-pam = mkSystemPackage {
+    name = "linux-pam";
+    source = sources.linux-pam;
+    script = ./meson.sh;
+    depends = [ glibc libxcrypt tools.bash ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Di18n=disabled -Ddocs=disabled -Daudit=disabled -Deconf=disabled -Dlogind=disabled -Delogind=disabled -Dselinux=disabled -Dnis=disabled -Dpwaccess=disabled -Dpam_userdb=disabled -Dexamples=false -Dxtests=false"; };
+  };
+
   # Extended attributes of files: libattr, which libacl is built with, and
   # getfattr and setfattr.
   attr = mkSystemPackage {
@@ -314,8 +332,36 @@ let
     name = "systemd";
     source = sources.systemd;
     script = ./base/systemd.sh;
-    depends = [ glibc libcap libxcrypt util-linux openssl kmod acl zlib tools.xz tools.bash cryptsetup curl ];
+    depends = [ glibc libcap libxcrypt linux-pam util-linux openssl kmod acl zlib tools.xz tools.bash cryptsetup curl ];
     buildDepends = [ meson ninja gperf pkgconf python-jinja2 python-pyelftools python-ctypes ];
+  };
+
+  # shadow: the tools that manage users and groups: useradd, usermod,
+  # userdel, groupadd, groupmod, groupdel, chage, and passwd and chpasswd,
+  # which set passwords through PAM.  /etc/login.defs and
+  # /etc/default/useradd reach a system on a disk through
+  # /usr/share/factory/etc.
+  # systemd: userdel and usermod ask logind, and refuse to change a user
+  # who is logged in.
+  shadow = mkSystemPackage {
+    name = "shadow";
+    source = sources.shadow;
+    script = ./base/shadow.sh;
+    depends = [ glibc libxcrypt linux-pam systemd ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # login and runuser from util-linux, with PAM: the console's login
+  # prompt (console-shell@.service), whose sessions logind knows, and
+  # runuser, root's way to run something as another user.  A build of its
+  # own from the source of util-linux, which systemd itself is built on:
+  # PAM there would rebuild most of the system.  No su: run0 is the way up.
+  util-linux-login = mkSystemPackage {
+    name = "util-linux-login";
+    source = sources.util-linux;
+    script = ./base/util-linux-login.sh;
+    depends = [ glibc linux-pam ];
+    buildDepends = [ pkgconf ];
   };
 
   # mkfs.ext4 and e2fsck: the file system of a system's writable
@@ -369,12 +415,14 @@ let
   };
 
   # OpenSSH: ssh, scp, sftp, ssh-keygen and ssh-agent, and sshd: keys
-  # only, no passwords (files/rootfs/etc/ssh/sshd_config).
+  # only, no passwords (files/rootfs/etc/ssh/sshd_config).  With PAM for
+  # accounts and sessions only (files/rootfs/usr/lib/pam.d/sshd), so a
+  # login over SSH is a session logind knows.
   openssh = mkSystemPackage {
     name = "openssh";
     source = sources.openssh;
     script = ./base/openssh.sh;
-    depends = [ glibc openssl zlib ];
+    depends = [ glibc openssl zlib linux-pam ];
     env = { sshd_config = ../files/rootfs/etc/ssh/sshd_config; };
   };
 
@@ -726,7 +774,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt libffi attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
+  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-zlib python-ctypes meson cmake llvm bindgen botan sqv;
 }

@@ -1,6 +1,5 @@
 unpack $src
-# The element's arguments, without --with-pam: there is no PAM here yet,
-# and with keys only sshd does not need it.
+# The element's arguments.
 # --with-privsep-path, --with-privsep-user: sshd handles a connection that
 #   has not logged in yet as the user sshd, inside an empty directory.
 # --disable-lastlog ... --disable-wtmpx: no records of logins in files
@@ -10,7 +9,7 @@ unpack $src
     --with-privsep-path=/usr/share/empty.sshd --with-privsep-user=sshd \
     --with-pid-dir=/run --with-default-path=/usr/bin --with-superuser-path=/usr/bin \
     --disable-lastlog --disable-utmp --disable-utmpx --disable-wtmp --disable-wtmpx \
-    --disable-strip
+    --disable-strip --with-pam
 # ssh-keysign is installed set-user-id, which a build cannot do and the
 # store would not keep; an image that wants it so says so itself
 # (docs/nix-usr-system.md).

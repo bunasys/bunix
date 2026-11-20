@@ -58,6 +58,9 @@ stagedBuild {
     base.e2fsprogs base.dosfstools
     # the network, and a way in over it
     base.openssh base.rex
+    # accounts: what checks who logs in and opens their session (PAM),
+    # the console's login prompt, and the tools that make and change users
+    base.linux-pam base.util-linux-login base.shadow
     # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)
     base.dbus base.iwd base.wireless-regdb
     # for a system on a disk: udev told of the device /usr is checked
@@ -89,6 +92,18 @@ stagedBuild {
       "usr/lib/systemd/timesyncd.conf.d/bunix.conf"
       "usr/lib/systemd/system/console-shell@.service"
       "usr/lib/systemd/system/systemd-sysusers.service.d/bunix.conf"
+      # PAM's rules, by the package whose programs ask.  A program with
+      # none of its own gets "other", and is refused.
+      # every program's: how a password is checked and kept, what a login is
+      "usr/lib/pam.d/system-auth" "usr/lib/pam.d/system-login" "usr/lib/pam.d/other"
+      # util-linux-login's
+      "usr/lib/pam.d/login" "usr/lib/pam.d/runuser" "usr/lib/pam.d/runuser-l"
+      # openssh's, and what its rules run to check the account: without
+      # that script no key logs in
+      "usr/lib/pam.d/sshd" "usr/lib/bunix/ssh-account-locked"
+      # shadow's.  (x86 has rules for useradd and its kin as well, which
+      # those tools never open.)
+      "usr/lib/pam.d/passwd" "usr/lib/pam.d/chpasswd"
       # whose signature on a list of update files is taken: the release
       # key's (docs/updates.md)
       "usr/lib/systemd/import-pubring.pgp"

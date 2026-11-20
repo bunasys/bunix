@@ -23,6 +23,11 @@
 #   BUNIX_SIGNATURE   with disk: the signature of a system for release, a
 #                     file in the repository (tools/sign.sh has the
 #                     steps); the disk is then of that system
+#   BUNIX_CHECK_SCRIPT
+#                     with check: one script to run on the machine as
+#                     well, as root, by bash (tools/vm-checks/).  The
+#                     check fails if it does, or if it leaves a unit
+#                     failed.
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT    the Mac's port for it; default 2022
 #
@@ -47,6 +52,17 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# said now, and not after a build and a boot
+check_script=${BUNIX_CHECK_SCRIPT:-}
+if [ -n "$check_script" ] && [ -z "$check" ]; then
+    echo "boot-vm.sh: BUNIX_CHECK_SCRIPT is for check" >&2
+    exit 1
+fi
+if [ -n "$check_script" ] && [ ! -f "$check_script" ]; then
+    echo "boot-vm.sh: no script $check_script" >&2
+    exit 1
+fi
 
 boot=${TMPDIR:-/tmp}/bunix-boot
 mkdir -p "$boot"
@@ -171,7 +187,22 @@ echo "systemd: $state"
 # would start all the same, so this is asked apart.
 timesync=$(in_guest systemctl is-active systemd-timesyncd.service || true)
 echo "systemd-timesyncd: $timesync"
+script=passed
+if [ -n "$check_script" ]; then
+    # As a file there, not read by bash from this connection: a command
+    # of the script that reads its input would read the rest of the
+    # script, and bash, finding no more, would end as if all had passed.
+    in_guest 'cat > /run/check-script.sh && bash /run/check-script.sh < /dev/null' \
+        < "$check_script" || script=failed
+    echo "$check_script: $script"
+    # Asked again: what the script did may have failed a unit that it
+    # did not look at (the manager of a user's own services, say).
+    state=$(in_guest systemctl is-system-running || true)
+    in_guest systemctl --no-pager --failed || true
+    echo "systemd, after the script: $state"
+fi
 in_guest systemctl poweroff || true
 wait $qemu || true
 [ "$state" = running ]
 [ "$timesync" = active ]
+[ "$script" = passed ]
