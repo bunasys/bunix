@@ -7,6 +7,7 @@
 # $signature is the signature of that hash (tools/sign.sh), and
 # $certificate the certificate of the key it is to be of.
 # $partition_architecture: arm64, x86-64 (nix/architecture.nix).
+# $signature_check: images/signature-check.sh.
 set -euo pipefail
 cd /build
 
@@ -16,20 +17,8 @@ usrhash=$(cat $usr/usrhash)
 
 # ---- The signature, checked ---------------------------------------------------
 
-# Here, where a wrong one costs a build, and not on a machine: that it is
-# of this hash, and made with the key of this certificate.  (-noverify:
-# the certificate is not asked who vouches for it; it is the one given.)
-if ! grep -a -q "\"rootHash\":\"$usrhash\"" $signature; then
-    echo "update.sh: $signature is not the signature of this system's hash, $usrhash" >&2
-    exit 1
-fi
-tr -d '\000' < $signature | sed 's/.*"signature":"\([^"]*\)".*/\1/' | base64 -d > signature.der
-printf %s $usrhash > signed
-if ! openssl smime -verify -binary -noverify -nointern -inform der -in signature.der \
-        -content signed -certfile $certificate -out /dev/null; then
-    echo "update.sh: $signature was not made with the key of $certificate" >&2
-    exit 1
-fi
+source $signature_check
+check_signature $usrhash $signature $certificate
 
 # ---- The files, under the names they are asked for by -------------------------
 

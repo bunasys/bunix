@@ -517,7 +517,114 @@ let
     script = ./base/wireless-regdb.sh;
   };
 
+  # ---- Tools for working on software -----------------------------------------
+  # What the devtools extension is made of (images/devtools.nix), not the
+  # system: a machine has them when its person asks for the extension.
+
+  # strace: traces a program's system calls and signals.  Without the
+  # second and third personality (32-bit programs on a 64-bit kernel),
+  # which need a compiler for them, and without stack traces.  bash:
+  # strace-log-merge is a script.
+  strace = mkSystemPackage {
+    name = "strace";
+    source = sources.strace;
+    script = ./autotools.sh;
+    depends = [ glibc ncurses tools.bash ];
+    env = { configure_arguments = "--enable-mpers=no --disable-gcc-Werror --without-libdw --without-libunwind"; };
+  };
+
+  # file and libmagic: identifies a file's type by its contents.
+  file = mkSystemPackage {
+    name = "file";
+    source = sources.file;
+    script = ./base/file.sh;
+    depends = [ glibc bzip2 tools.xz zlib zstd ];
+  };
+
+  # libarchive: bsdtar, which reads and writes zip, 7-Zip, ISO 9660 and
+  # the tar and cpio formats, and bsdunzip, installed as unzip.  A zip is
+  # made with `bsdtar -a -cf name.zip files...`.
+  libarchive = mkSystemPackage {
+    name = "libarchive";
+    source = sources.libarchive;
+    script = ./base/libarchive.sh;
+    depends = [ glibc bzip2 lz4 openssl tools.xz zlib zstd ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # Git.  HTTPS through libcurl, `git grep -P` through PCRE2.  Without the
+  # parts written in Perl, Python and Tcl/Tk (send-email, svn, gitk, git
+  # gui), and without the Rust parts, which build with Cargo.  bash: some
+  # of its commands are scripts.
+  git = mkSystemPackage {
+    name = "git";
+    source = sources.git;
+    script = ./base/git.sh;
+    depends = [ glibc curl expat openssl pcre2 zlib tools.bash ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # GMP: arbitrary-precision arithmetic (gdb evaluates expressions with
+  # it).  The compiler has its own copy, built into it.
+  gmp = mkSystemPackage {
+    name = "gmp";
+    source = sources.gmp;
+    script = ./base/gmp.sh;
+    depends = [ glibc ];
+  };
+
+  # MPFR: floating point with exact rounding (gdb's floating-point
+  # expressions).
+  mpfr = mkSystemPackage {
+    name = "mpfr";
+    source = sources.mpfr;
+    script = ./autotools.sh;
+    depends = [ glibc gmp ];
+    env = { configure_arguments = "--disable-static"; };
+  };
+
+  # GDB, the GNU debugger, and gdbserver.  With its text interface (gdb
+  # -tui) and compressed debug sections (zlib, zstd, xz); without Python
+  # and Guile scripting and debuginfod.  gccLibraries: it is C++.  bash,
+  # coreutils and gawk: gstack is a script, started by env, that uses awk.
+  gdb = mkSystemPackage {
+    name = "gdb";
+    source = sources.gdb;
+    script = ./autotools.sh;
+    depends = [ glibc expat gmp mpfr ncurses readline tools.xz zlib zstd toolchain.gccLibraries tools.bash tools.coreutils tools.gawk ];
+    buildDepends = [ pkgconf ];
+    env = { configure_arguments = "--disable-nls --disable-werror --disable-sim --disable-gprofng --with-system-readline --with-system-zlib --with-zstd --with-lzma --with-expat --enable-tui --without-python --without-guile --without-debuginfod --without-babeltrace --without-xxhash --without-intel-pt"; };
+  };
+
   # ---- Programs built elsewhere ----------------------------------------------
+
+  # Nix, for the devtools extension: what bunix is built by, on a bunix.
+  # The one program, linked with all it needs, as the Nix project's own
+  # builds publish it for each architecture (sources.json: a build of
+  # their maintenance-2.35 jobs, by its number).  Not built here yet:
+  # that is Nix and ten libraries this system does not have.  With it,
+  # bunix's own: the daemon's units, and settings for /etc (files/nix/).
+  nix = mkSystemPackage {
+    name = "nix";
+    source = sources."nix-${system}";
+    script = ./base/nix.sh;
+    builtElsewhere = true;
+    env = { files = ../files/nix; };
+  };
+
+  # Firecracker: microVMs on KVM (/dev/kvm), with jailer, which starts it
+  # in a chroot, namespaces and cgroup of its own.  Upstream's own static
+  # release build, not built here: its seccomp filters (the system calls
+  # the VMM may make) exist only for the musl build, which bunix's Rust
+  # cannot target, and a glibc build runs with an empty filter.  For
+  # x86_64 only so far, as its element was: the release for aarch64 has
+  # not been tried on a Mac.
+  firecracker = mkSystemPackage {
+    name = "firecracker";
+    source = sources."firecracker-${system}";
+    script = ./base/firecracker.sh;
+    builtElsewhere = true;
+  };
 
   # Rust: rustc, its standard library, cargo, rustfmt, and the standard
   # library's source, which the kernel compiles for itself; five archives
@@ -872,5 +979,6 @@ in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
+  inherit strace file libarchive git gmp mpfr gdb nix firecracker;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
 }

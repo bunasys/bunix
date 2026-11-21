@@ -4,4 +4,4 @@
 # a release does.
 set -euo pipefail
 BUNIX_VERITY_KEY_FILE=$key BUNIX_VERITY_CERTIFICATE=$certificate \
-    bash $sign $(cat $system_image/usr-partition/usrhash) > $out/signature
+    bash $sign $(cat $hash_file) > $out/signature

@@ -148,6 +148,13 @@ the Rust project publishes them, each archive pinned.  They are in
 links in `/usr/bin`.  `elements/bootstrap/rust.bst` builds Rust from
 source with such a download as its seed; that is not ported.
 
+Two more, both in the devtools extension only.  Nix: the one program,
+linked with all it needs, as the Nix project's own builds publish it;
+building it here is Nix and ten libraries this system does not have
+yet.  Its source is a build of their build server, named by its number,
+which that server may not keep for ever.  And Firecracker, for x86_64,
+as on x86: its makers' release.
+
 ## clang, and the kernel
 
 LLVM, clang and lld are one package, `llvm`, built from source by gcc.
@@ -419,14 +426,65 @@ refuses to go on over one) and should not update from a version not yet
 marked good; a test system's update files told from a release's by
 more than the name of the build's result; the kernel image signed (what would check it is Secure Boot,
 which a Mac's EFI does not have, so whoever can write the boot
-partition chooses what runs); extensions; a medium the installer finds
+partition chooses what runs); a medium the installer finds
 its files on by itself; and any of it
 on a Mac.  U-Boot, as built for a virtual machine, has done both things
 that were in doubt: its EFI lets systemd-boot rename a file, as counting
 boots needs (`BUNIX_EFI=u-boot tools/update-test.sh`: the update,
 the three tries of a bad one, and the way back), and it starts a disk
 of 4096-byte sectors laid out as a Mac's (`tools/install-test.sh`).  As
-built for a Mac it has started nothing.
+built for a Mac it starts the 13-inch MacBook Pro M1 ("A Mac starts
+from its disk").
+
+### Extensions
+
+What a machine does not need to run, and its person may ask for, is an
+extension: an image that systemd-sysext lays over `/usr`
+(`docs/updates.md`).  `images/extension.nix` makes one of a list of
+packages: their files and those of all they need to run, without what
+`/usr` has already, and, so far, without what is for building (x86's
+gcc extension is for that, and is not ported).  The image is a
+small disk of three partitions, as a `/usr` slot is three: the file
+system, the hashes of its blocks, and the root hash, signed by
+`tools/sign.sh` as `/usr`'s is.  A system merges only an image that is
+signed by a key it takes (`sysext.conf.d/bunix.conf`), and only an
+extension of its own version.  (A directory that root puts where
+extensions are looked for is merged as it is.)
+
+`images/devtools.nix` is the first: git, gdb, strace, file, libarchive's
+bsdtar and unzip, as on x86; Nix, which bunix is built by, with its
+daemon; and on x86_64 Firecracker.  The image for arm64 is about 63 MiB.
+
+```
+mkdir -p /etc/sysupdate.d/devtools.feature.d
+printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf
+/usr/lib/systemd/systemd-sysupdate update && systemctl restart systemd-sysext
+```
+
+A machine that has asked takes a version only together with that
+version's extension, as one update, and has it merged at every boot.
+Two versions' extensions are kept, as two of `/usr` are, in
+`/var/lib/bunix/extensions`; what is merged is the running version's
+(`/usr/lib/bunix/extensions-of-this-version`).  x86 keeps them where
+systemd-sysext looks, which takes the newest: after an update, and
+after going back from one, that is not the running version's, and none
+is merged.
+Its file is published with the architecture in its name
+(`devtools_<version>.arm64.raw`), where x86's had none.
+
+Nix's store is `/nix`, on the root file system, made when its socket is
+first started; its settings are copied to `/etc/nix/nix.conf` where the
+machine has none: every build in a sandbox, as a user made up for it,
+nothing taken from others' stores, and only for the machine's
+administrators (wheel).  The socket is started with the merge, at boot
+and by hand alike: systemd is asked for its sockets again once the
+extension is there (`systemd-sysext.service.d/bunix.conf`).
+
+`tools/update-test.sh` asks for the extension before its update, runs
+its programs after the restart, and checks that what is in its place is
+not merged when it is not signed, or signed as of another hash.
+
+Not ported: the gcc, rust, swift and desktop extensions.
 
 ### Who signs
 
@@ -460,7 +518,8 @@ bunix's.  The kernel has bunix's certificate only, in both.
 What is enforced, and what is not: nothing yet refuses a `/usr` that has
 no signature.  `/usr` is opened by the hash on the kernel's command
 line, and the signature beside it is not asked for at boot; it is there
-for what will ask, extensions and sysupdate.  That the kernel takes a
+for what will ask.  An extension's is asked for: one that is not signed
+by a key the system takes is not merged ("Extensions").  That the kernel takes a
 signature made with bunix's own key, and no other, was tried in a
 virtual machine with a system for release (`BUNIX_SIGNATURE=...
 tools/boot-vm.sh disk`): given a copy of `/usr` and its signature,
@@ -533,8 +592,9 @@ The union of the chosen packages' `usr/` and `etc/` trees, with what they
 `depends` on, as files: no `/nix`, no `depends` files.  The system
 (`nix/images/system.nix`) is one such union, with bunix's configuration
 over it, packed by the kernel's `gen_init_cpio` as an initramfs, and its
-`/usr` also as the images of a partition; the extensions and the
-signatures are to come, in the formats bunix already has.
+`/usr` also as the images of a partition.  An extension
+(`nix/images/extension.nix`) is the same union without what the system
+has.
 
 systemd is its init system.  bunix's configuration is `files/rootfs`'s
 where the system on x86 has the same (the network's files, the journal,
@@ -590,6 +650,7 @@ What `images/` makes, and of what:
 system.nix  (image.sh)  ->  initramfs.cpio.gz: the system, for memory
                             usr-partition/: its /usr as a partition's
                             images, with usrhash, version, os-release
+                            usr-paths: what /usr has, as a list
 initrd.nix  (image.sh)  ->  initramfs.cpio.gz: what starts a system
                             that is on a disk
 uki.nix     (uki.sh)    <-  boot.linux, initrd.nix, system.nix's hash
@@ -600,6 +661,10 @@ update.nix  (update.sh) <-  system.nix's usr-partition/, uki.nix, a
                         ->  one version's files, as they are downloaded
 disk.nix    (disk.sh)   <-  update.nix
                         ->  disk.raw
+extension.nix (extension-parts.sh, extension.sh)
+                        <-  packages, system.nix's usr-paths, a signature
+                        ->  <name>_<version>.<architecture>.raw
+devtools.nix            the one extension so far, by extension.nix
 system/  initrd/            bunix's own configuration of the first two
 ```
 
@@ -614,7 +679,8 @@ tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
 BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
                                          and accounts tried on it; run0.sh
                                          and passwd-chsh.sh the same way
-tools/update-test.sh                     on a disk: update it, and go back from a bad update
+tools/update-test.sh                     on a disk: update it, with the devtools extension,
+                                         and go back from a bad update
 BUNIX_EFI=u-boot tools/update-test.sh
                                          the same, started by U-Boot
 tools/install-test.sh                    install it on two disks, and start them
@@ -644,6 +710,13 @@ tools/mac-stage1.sh <id of the ESP> [try | put root@<address>]
   in a later `/usr` does not reach a file already copied, as on x86.
   sshd's keys are in `/var/lib/sshd` only because `/etc`, in memory, is
   not kept.
+- **An extension that is refused fails the boot.**  An image where
+  extensions are looked for that is not signed, or is damaged, fails
+  the unit that merges them, and a boot with a failed unit is not
+  marked good: a new version would be gone back from for it.  Right for
+  the extension an update brought; a stray file would do the same.
+- **Nix's program is downloaded from its makers' build server**, which
+  may not keep that build for ever: to be kept beside bunix's releases.
 - **Power lost right after the first start.**  The first start fills
   `/etc` from the copy in `/usr`, and nothing makes sure those files are
   on the disk before going on: for some seconds a machine that loses

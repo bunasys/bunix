@@ -48,7 +48,7 @@ let
       sign = ../../tools/sign.sh;
       key = ../development-key/development.key;
       inherit certificate;
-      system_image = systemImage;
+      hash_file = "${systemImage}/usr-partition/usrhash";
     };
   };
 in
@@ -65,6 +65,7 @@ stagedBuild {
     uki = import ./uki.nix { inherit system signing version; };
     signature = if signature == null then "${developmentSignature}/signature" else signature;
     inherit certificate;
+    signature_check = ./signature-check.sh;
     partition_architecture = architecture.partitionArchitecture;
   };
 }

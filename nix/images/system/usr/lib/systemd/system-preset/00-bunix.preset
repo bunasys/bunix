@@ -13,6 +13,9 @@ enable console-shell@.service tty1 ttyAMA0 ttySAC0
 # polkit's password check, for run0: started for each request, and so
 # not a set-user-id program
 enable polkit-agent-helper.socket
+# Extensions the machine's person asked for (sysupdate.d/*.feature) are
+# laid over /usr at every boot.
+enable systemd-sysext.service
 # On a disk, a new version is given three boots to show that it starts
 # (sysupdate.d/90-uki.transfer).  This says what "starts" is: no unit
 # failed.  A boot that passes it is marked good, and one that never does

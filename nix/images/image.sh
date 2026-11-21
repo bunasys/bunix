@@ -226,6 +226,14 @@ rm -f $factory/passwd* $factory/group* $factory/shadow* $factory/gshadow* \
     done
 ) > $root/usr/lib/tmpfiles.d/bunix-etc.conf
 
+# ---- What /usr has, as a list -------------------------------------------------
+
+# A path a line, in the result as usr-paths: an extension is made without
+# these (images/extension-parts.sh), as the system's own are the ones
+# used.  Only read from the tree.
+mkdir -p $out
+(cd $root && find usr ! -type d | LC_ALL=C sort) > $out/usr-paths
+
 # ---- /usr as a partition -----------------------------------------------------
 
 # What systemd-repart makes of a partition and its contents: a read-only

@@ -508,5 +508,40 @@
     "version": "85b7afba1a9d9bd445779800e5bcafeb732e4421",
     "url": "https://github.com/fish-shell/rust-pcre2/archive/85b7afba1a9d9bd445779800e5bcafeb732e4421.tar.gz",
     "sha256": "b5bb6d49f8e779d6a54778229d45c4213d56bfabb264481744d8e1b42dbb4dec"
+  },
+  "strace": {
+    "version": "7.3",
+    "url": "https://github.com/strace/strace/releases/download/v7.3/strace-7.3.tar.xz",
+    "sha256": "529634c40910895a9a1f3c5c1e65da2ca9ed72fb158dfc4bcc89efdf05e39b72"
+  },
+  "libarchive": {
+    "version": "3.8.11",
+    "url": "https://www.libarchive.org/downloads/libarchive-3.8.11.tar.xz",
+    "sha256": "a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2"
+  },
+  "git": {
+    "version": "2.56.1",
+    "url": "https://cdn.kernel.org/pub/software/scm/git/git-2.56.1.tar.xz",
+    "sha256": "f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f"
+  },
+  "gdb": {
+    "version": "18.1",
+    "url": "https://mirrors.kernel.org/gnu/gdb/gdb-18.1.tar.xz",
+    "sha256": "cd9fc3fe2b47743840e42c1592d3d87f8302eb18639c0b8b4ba0898002e2348f"
+  },
+  "nix-aarch64-linux": {
+    "version": "2.35.7",
+    "url": "https://hydra.nixos.org/build/353287192/download/1/nix",
+    "sha256": "f7c1c1c3440d5cf6e04cdf14787c28563505a2bfbdf7a299c0a03aa1122a1179"
+  },
+  "nix-x86_64-linux": {
+    "version": "2.35.7",
+    "url": "https://hydra.nixos.org/build/353287205/download/1/nix",
+    "sha256": "84b0875c7071394b20cc860ddf5ed38a58057d816907c8b505bc970fcdf4b73f"
+  },
+  "firecracker-x86_64-linux": {
+    "version": "1.18.0",
+    "url": "https://github.com/firecracker-microvm/firecracker/releases/download/v1.18.0/firecracker-v1.18.0-x86_64.tgz",
+    "sha256": "1ac8eec866dd5eea14efecf6323e22b23eea24054545338a5b34bc5bca6623cd"
   }
 }

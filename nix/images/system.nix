@@ -7,7 +7,8 @@
 # and, of the same tree, usr-partition/: /usr as the images of a
 # partition, for a machine's disk (image.sh).  One build for both, at the
 # cost of each being made when only the other is wanted: the tree they
-# are made of is not kept.
+# are made of is not kept.  And usr-paths, the list of what /usr has, for
+# what makes an extension (images/extension.nix).
 #
 # It is the usr/ and etc/ of `contents`, and of everything they need to
 # run, with bunix's configuration over them: files/rootfs's where the

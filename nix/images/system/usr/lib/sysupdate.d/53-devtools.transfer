@@ -1,0 +1,29 @@
+# The devtools extension (devtools.feature), built with each release: an
+# extension built for another release would not match this system's C
+# library.  Being part of the same update target, it moves in lock-step
+# with /usr (10-usr.transfer): sysupdate installs the same version of
+# both.  (After files/rootfs's 50-gcc.transfer and 53-devtools.transfer.)
+#
+# On the machine the file is named devtools_<version>.raw, and two are
+# kept: this version's, and the one's before or after.  Not where sysext
+# looks, as files/rootfs's are (a directory devtools.raw.v/, of which
+# sysext takes the newest): the newest is not this version's after an
+# update, nor after going back from one
+# (usr/lib/bunix/extensions-of-this-version).  The file to download says
+# its architecture as well (%a: arm64, x86-64), as the kernel image's
+# does.
+[Transfer]
+Features=devtools
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=devtools_@v.%a.raw
+
+[Target]
+Type=regular-file
+Path=/var/lib/bunix/extensions
+MatchPattern=devtools_@v.raw
+Mode=0444
+InstancesMax=2

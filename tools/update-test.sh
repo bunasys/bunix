@@ -20,13 +20,17 @@
 #      after it was signed; and nothing of that version is written
 #   3. with the list signed as it should be, it updates: the next /usr goes
 #      into the empty slot, its kernel image beside the old one, with three
-#      tries
+#      tries; and, the devtools extension having been asked for, that
+#      version's extension with it
 #   4. the machine restarts into the next version, from the second slot,
-#      and marks it good once all of it has started
+#      and marks it good once all of it has started.  The extension is
+#      laid over /usr, and its programs run.  It is not, if what is in
+#      its place is not signed, or signed as of another hash
 #   5. it updates to the broken one, over the first slot
 #   6. the broken one is started three times, and does not come up
 #   7. the fourth start is the next version again, and the broken one is
-#      marked bad
+#      marked bad; the next version's extension is merged, not the
+#      broken one's
 #
 # The lists of steps 2 to 5 are signed here, with keys made for this run,
 # and the machine is told which of them to take, in /etc, where an
@@ -118,6 +122,13 @@ disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
     --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
 next_update=$(build /bunix/nix/images/update.nix --argstr version "$next")
 broken_update=$(build /bunix/nix/images/update.nix --argstr version "$broken")
+# The devtools extension of each: a machine that has asked for it takes a
+# version only with its extension, as one update.
+next_devtools=$(build /bunix/nix/images/devtools.nix -A image --argstr version "$next")
+# and its file system alone, before anything was signed: what an
+# extension nobody signed would be
+next_devtools_parts=$(build /bunix/nix/images/devtools.nix -A parts --argstr version "$next")
+broken_devtools=$(build /bunix/nix/images/devtools.nix -A image --argstr version "$broken")
 # The kernel image of another system of the broken version: one for
 # release, whose /usr differs (it takes fewer certificates), and so its
 # hash.  No partition will have the ids that image looks for.
@@ -136,6 +147,9 @@ truncate -s +2G "$work/disk.raw"
 
 limactl copy -r "bunix-builder:$next_update/." "$work/served/next/"
 limactl copy -r "bunix-builder:$broken_update/." "$work/served/broken/"
+limactl copy -r "bunix-builder:$next_devtools/." "$work/served/next/"
+limactl copy "bunix-builder:$next_devtools_parts/root.raw" "$work/devtools-file-system.raw"
+limactl copy -r "bunix-builder:$broken_devtools/." "$work/served/broken/"
 chmod -R u+w "$work/served"
 broken_uki=$(basename "$work"/served/broken/*.efi)
 rm "$work/served/broken/$broken_uki"
@@ -297,6 +311,16 @@ expect_refusal() {
     esac
     echo "  refused: the list of files $2"
 }
+# expect_not_merged <name of the log> <what is wrong with the image that
+#     is in the devtools extension's place>: that none of its programs is
+# there after systemd was asked to merge what there is.
+expect_not_merged() {
+    in_guest "systemd-sysext refresh" > "$work/sysext-$1.log" 2>&1 || true
+    if in_guest "command -v git" > /dev/null; then
+        fail "an extension $2 was merged; see $work/sysext-$1.log"
+    fi
+    echo "  refused: an extension $2"
+}
 # expect_kernel_image <file name> <what is wrong if it is not there>
 expect_kernel_image() {
     kernel_images=$(in_guest ls /boot/EFI/Linux) || fail "could not list the machine's kernel images"
@@ -349,9 +373,16 @@ echo "$no_hash  added-after-signing" >> "$work/served/next/SHA256SUMS"
 expect_refusal changed "was changed after it was signed" "Signature verification failed"
 
 echo "3. $installed updates to $next"
+# The machine's person asks for the devtools extension, as its feature
+# file says how (system/usr/lib/sysupdate.d/devtools.feature).
+in_guest "mkdir -p /etc/sysupdate.d/devtools.feature.d &&
+    printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf" \
+    || fail "could not ask for the devtools extension"
 write_list next
 sign_list signer next
 update next
+in_guest "ls /var/lib/bunix/extensions/devtools_$next.raw" > /dev/null \
+    || fail "the update did not bring the devtools extension of $next"
 expect_kernel_image "bunix_$next+3-0.efi" "no kernel image of $next with three tries"
 in_guest lsblk -n -o PARTLABEL | grep -q -x -F "bunix_$next" \
     || fail "no /usr partition labelled bunix_$next"
@@ -366,6 +397,40 @@ in_guest systemctl is-active --quiet systemd-boot-check-no-failures.service \
 in_guest systemctl is-active --quiet systemd-bless-boot.service \
     || fail "the boot of $next was not marked good"
 expect_kernel_image "bunix_$next.efi" "$next still has tries in its name"
+
+# The extension came with the update, and the boot laid it over /usr:
+# its programs are there, and Nix's daemon is listening.
+in_guest "git --version && gdb --version && strace -V && file --version && bsdtar --version && nix --version" \
+    > "$work/devtools.log" 2>&1 \
+    || fail "the devtools extension's programs do not all run; see $work/devtools.log"
+in_guest systemctl is-active --quiet nix-daemon.socket \
+    || fail "nothing listens for Nix's daemon"
+echo "  the devtools extension of $next is merged, and its programs run"
+# What is in the extension's place is merged only if it is signed, and
+# the signature is of what is there.  The image as it came is set aside
+# for these, and put back after.
+extension=/var/lib/bunix/extensions/devtools_$next.raw
+in_guest "systemd-sysext unmerge > /dev/null 2>&1 && mv $extension /var/tmp/as-it-came.raw" \
+    || fail "could not set the extension aside"
+# Its file system alone: no hashes, no signature.  systemd would merge it
+# if it were not told to take signed images only.
+in_guest "cat > $extension" < "$work/devtools-file-system.raw" \
+    || fail "could not put an unsigned extension in the place of the signed one"
+expect_not_merged unsigned "that is not signed"
+# The image as it came, but for the hash its signature says it is of:
+# the first four digits, which come right after the name.
+in_guest "set -e
+    cp /var/tmp/as-it-came.raw $extension
+    name_at=\$(grep -a -b -o '\"rootHash\":\"' $extension | head -n 1 | cut -d: -f1)
+    [ -n \"\$name_at\" ]
+    digits_at=\$((name_at + 12))    # past \"rootHash\":\"
+    printf 0000 | dd of=$extension bs=1 seek=\$digits_at conv=notrunc status=none
+    ! cmp -s $extension /var/tmp/as-it-came.raw" \
+    || fail "could not change the hash the extension's signature is of"
+expect_not_merged changed "whose signature is of another hash"
+in_guest "mv /var/tmp/as-it-came.raw $extension && chmod 0444 $extension &&
+    systemd-sysext refresh > /dev/null 2>&1 && command -v git > /dev/null" \
+    || fail "the extension as it came is not merged again"
 
 echo "5. $next updates to $broken, which cannot start"
 look_for_updates_in broken
@@ -389,6 +454,10 @@ done
 echo "7. the machine goes back to $next"
 start_and_expect "$next"
 expect_kernel_image "bunix_$broken+0-3.efi" "$broken is not marked bad"
+# $next has its own extension still, though $broken's is beside it and
+# is the newer
+in_guest "command -v git" > /dev/null \
+    || fail "back on $next, its devtools extension is not merged"
 
 stop_machine poweroff
 echo "update-test.sh: passed"
