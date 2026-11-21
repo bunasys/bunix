@@ -519,19 +519,6 @@ let
 
   # ---- Programs built elsewhere ----------------------------------------------
 
-  # Rex (superlogical.com/rex): makes this machine a remote host for the
-  # rex command and Rex for Mac, over SSH.  Published as a program, not as
-  # source, one archive for each architecture (sources.json).
-  rex = mkSystemPackage {
-    name = "rex";
-    source = sources."rex-${system}";
-    script = ./base/rex.sh;
-    depends = [ glibc ];
-    # Rex's builders used Nix: it names four paths of their store, where
-    # its Go runtime would look for time zones and MIME types last.
-    builtElsewhere = true;
-  };
-
   # Rust: rustc, its standard library, cargo, rustfmt, and the standard
   # library's source, which the kernel compiles for itself; five archives
   # of one version (sources.json).  As the Rust project publishes them, in
@@ -884,6 +871,6 @@ let
 in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
-  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
 }

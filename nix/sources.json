@@ -179,16 +179,6 @@
     "url": "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.xz",
     "sha256": "5c1789d290bba048a6135ed1ab81b0402dd0fb528d1f1421765c42b1fc3d6289"
   },
-  "rex-aarch64-linux": {
-    "version": "0.1.0-preview.21",
-    "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-arm64.tar.gz",
-    "sha256": "6c669a915a26662d06815abb9d23fd51c7f7c460982e91672e075d30b06cc3f5"
-  },
-  "rex-x86_64-linux": {
-    "version": "0.1.0-preview.21",
-    "url": "https://blob.superlogical.com/download/rex/preview/202b1b3fc0219883112258a8d0f9f95e2d47daa9/rex-linux-amd64.tar.gz",
-    "sha256": "41988e86e87e8b0b47c8bca7652d9959178360f7789785232090784e38e23cb5"
-  },
   "ninja": {
     "version": "1.13.2",
     "url": "https://github.com/ninja-build/ninja/archive/v1.13.2.tar.gz",

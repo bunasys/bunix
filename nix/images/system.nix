@@ -57,7 +57,7 @@ stagedBuild {
     # a disk: systemd checks and makes file systems with these
     base.e2fsprogs base.dosfstools
     # the network, and a way in over it
-    base.openssh base.rex
+    base.openssh
     # accounts: what checks who logs in and opens their session (PAM),
     # the console's login prompt, and the tools that make and change users
     base.linux-pam base.util-linux-login base.shadow

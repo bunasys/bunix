@@ -2,7 +2,7 @@
 
 Status: 2026-11-21.  All six steps of the order of work are done: a
 system with no `/nix` boots, and the store-layout system is gone.  Since
-then: a network, SSH and Rex in the image; clang and Rust as packages;
+then: a network and SSH in the image; clang and Rust as packages;
 one kernel, Aurora Silicon's, built with them; Wi-Fi (iwd, with the
 system bus it needs); Aurora's boot loader for Apple Silicon Macs; and
 systemd as the init system, in place of a script.
@@ -136,14 +136,14 @@ A package made from another's result has a `version` where others have a
 
 ## A program built elsewhere
 
-Rex is published as a program, not as source.  Its package says
-`builtElsewhere = true`: the file is shipped as published, not stripped,
-and may name its builder's store as text.  It is still checked for what
-makes it start here: this system's loader, and libraries among its
-`depends`.
+Rust is published as programs, not only as source.  Its packages say
+`builtElsewhere = true`: the files are shipped as published, not
+stripped, and may name their builder's store as text.  They are still
+checked for what makes them start here: this system's loader, and
+libraries among their `depends`.
 
-Rust is the other one: rustc, cargo, rustfmt, the standard library and
-its source, as the Rust project publishes them, each archive pinned.  They are in
+They are rustc, cargo, rustfmt, the standard library and its source, as
+the Rust project publishes them, each archive pinned.  They are in
 `/usr/lib/rust`, where rustc finds its libraries beside itself, with
 links in `/usr/bin`.  `elements/bootstrap/rust.bst` builds Rust from
 source with such a download as its seed; that is not ported.
