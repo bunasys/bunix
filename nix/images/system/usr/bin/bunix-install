@@ -244,14 +244,20 @@ if [ -b "$files_device" ]; then
   files_disk=${files_disk:-$files_device}
 fi
 disks=()
-while read -r name type; do
+while read -r name type size; do
   [ "$type" = disk ] || continue
   [ "$name" = "$files_disk" ] && continue
   # compressed swap in memory (zram-swap), not a disk to install to
   case $name in /dev/zram*) continue ;; esac
+  # Nor what bunix could never fit on.  A machine's flash chip is a disk
+  # to lsblk, and so are the small parts of a Mac's SSD where Apple
+  # keeps the Mac's own settings: nothing to offer, and nothing that may
+  # be erased.  (The size as lsblk says it, which is 0 for a card reader
+  # with no card in it.)
+  [ $((size / MiB)) -ge "$NEEDED_SIZE" ] || continue
   disks+=("$name")
-done < <(lsblk -ndpo NAME,TYPE)
-[ ${#disks[@]} -gt 0 ] || die "no disk to install to"
+done < <(lsblk -bndpo NAME,TYPE,SIZE)
+[ ${#disks[@]} -gt 0 ] || die "no disk of at least $NEEDED_SIZE MiB to install to"
 
 echo "Disks:"
 for i in "${!disks[@]}"; do
@@ -871,8 +877,9 @@ echo "Log in as \"$user_name\"."
 if [ "$starts_through_aura" = yes ]; then
   echo "A Mac starts it once the Mac is told, in its recovery system, to start"
   echo "aura's first stage made for this ESP, which this installer does not do."
-  echo "On the computer bunix is built on:"
-  echo "  tools/mac-stage1.sh $(lsblk -ndo PARTUUID "$esp")"
+  echo "On the computer bunix is built on, while this system still runs:"
+  echo "  tools/mac-stage1.sh $(lsblk -ndo PARTUUID "$esp") put root@<this Mac's address>"
+  echo "It puts on the ESP what the recovery system needs, and says what to do."
 else
   echo "It starts when the machine's firmware starts this disk; choose the disk"
   echo "in the firmware's boot menu if another system starts first."

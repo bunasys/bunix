@@ -256,8 +256,8 @@ and 5.5 GB were left free.  Deleting the two entries undoes it.
 
 ### A Mac starts from its disk
 
-Not tried on a Mac yet.  What is there, and tried in a virtual machine
-as far as one goes:
+The 13-inch MacBook Pro M1 starts this way (2026-11-21), by itself and
+with its Wi-Fi.  The chain:
 
 ```
 the Mac's own firmware
@@ -282,9 +282,20 @@ Stage 1 is made for one ESP, on the computer bunix is built on:
 prints at its end.  It runs aura's tool that writes the id into the
 image, and says what to do with the result in the Mac's recovery system,
 where aura's own script (`enroll-stage1.sh`) checks and then tells the
-Mac.  The Mac is told in place of what its boot container starts now
-("On a Mac"): from then on it no longer waits on USB, and the plain
-Stage 1, which does, is kept beside the new one as the way back.  `tools/mac-stage1.sh <id> try` instead loads that Stage 1 into the
+Mac.  With `put root@<the Mac's address>`, while the Mac still runs the
+system the installer ran in, it also puts the files on the ESP
+(`bunix-enroll/`), where the recovery system reads them: no USB stick
+is carried over.  Two short scripts beside them have the checksums
+written in (`enroll.sh`, and `way-back.sh` for the plain Stage 1), as
+the recovery system cannot paste.  The id is not written into Stage 1
+by the installer itself: aura's tool for it is Python, which the system
+does not have, and a second one would be ours to keep in step.
+
+The Mac is told in place of what its boot container starts now ("On a
+Mac"): from then on it no longer waits on USB, and the plain Stage 1,
+which does, is kept beside the new one as the way back.
+
+`tools/mac-stage1.sh <id> try` instead loads that Stage 1 into the
 memory of a Mac that waits on USB, as `boot-mac.sh` does with the plain
 one: the whole chain runs from the disk once, and nothing on the Mac has
 changed if it does not.
@@ -609,7 +620,8 @@ BUNIX_EFI=u-boot tools/update-test.sh
 tools/install-test.sh                    install it on two disks, and start them
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
-tools/mac-stage1.sh <id of the ESP>      what a Mac is told to start, to start it from its disk
+tools/mac-stage1.sh <id of the ESP> [try | put root@<address>]
+                                         what a Mac is told to start, to start it from its disk
 ```
 
 ## Open questions

@@ -9,13 +9,16 @@
 # and is given the files of its own version (nix/images/update.nix).  It
 # installs twice:
 #
-#   1. onto a whole, empty disk
+#   1. onto a whole, empty disk; the machine's flash chip is not to be
+#      offered as one
 #   2. onto a disk laid out as a Mac's is, with sectors of 4096 bytes as
 #      a Mac's has: Apple's partitions before and after, and between them
 #      another system's ESP, an ESP for bunix, a root partition of an
 #      earlier Linux, and free space (what mbp20's disk has, and an ESP
 #      more).  The installer replaces the Linux partition, and is told
 #      which ESP is bunix's; the whole disk is not to be offered.
+#      tools/mac-stage1.sh then puts on that ESP what a Mac's recovery
+#      system is to find there.
 #   3. the first disk is started by EFI firmware, as a machine would
 #      start it, and the person the installer was told of logs in over
 #      SSH and looks: all of the system started, /usr is checked against
@@ -198,9 +201,10 @@ whole=$(disk_with_sectors_of 512)
 mac=$(disk_with_sectors_of 4096)
 [ -n "$whole" ] && [ -n "$mac" ] || fail "the machine does not have the two disks: '$whole' '$mac'"
 # The number the installer lists a disk under: it lists what lsblk does,
-# in that order (the virtual machine has a small flash chip as well).
+# in that order, but for what is too small for bunix.  Here that is the
+# virtual machine's flash chip, and the test's own two disks are not.
 number_of() {
-    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" { number++; if (\$1 == \"$1\") print number }'"
+    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock/ { number++; if (\$1 == \"$1\") print number }'"
 }
 
 # run_installer <name of the log> <answers, a line each>: fails the test
@@ -256,6 +260,9 @@ sara
 a password with spaces
 a password with spaces
 $whole"
+if grep -q mtdblock "$work/install-whole.log"; then
+    fail "the machine's flash chip was offered as a disk to install to"
+fi
 expect_root_locked "$whole"
 give_key_to "$whole" sara
 partitions_of root "$whole" > "$work/whole-partitions"
@@ -340,8 +347,23 @@ as root "mount -o ro ${mac}5 /run/other-esp && ls /run/other-esp/EFI/Linux/bunix
 # and what a Mac's own boot loader loads from it, whole
 as root "mount -o ro ${mac}5 /run/other-esp && cmp /usr/lib/mac-stage2/stage2.bin /run/other-esp/aurora/stage2.bin && umount /run/other-esp" \
     || fail "the ESP that was chosen does not have what a Mac's boot loader loads (aurora/stage2.bin)"
-grep -q "tools/mac-stage1.sh $bunix_esp_id" "$work/install-mac.log" \
+grep -q "tools/mac-stage1.sh $bunix_esp_id put " "$work/install-mac.log" \
     || fail "the installer did not say how the Mac is told of the ESP; see $work/install-mac.log"
+# and that, done: what the Mac's recovery system is to find is on the ESP,
+# whole (the first stage made for it, by its checksum)
+# (made in the test's own directory: the default one may have the files
+# of a real Mac)
+BUNIX_STAGE1_DIRECTORY="$work/mac-stage1" "$(dirname "$0")/mac-stage1.sh" "$bunix_esp_id" put "ssh://root@127.0.0.1:$ssh_port" \
+    > "$work/mac-stage1.log" 2>&1 \
+    || fail "tools/mac-stage1.sh could not put its files on the ESP; see $work/mac-stage1.log"
+as root "mount -o ro ${mac}5 /run/other-esp" || fail "could not mount the ESP that was chosen"
+files_on_the_esp=$(as root "cd /run/other-esp/bunix-enroll && LC_ALL=C ls | tr '\n' ' '")
+checksum_on_the_esp=$(as root "md5sum /run/other-esp/bunix-enroll/aura-stage1.bin | cut -d' ' -f1")
+as root "umount /run/other-esp"
+[ "$files_on_the_esp" = "aura-stage1.bin aura.bin enroll-stage1.sh enroll.sh way-back.sh " ] \
+    || fail "the ESP does not have the files the Mac's recovery system needs, but: $files_on_the_esp"
+[ "$checksum_on_the_esp" = "$(md5 -q "$work/mac-stage1/aura-stage1.bin")" ] \
+    || fail "the first stage on the ESP is not the one that was made"
 expect_root_locked "$mac"
 give_key_to "$mac" adam
 partitions_of root "$mac" > "$work/mac-partitions"
