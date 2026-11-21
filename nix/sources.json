@@ -488,5 +488,25 @@
     "version": "128",
     "url": "https://github.com/polkit-org/polkit/archive/refs/tags/128.tar.gz",
     "sha256": "6edb06bf1448e49e428f9597a97af6a05d62146dd0b58f86eeaebcee3f5ecfaa"
+  },
+  "fish": {
+    "version": "4.9.3",
+    "url": "https://github.com/fish-shell/fish-shell/releases/download/4.9.3/fish-4.9.3.tar.xz",
+    "sha256": "20998a25f73217ddcc19f499055fd587e9912d1ad6e7109120fbcf2871f0b98c"
+  },
+  "fish-fluent-rs": {
+    "version": "cf712bced280b217b6307edabc2089b3e57204ab",
+    "url": "https://github.com/danielrainer/fluent-rs/archive/cf712bced280b217b6307edabc2089b3e57204ab.tar.gz",
+    "sha256": "c010922974bae311801d760cc46a398744ef6427dbef819baeb415979e570c51"
+  },
+  "fish-fluent-ftl-tools": {
+    "version": "5917664c8f2e4928ef1e480ff5c13bbe1e226066",
+    "url": "https://codeberg.org/danielrainer/fluent-ftl-tools/archive/5917664c8f2e4928ef1e480ff5c13bbe1e226066.tar.gz",
+    "sha256": "091b164ed0f7d28928c6af0e76518ff5ea2c6c3cdf1a2b850d36e81c52cd74be"
+  },
+  "fish-rust-pcre2": {
+    "version": "85b7afba1a9d9bd445779800e5bcafeb732e4421",
+    "url": "https://github.com/fish-shell/rust-pcre2/archive/85b7afba1a9d9bd445779800e5bcafeb732e4421.tar.gz",
+    "sha256": "b5bb6d49f8e779d6a54778229d45c4213d56bfabb264481744d8e1b42dbb4dec"
   }
 }

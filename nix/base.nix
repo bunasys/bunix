@@ -389,6 +389,7 @@ let
   # runuser, root's way to run something as another user.  A build of its
   # own from the source of util-linux, which systemd itself is built on:
   # PAM there would rebuild most of the system.  No su: run0 is the way up.
+  # And chsh, which the element does not have (base/util-linux-login.sh).
   util-linux-login = mkSystemPackage {
     name = "util-linux-login";
     source = sources.util-linux;
@@ -815,6 +816,31 @@ let
     };
   };
 
+  # fish: a shell a user may choose in place of bash (chsh).  Written in
+  # Rust; it brings its own PCRE2, which its build compiles.
+  # ncurses: fish reads the terminfo database when it runs.
+  fish = mkSystemPackage {
+    name = "fish";
+    source = sources.fish;
+    script = ./base/fish.sh;
+    depends = [ glibc toolchain.gccLibraries ncurses ];
+    buildDepends = [ rust cmake ninja ];
+    env = {
+      # fish's Cargo.lock, as the `cargo2` source of elements/base/fish.bst
+      # has it
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./base/fish-crates.json));
+      # and the three git repositories that the rest of its crates are in,
+      # each at the commit the element's `kind: git` crates name (its
+      # version in sources.json)
+      fluent_rs = fetch sources.fish-fluent-rs;
+      fluent_ftl_tools = fetch sources.fish-fluent-ftl-tools;
+      rust_pcre2 = fetch sources.fish-rust-pcre2;
+    };
+  };
+
   # Generates scanners; the kernel's configuration tool is built with one.
   # flex runs m4.
   flex = mkSystemPackage {
@@ -846,5 +872,5 @@ in
 {
   inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
 }

@@ -61,6 +61,8 @@ stagedBuild {
     # accounts: what checks who logs in and opens their session (PAM),
     # the console's login prompt, and the tools that make and change users
     base.linux-pam base.util-linux-login base.shadow
+    # the shell a user may have in place of bash
+    base.fish
     # a user's way up: run0 asks polkit, which asks a member of wheel
     # for their own password
     base.polkit
@@ -78,7 +80,7 @@ stagedBuild {
   # units and compile the hardware database, on the tree that is to be the
   # image.  gen_init_cpio comes with the kernel.
   # erofs-utils: the file system of /usr's image.
-  buildDepends = [ boot.linux base.systemd base.erofs-utils tools.bash tools.coreutils tools.findutils tools.grep tools.sed tools.gzip ];
+  buildDepends = [ boot.linux base.systemd base.erofs-utils tools.bash tools.coreutils tools.tar tools.findutils tools.grep tools.sed tools.gzip ];
   env = {
     bunix_files = ./system;
     shared_files = ../../files/rootfs;
@@ -114,6 +116,11 @@ stagedBuild {
       # that hands the check to sqv
       "usr/bin/gpg"
     ];
+    # passwd: a user changes their own password, in /etc/shadow, which
+    # only root may write (PAM asks for the old one first).  As
+    # elements/system/usr.bst.
+    # chsh: the same for their shell, in /etc/passwd (system/usr/lib/pam.d/chsh).
+    set_user_id = [ "usr/bin/passwd" "usr/bin/chsh" ];
     inherit version;
     usr_partition = "yes";
     certificates = [ ../../keys/verity.crt ]

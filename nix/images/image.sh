@@ -13,6 +13,9 @@
 #                        a disk: its /usr is made into the images of a
 #                        /usr partition as well ("/usr as a partition",
 #                        below), in usr-partition/ of the result
+#   $set_user_id         the programs that run as root whoever starts them
+#                        (usr/bin/passwd): paths in the tree
+#                        ("Set-user-id: the list", below)
 #   $certificates        whose signature on an image's hash this system
 #                        takes: certificates, for /usr/lib/verity.d
 #   $variant             what the system says it is, if it is not the one
@@ -73,6 +76,32 @@ fi
 cp -a --no-preserve=ownership $bunix_files/. $root/
 # a copy out of the store is read-only, as the store is
 chmod -R u+w $root
+
+# ---- Set-user-id: the list --------------------------------------------------
+
+# A build is not allowed to make a file set-user-id (Nix refuses the
+# chmod), so no file of the tree is.  The programs of $set_user_id are
+# said to be so in the two places where the tree is written out with a
+# mode for every file: usr.tar ("/usr as a partition") and the
+# archive's list ("The archive").
+#
+# Only a program of /usr can be listed: /usr is all a disk has of the
+# tree, and a program elsewhere would be set-user-id in memory alone.
+set_user_id_mode=4755
+for program in ${set_user_id:-}; do
+    case $program in
+        usr/bin/*) is_in_usr_bin=yes ;;
+        *) is_in_usr_bin=no ;;
+    esac
+    is_a_file=no
+    if [ -f $root/$program ] && [ ! -L $root/$program ]; then
+        is_a_file=yes
+    fi
+    if [ $is_in_usr_bin = no ] || [ $is_a_file = no ]; then
+        echo "image.sh: set_user_id names $program, which is not a program in usr/bin" >&2
+        exit 1
+    fi
+done
 
 # whose signature on an image's hash this system takes
 for certificate in ${certificates:-}; do
@@ -202,19 +231,48 @@ rm -f $factory/passwd* $factory/group* $factory/shadow* $factory/gshadow* \
 mkdir -p $out
 if [ -n "${usr_partition:-}" ]; then
     mkdir -p usr.d tmp images $out/usr-partition
+    # The file system is made here, and handed to repart whole: repart
+    # would make it of the tree, where nothing is set-user-id.  mkfs.erofs
+    # makes it of a tar file, and tar can be told a file's mode: into
+    # usr.tar goes everything but the set-user-id programs first, then
+    # they, with theirs.  It is of /usr's contents: the partition is
+    # mounted on /usr.  Every file is root's, and of the time files in
+    # the store have.
+    to_usr_tar() {
+        tar -C $root/usr --sort=name --owner=0 --group=0 --numeric-owner --mtime=@1 "$@"
+    }
+    programs=
+    without_programs=
+    for program in ${set_user_id:-}; do
+        programs="$programs ./${program#usr/}"
+        without_programs="$without_programs --exclude=./${program#usr/}"
+    done
+    to_usr_tar --anchored $without_programs -cf usr.tar .
+    if [ -n "$programs" ]; then
+        to_usr_tar --mode=$set_user_id_mode -rf usr.tar $programs
+    fi
+    # one line a program, and the s in it: a list that tar did not take as
+    # meant would otherwise be found out on a running system, or not
+    for program in $programs; do
+        if ! tar -tvf usr.tar $program | grep -q '^-rwsr-xr-x '; then
+            echo "image.sh: $program is not set-user-id in usr.tar" >&2
+            exit 1
+        fi
+    done
+    # -U: the file system's id, 32 digits written as a UUID; the same at
+    # every build of a version
+    digits=$(printf 'bunix usr file system %s' $version | sha256sum | head -c 32)
+    usr_file_system_id=${digits:0:8}-${digits:8:4}-${digits:12:4}-${digits:16:4}-${digits:20:12}
+    mkfs.erofs --quiet -zlz4hc -U $usr_file_system_id --tar=f usr.erofs usr.tar
     # SplitName: each partition as a file of its own, images/x.<name>.raw.
-    # CopyFiles=/usr/:/ : /usr's contents at the top of the partition,
-    # which is mounted on /usr.  No validatefs: a build cannot store the
-    # attribute it marks a file system with.
-    printf '%s\n' '[Partition]' 'Type=usr' 'Format=erofs' 'Compression=lz4hc' \
-        'CopyFiles=/usr/:/' 'Verity=data' 'VerityMatchKey=usr' 'Minimize=best' \
-        'AddValidateFS=no' 'SplitName=usr' > usr.d/10-usr.conf
+    printf '%s\n' '[Partition]' 'Type=usr' 'CopyBlocks=/build/usr.erofs' \
+        'Verity=data' 'VerityMatchKey=usr' 'SplitName=usr' > usr.d/10-usr.conf
     printf '%s\n' '[Partition]' 'Type=usr-verity' 'Verity=hash' 'VerityMatchKey=usr' \
         'Minimize=best' 'SplitName=usr-verity' > usr.d/20-usr-verity.conf
     # --offline: without the loop devices a build does not have.  The disk
     # repart makes around the two is not wanted, only its parts.
     TMPDIR=/build/tmp systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
-        --definitions=usr.d --copy-source=$root --split=yes \
+        --definitions=usr.d --split=yes \
         --seed=$(printf 'bunix usr %s' $version | sha256sum | head -c 32) --json=short \
         images/x.raw > repart.json
     cp images/x.usr.raw $out/usr-partition/usr.raw
@@ -240,5 +298,15 @@ cd $root
     find . -type f -printf "file /%P $root/%P %m 0 0\n" | LC_ALL=C sort
     find . -type l -printf 'slink /%P %l 777 0 0\n' | LC_ALL=C sort
 } > /build/list
+# The set-user-id programs: the list has the tree's mode for them, which
+# is not theirs ("Set-user-id: the list").  A line is
+#   file /usr/bin/passwd <where it is in the tree> <mode> 0 0
+for program in ${set_user_id:-}; do
+    sed -i "s|^\(file /$program [^ ]* \)[0-7]* 0 0\$|\1$set_user_id_mode 0 0|" /build/list
+    if ! grep -q "^file /$program [^ ]* $set_user_id_mode 0 0\$" /build/list; then
+        echo "image.sh: $program is not set-user-id in the archive's list" >&2
+        exit 1
+    fi
+done
 # -t: one time for every entry, as files in the store have
 gen_init_cpio -t 1 /build/list | gzip -9 -n > $out/initramfs.cpio.gz

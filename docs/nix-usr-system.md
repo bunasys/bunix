@@ -110,8 +110,8 @@ needed.
 - **Owners, set-user-id and capabilities are not a package's.**  A build
   cannot give a file to another user or make it set-user-id, and the
   store would not keep either.  They are applied when an image is put
-  together, as `elements/base/util-linux.bst` notes today; where that list
-  lives is an open question below.
+  together, as `elements/base/util-linux.bst` notes today: set-user-id
+  from the image's own list (`set_user_id`, `images/system.nix`).
 - **An account is a package's to ask for, and the image's to make.**  A
   package that needs one installs a line in `/usr/lib/sysusers.d/`,
   systemd's format, with the id written out:
@@ -516,7 +516,8 @@ tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
 tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
 BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
-                                         and accounts tried on it
+                                         and accounts tried on it; run0.sh
+                                         and passwd-chsh.sh the same way
 tools/update-test.sh                     on a disk: update it, and go back from a bad update
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
@@ -524,11 +525,11 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 
 ## Open questions
 
-- **Owners and set-user-id.**  Where the list of them lives, and what
-  applies it to an image.  Until then nothing is set-user-id, where x86
-  has `passwd` so: a user cannot change their own password (root can,
-  for anyone), and PAM's helper cannot check one for a program that is
-  not root's.
+- **Owners.**  A file that is another account's than root's has no list
+  to be on, and nothing that applies one, as set-user-id has
+  (`images/image.sh`); none is needed so far.  And PAM's helper that
+  checks a password is not set-user-id, as on x86: it cannot check one
+  for a program that is not root's.
 - **Account ids.**  Each is a number in its package's script, and two
   packages with the same one are only found out when an image has both.
   systemd's own accounts get the numbers sysusers gives them when the
@@ -583,8 +584,13 @@ check` goes through them on a running system).  SSH takes keys only.  A
 member of wheel becomes root for a command with `run0`: it asks polkit,
 which asks them for their own password (`tools/vm-checks/run0.sh`, run
 the same way).  systemd's own rule for polkit is there too: a member of
-the group `empower` is asked nothing, and only root can add one.  No program is set-user-id, since a Nix build may not make
-one: a user cannot yet change their own password or shell.
+the group `empower` is asked nothing, and only root can add one.
+A user changes their own password with `passwd` and their shell with
+`chsh`, to fish or back to bash (`tools/vm-checks/passwd-chsh.sh`); a new
+user's shell, and root's, is bash.  The two programs are set-user-id, and
+the only ones.  A Nix build may not make a file so; the image says they
+are, where it describes each file: /usr's file system is made of an
+archive, which names a mode for every file, and not of the tree.
 It has no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
 again by itself where there is a disk to remember it on.  In memory the
 machine's id is new at every boot, unless the command line gives it one;
