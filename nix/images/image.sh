@@ -123,7 +123,26 @@ ln -s usr/bin $root/bin
 ln -s usr/bin $root/sbin
 ln -s usr/lib $root/lib
 case $loader in
-    /lib64/*) ln -s usr/lib/$triplet $root/lib64 ;;
+    /lib64/*)
+        ln -s usr/lib/$triplet $root/lib64
+        # and on the root partition systemd-repart makes of a disk, which
+        # starts empty: without the link nothing on it can be run.  The
+        # rule that makes it gets the link here.  (The image that starts
+        # a system, images/initrd.nix, has no such rule.)
+        new_root_partition=$root/usr/lib/repart.d/50-root.conf
+        if [ -e $new_root_partition ]; then
+            lib64_link="/lib64:usr/lib/$triplet"
+            if grep -q '^MakeSymlinks=.*/lib64:' $new_root_partition; then
+                echo "image.sh: $new_root_partition already makes /lib64" >&2
+                exit 1
+            fi
+            sed -i "s|^MakeSymlinks=.*|& $lib64_link|" $new_root_partition
+            if ! grep -q "^MakeSymlinks=.* $lib64_link\$" $new_root_partition; then
+                echo "image.sh: no MakeSymlinks= line in $new_root_partition to add /lib64 to" >&2
+                exit 1
+            fi
+        fi
+        ;;
 esac
 # /sysroot: where a root partition is mounted before the system on it is
 # handed over to (images/initrd.nix), and where a machine's own partition

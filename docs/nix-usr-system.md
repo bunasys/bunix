@@ -1,6 +1,6 @@
 # The system out of Nix: /usr, and no store
 
-Status: 2026-11-19.  All six steps of the order of work are done: a
+Status: 2026-11-21.  All six steps of the order of work are done: a
 system with no `/nix` boots, and the store-layout system is gone.  Since
 then: a network, SSH and Rex in the image; clang and Rust as packages;
 one kernel, Aurora Silicon's, built with them; Wi-Fi (iwd, with the
@@ -13,7 +13,9 @@ itself is still booted into memory.  In a virtual machine it also boots
 from a disk, as a machine with EFI starts one: systemd-boot, a unified
 kernel image, `/usr` read-only on a partition of its own and checked
 against its hash, a second slot for an update, and a root partition
-made at the first boot.
+made at the first boot.  On x86_64 every package builds, and the system
+has started in an emulated PC, from memory and from such a disk; the
+tests of installing and updating run for aarch64 only.
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -157,7 +159,10 @@ and device trees of Apple Silicon Macs.  It is built with clang and
 LLVM's linker (`LLVM=1`), with its Rust drivers, on top of the source's
 own `asahi.config`; `boot/linux/aarch64.config` has what bunix adds, each
 line with its reason, and the build fails if one of them is not in the
-final configuration.  The same image boots a virtual machine.
+final configuration.  The same image boots a virtual machine.  On
+x86_64 it is the same source with that architecture's default
+configuration and `boot/linux/x86_64.config` ("What the image that
+boots lacks" says what it has).
 
 Aura, Aurora's boot loader (from m1n1), is a package too (`boot.nix`):
 built by clang and LLVM's linker, its Rust part by cargo with no network,
@@ -703,8 +708,35 @@ laptop and a Mac mini need to reach the disk, Ethernet, Wi-Fi, a
 keyboard (USB, and the M1 laptops' own), a display on USB-C, and a
 network over a USB cable to another computer; and it installs Apple's
 device trees.  What has run on a Mac is in "On a Mac"; the Mac mini's
-parts (Ethernet, the display on USB-C) have not.  There is no kernel
-configuration for x86_64 yet.
+parts (Ethernet, the display on USB-C) have not.
+
+On x86_64 the kernel is the same source with the architecture's own
+default configuration and `boot/linux/x86_64.config`, which is the
+kernel of bunix on x86 so far (`files/linux/x86_64.fragment`) built
+without modules; the file's first lines list what else differs.  So it
+has what a virtual machine needs, and a PC with a wired network and the
+firmware's own picture on its screen; not the drivers of real GPUs,
+Wi-Fi, Bluetooth or sound, nor the wired network chips that load
+firmware: those need modules and firmware in `/usr`.  The architecture's
+default configuration builds some of them in, and the file turns those
+off by name.
+Its build needs libelf (`base.elfutils`) and zstd, which a Mac's does
+not.  Built on the x86_64 builder, it has started the system in an
+emulated PC (QEMU on the Mac, with no hypervisor): from memory, and from
+a disk of `images/disk.nix` through EFI firmware, systemd-boot and the
+kernel image, with `/usr` checked against its hash and the root
+partition made at the first start (whose rule gets x86's `/lib64` link
+when the image is made: `images/image.sh`).  Nothing else of it is tried
+there: the tests that install, update and go back (`tools/`) run on a
+Mac, for aarch64.  And a PC's serial port has no shell on it: the
+console's is enabled for the screen and for the serial ports of a Mac
+and of an Arm virtual machine.
+
+Aurora's source is at Linux 7.3.0 and does not follow the 7.3.x
+releases that carry fixes (2026-11-21: its branch says 7.3.0 at our
+commit and at its head).  That is to be settled before a system for
+x86, which so far has a kernel from kernel.org's long-term line, is
+published with this one.
 
 Firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
 each Mac's own macOS, and is added to the image when that Mac is booted
@@ -719,5 +751,5 @@ firmware too, and have none.  The regulatory database is a package.
 | 2. glibc for `/usr`, built by stage 1's gcc | a program linked against it runs in a staged build, loader `/lib/ld-linux-...` | done |
 | 3. binutils and gcc for `/usr` | `nix/tests/usr-toolchain`: C and C++, threads, shared libraries and LTO with no flags, no store path in the results | done |
 | 4. tools: bash, coreutils, make and the rest, built by that gcc | `nix/tests/usr-build-environment`: glibc builds again with the system's compiler and tools alone, and comes out the same, file for file | done |
-| 5. The image as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | done (aarch64) |
+| 5. The image as a union of `/usr` trees | `tools/boot-vm.sh` boots it; `ldd` shows `/usr/lib` paths; there is no `/nix` | done (aarch64; on x86_64 it boots in an emulated PC, by hand) |
 | 6. Remove stage 3 and the store-layout packages; move the bootstrap under `nix/bootstrap/` | the tests that remain pass on both builders | done |

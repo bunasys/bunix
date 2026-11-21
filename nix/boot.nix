@@ -23,7 +23,9 @@ let
 
   # Aurora Silicon's kernel (aurorasilicon.org): Linux with the drivers of
   # Apple Silicon Macs that are not in Linux yet, and their device trees.
-  # The one kernel of bunix: it boots a virtual machine as well.
+  # The one kernel of bunix: it boots a virtual machine as well, and on
+  # x86_64 it is the same source with that architecture's default
+  # configuration (boot/linux/x86_64.config).
   linux = mkSystemPackage {
     name = "linux";
     source = sources.linux;
@@ -31,11 +33,17 @@ let
     # glibc: for gen_init_cpio, the one program in it
     depends = [ toolchain.glibc ];
     # llvm: the kernel is built with clang.
-    # rust and bindgen: parts of this kernel are written in Rust.
+    # rust and bindgen: parts of this kernel are written in Rust (a Mac's
+    # drivers; x86 builds none of them).
     # flex, bc and perl: the kernel's own configuration and build tools.
-    # openssl: asahi.config has the kernel keep a keyring of certificates,
-    # and what puts them into the image is built with OpenSSL.
-    buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ];
+    # openssl: the configuration has the kernel keep a keyring of
+    # certificates, and what puts them into the image is built with
+    # OpenSSL.
+    buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ]
+      # x86: what checks the kernel's object code reads it with libelf,
+      # found through pkgconf; and the kernel image is compressed with
+      # zstd (CONFIG_KERNEL_ZSTD).
+      ++ (if system == "x86_64-linux" then [ base.elfutils base.pkgconf base.zstd ] else []);
     env = {
       options_directory = ./boot/linux;
       # whose signature on an image's hash the kernel takes: public

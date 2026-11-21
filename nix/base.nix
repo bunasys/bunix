@@ -101,6 +101,19 @@ let
     env = { configure_arguments = "--disable-static"; };
   };
 
+  # libelf and libdw.  What checks and annotates the kernel's object code
+  # on x86 (objtool) reads ELF files with libelf.  libdw is for pahole,
+  # which makes the kernel's BTF and is not a package yet
+  # (boot/linux/x86_64.config).
+  elfutils = mkSystemPackage {
+    name = "elfutils";
+    source = sources.elfutils;
+    script = ./base/elfutils.sh;
+    depends = [ glibc zlib ];
+    # bzip2: the source's archive is compressed with it
+    buildDepends = [ pkgconf bzip2 ];
+  };
+
   # Zstandard compression: the zstd command and libzstd.  zstdgrep and
   # zstdless are shell scripts.
   zstd = mkSystemPackage {
@@ -870,7 +883,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
+  inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rex rust rust-std-aarch64-none;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
 }
