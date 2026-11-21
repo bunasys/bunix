@@ -767,7 +767,15 @@ root_size=$(( place_end - position ))
 add_partition rest $TYPE_ROOT "$ROOT_NAME" "$root_uuid"
 
 echo "Creating partitions..."
+# udev looks at a disk again whenever its partitions change, as they just
+# did where something was deleted.  While it looks, the kernel refuses to
+# read the new table as a whole, and sfdisk only remarks on it: the new
+# partitions would never appear.  So udev is waited for first; and the
+# kernel is told of the partitions one by one as well (partx), which it
+# takes even from a disk that is in use.
+udevadm settle
 printf '%s' "$script" | sfdisk -q --append "$disk"
+partx --update "$disk"
 udevadm settle
 
 echo "Writing /usr ($release)..."
