@@ -285,7 +285,23 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   shared with another system it would take that system's for this one,
   and grow whichever it takes into the space beside it.  There, as on
   the first Mac, what installs bunix has to make every partition itself,
-  the slots first.
+  the slots first: `bunix-install` does (below).
+- **Installing.**  `bunix-install <directory>`, on a system started in
+  memory, puts the version whose files the directory has
+  (`images/update.nix`) on a disk: into free space, in place of a
+  partition or of an earlier Linux, or over a whole disk.  It is x86's
+  (`files/rootfs/usr/bin/bunix-install`, `docs/install.md`) with what its
+  first lines list changed: the kernel images on the ESP, no firmware
+  boot entry, nothing of Apple's deleted and never a Mac's whole disk,
+  and the person's choice of bash or fish.  It asks for the machine's
+  name and one account, an administrator; root's is locked.  The root
+  partition it makes ends where the next partition begins: free space
+  right after the chosen place becomes bunix's, since systemd-repart
+  grows the root partition into such space at every boot (seen in the
+  test: a megabyte at a disk's end).
+  `tools/install-test.sh` installs twice in a virtual machine, on an
+  empty disk and on one laid out as a Mac's with 4096-byte sectors, and
+  starts both.
 - **The hash signed.**  A third partition beside `/usr` and its hashes:
   the root hash, signed.  The kernel has bunix's certificate built in
   (`keys/verity.crt`) and checks such signatures against it; the system
@@ -328,7 +344,8 @@ refuses to go on over one) and should not update from a version not yet
 marked good; a test system's update files told from a release's by
 more than the name of the build's result; the kernel image signed (what would check it is Secure Boot,
 which a Mac's EFI does not have, so whoever can write the boot
-partition chooses what runs); extensions; an installer; and any of it
+partition chooses what runs); extensions; a medium the installer finds
+its files on by itself; and any of it
 on a Mac, which needs U-Boot first, and has only been said, not tried:
 that U-Boot's EFI lets systemd-boot rename a file, as counting boots
 needs, and reads a disk of 4096-byte sectors made this way.
@@ -519,6 +536,7 @@ BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
                                          and accounts tried on it; run0.sh
                                          and passwd-chsh.sh the same way
 tools/update-test.sh                     on a disk: update it, and go back from a bad update
+tools/install-test.sh                    install it on two disks, and start them
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 ```
