@@ -252,6 +252,39 @@ let
     env = { configure_arguments = "--disable-static --disable-docs --disable-multi-os-directory"; };
   };
 
+  # Perl-compatible regular expressions, for GLib.  bzip2: its source is
+  # a .tar.bz2.  bash: pcre2-config is a script.
+  pcre2 = mkSystemPackage {
+    name = "pcre2";
+    source = sources.pcre2;
+    script = ./autotools.sh;
+    depends = [ glibc tools.bash ];
+    buildDepends = [ bzip2 ];
+    env = { configure_arguments = "--disable-static --enable-jit"; };
+  };
+
+  # GLib: the C utility, object (GObject) and I/O (GIO) libraries that
+  # polkit is built on, and later GTK, pango, Qt and niri.  No
+  # introspection, no SELinux, no sysprof.
+  # bash: glib-gettextize is a script.
+  glib = mkSystemPackage {
+    name = "glib";
+    source = sources.glib;
+    script = ./base/glib.sh;
+    depends = [ glibc libffi pcre2 zlib util-linux tools.bash ];
+    buildDepends = [ meson ninja pkgconf python-packaging ];
+  };
+
+  # Duktape: a small JavaScript interpreter, which polkit runs its rules
+  # (/usr/share/polkit-1/rules.d) in.
+  duktape = mkSystemPackage {
+    name = "duktape";
+    source = sources.duktape;
+    script = ./base/duktape.sh;
+    depends = [ glibc ];
+    env = { duktape_version = sources.duktape.version; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -436,6 +469,20 @@ let
     buildDepends = [ meson ninja pkgconf ];
   };
 
+  # polkit: decides which user may do which privileged thing (run0,
+  # setting the time), from rules in JavaScript.  Members of the wheel
+  # group are administrators: polkit asks them for their own password.
+  # gettext: msgfmt merges the actions' descriptions into their .policy
+  #   files.
+  # perl: turns the JavaScript init file into a C string.
+  polkit = mkSystemPackage {
+    name = "polkit";
+    source = sources.polkit;
+    script = ./base/polkit.sh;
+    depends = [ glibc duktape expat glib linux-pam systemd ];
+    buildDepends = [ meson ninja pkgconf gettext perl ];
+  };
+
   # iwd, the wireless daemon: scans, authenticates and keeps the link up,
   # and leaves addresses to whatever hands them out.  iwctl is its client.
   # The chip's firmware is not a package (boot/linux/aarch64.config).
@@ -589,6 +636,15 @@ let
     env = { module_paths = "elftools"; };
   };
 
+  # packaging: version parsing, for GLib's build
+  python-packaging = mkSystemPackage {
+    name = "python-packaging";
+    source = sources.python-packaging;
+    script = ./base/python-module.sh;
+    depends = [ tools.python ];
+    env = { module_paths = "src/packaging"; };
+  };
+
   # pefile: ukify puts a unified kernel image together with it.
   python-pefile = mkSystemPackage {
     name = "python-pefile";
@@ -596,6 +652,20 @@ let
     script = ./base/python-module.sh;
     depends = [ tools.python ];
     env = { module_paths = "pefile.py peutils.py ordlookup"; };
+  };
+
+  # GNU gettext: the translation tools (xgettext, msgfmt, ...).  glibc has
+  # the run-time side (libintl) already.
+  # gccLibraries: one of its libraries is C++.  bash: gettextize and
+  # autopoint are shell scripts.  python, coreutils: its program spit is
+  # a Python script, started through env.  Python is why gettext is a
+  # tool of builds and not in an image.
+  gettext = mkSystemPackage {
+    name = "gettext";
+    source = sources.gettext;
+    script = ./autotools.sh;
+    depends = [ glibc ncurses toolchain.gccLibraries tools.bash tools.coreutils tools.python ];
+    env = { configure_arguments = "--disable-static --disable-java --disable-csharp --disable-d --disable-modula2 --disable-go --disable-openmp --disable-rpath"; };
   };
 
   # mcopy, which systemd-repart fills a FAT partition with: the one a
@@ -774,7 +844,7 @@ let
   };
 in
 {
-  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
-  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus iwd wireless-regdb rex rust rust-std-aarch64-none;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-zlib python-ctypes meson cmake llvm bindgen botan sqv;
+  inherit readline zlib bzip2 zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
+  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rex rust rust-std-aarch64-none;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv;
 }

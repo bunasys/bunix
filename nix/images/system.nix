@@ -61,6 +61,9 @@ stagedBuild {
     # accounts: what checks who logs in and opens their session (PAM),
     # the console's login prompt, and the tools that make and change users
     base.linux-pam base.util-linux-login base.shadow
+    # a user's way up: run0 asks polkit, which asks a member of wheel
+    # for their own password
+    base.polkit
     # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)
     base.dbus base.iwd base.wireless-regdb
     # for a system on a disk: udev told of the device /usr is checked

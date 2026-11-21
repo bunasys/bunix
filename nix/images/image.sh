@@ -119,7 +119,8 @@ fi
 # for one number, under two names: sysusers would give the second
 # another, and say nothing.  (One name asked for twice is not that:
 # system/usr/lib/sysusers.d/00-bunix-root.conf says what it is for.)
-names_and_ids=$(sed -n 's/^u  *\([^ ]*\)  *\([0-9][0-9]*\).*/\2 \1/p' $root/usr/lib/sysusers.d/*.conf | sort -u)
+# (u!: an account that is locked, as polkit asks for its own)
+names_and_ids=$(sed -n 's/^u!\?  *\([^ ]*\)  *\([0-9][0-9]*\).*/\2 \1/p' $root/usr/lib/sysusers.d/*.conf | sort -u)
 same_id=$(echo "$names_and_ids" | cut -d' ' -f1 | uniq -d)
 if [ -n "$same_id" ]; then
     echo "image.sh: two accounts ask for the id $same_id" >&2

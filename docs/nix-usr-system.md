@@ -580,7 +580,11 @@ shadow's tools, and a console that is root's shell until root has a
 password and a login prompt from then on
 (`BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk
 check` goes through them on a running system).  SSH takes keys only.  A
-user has no way up yet: run0 asks polkit, which is not a package here.
+member of wheel becomes root for a command with `run0`: it asks polkit,
+which asks them for their own password (`tools/vm-checks/run0.sh`, run
+the same way).  systemd's own rule for polkit is there too: a member of
+the group `empower` is asked nothing, and only root can add one.  No program is set-user-id, since a Nix build may not make
+one: a user cannot yet change their own password or shell.
 It has no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
 again by itself where there is a disk to remember it on.  In memory the
 machine's id is new at every boot, unless the command line gives it one;
