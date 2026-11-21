@@ -289,6 +289,11 @@
     "url": "https://codeload.github.com/aurora-silicon/aura/tar.gz/5dcf62d0bf28e42c0e3f4ece44908643ffd40837",
     "sha256": "a9a8c81ac7631931688adffbb6c2899ffaf28ef5b1a807e78a9f87dbb46c505d"
   },
+  "u-boot": {
+    "version": "2026.07-aurora-250385f",
+    "url": "https://codeload.github.com/aurora-silicon/u-boot/tar.gz/250385f8c8aaafd47a8f7990f6efe0443c28d0b5",
+    "sha256": "54733c99013b87f7703065fd7a96e0960dfbbeeefaf3462c1fd0789526105e8a"
+  },
   "aura-fatfs": {
     "version": "7d505fb",
     "url": "https://codeload.github.com/aurora-silicon/fatfs/tar.gz/7d505fbfa37a945af5549517f47c1d2e87a8333e",

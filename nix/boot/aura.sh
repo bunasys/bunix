@@ -1,4 +1,9 @@
-# Aura's images, in /usr/lib/aura:
+# Aura's images, in /usr/lib/aura.  A Mac starts aura in two stages
+# (docs/nix-usr-system.md, "A Mac starts from its disk"): the first is
+# what the Mac itself is told to start, once, and it loads the second
+# from the ESP, which is the one that changes with the system.
+#
+# Stage 1:
 #
 #   aura.bin         the raw image: what a Mac is told to start
 #                    (kmutil configure-boot --raw), and what a boot loader
@@ -13,9 +18,21 @@
 #                    of the cable, which is not a bunix system: they are
 #                    Python, copied from here and run there
 #                    (tools/boot-mac.sh)
+#   tools/           aura's own, for a Stage 1 that starts from the disk
+#                    (tools/mac-stage1.sh): fill_stage1_config.py writes
+#                    into the image which ESP has Stage 2, and
+#                    enroll-stage1.sh tells the Mac, from its recovery
+#                    system, to start the result
 #
 # Stage 1 as the source's documents build it, with no configuration filled
 # in: it waits for a computer on USB to tell it what to start.
+#
+# Stage 2:
+#
+#   aura-stage2.bin  aura as loaded from the ESP, bare: boot.nix puts the
+#                    device trees and U-Boot after it
+#   tools/compose_stage2.py
+#                    aura's own tool that does so
 #
 # The directory is named as an archive of the source unpacks: with no
 # repository to ask, aura takes the commit it labels itself with from
@@ -92,6 +109,15 @@ llvm-objcopy -j.text -O binary stub.elf stub.code
 printf '\x88\x77\x66\x55\x44\x33\x22\x11' > build/chainload-stub.bin
 cat stub.code >> build/chainload-stub.bin
 
-install -d $out/usr/lib/aura
+install -d $out/usr/lib/aura/tools
 install -m 644 build/aura.bin build/aura.macho build/aura-boot.macho build/chainload-stub.bin $out/usr/lib/aura/
 cp -r proxyclient $out/usr/lib/aura/
+install -m 644 tools/fill_stage1_config.py tools/recovery/enroll-stage1.sh $out/usr/lib/aura/tools/
+
+# Stage 2 is the same source built with one more word, into the same
+# directory: what Stage 1 left there is removed first.
+make clean
+make USE_CLANG=1 ARCH=aarch64-linux-gnu RELEASE=1 CHAINLOADING=1 ESP_STAGE2=1
+cmp rust/Cargo.lock Cargo.lock.pinned
+install -m 644 build/aura.bin $out/usr/lib/aura/aura-stage2.bin
+install -m 644 tools/compose_stage2.py $out/usr/lib/aura/tools/

@@ -74,7 +74,10 @@ stagedBuild {
     # and what checks the signature of an update's list of files, for
     # the gpg below
     base.sqv
-  ];
+  ]
+  # and what a Mac's own boot loader loads from the ESP, for the
+  # installer to put there (x86 has no such Mac to start)
+  ++ (if system == "aarch64-linux" then [ boot.mac-stage2 ] else []);
 
   # What makes it.  systemd: its own tools make the accounts, enable the
   # units and compile the hardware database, on the tree that is to be the

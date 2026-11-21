@@ -163,11 +163,18 @@ Aura, Aurora's boot loader (from m1n1), is a package too (`boot.nix`):
 built by clang and LLVM's linker, its Rust part by cargo with no network,
 from the crates of `boot/aura-crates.json` and one from a repository at a
 pinned commit, against Rust's libraries for a machine with no operating
-system (`rust-std-aarch64-none`).  It installs three images in
+system (`rust-std-aarch64-none`).  It installs its images in
 `/usr/lib/aura`: Stage 1 with no configuration, which waits for a
-computer on USB; and beside them aura's tools for that computer, and a
-piece they would otherwise need an assembler for.  Nothing installs it
-on a Mac yet: it is loaded into memory (below).
+computer on USB, and beside it aura's tools for that computer, and a
+piece they would otherwise need an assembler for; Stage 2, the same
+source built to be loaded from a disk; and aura's three tools for
+starting from a disk ("A Mac starts from its disk", below).
+
+U-Boot is Aurora's too (`boot.nix`, `boot/u-boot.sh`), at the commit
+Aurora's own systems pin, built by gcc with the source's configuration
+for Apple's machines, less one tool for the computer it is built on,
+which nothing here uses.  A second build of it, for
+QEMU's virtual machine, is what the tests start a disk with.
 
 bindgen is 0.73.2 with the two patches of Aurora's source
 (`tools/aurora-bindgen/`, here in `files/bindgen/`), for C layouts the
@@ -241,6 +248,58 @@ mkfs.ext4 -L bunix-root /dev/nvme0n1p6
 
 and 5.5 GB were left free.  Deleting the two entries undoes it.
 
+### A Mac starts from its disk
+
+Not tried on a Mac yet.  What is there, and tried in a virtual machine
+as far as one goes:
+
+```
+the Mac's own firmware
+  -> aura, Stage 1       the Mac is told of it once, in its recovery
+                         system.  It has the id of one ESP in it.
+  -> aurora/stage2.bin   on that ESP: aura again (Stage 2), the device
+                         tree of every Mac the kernel knows, U-Boot
+  -> systemd-boot        on that ESP, started by U-Boot as by any EFI
+                         firmware; from here on a Mac is a machine like
+                         another ("Where this is going", below)
+```
+
+`boot.nix`'s `mac-stage2` makes the file of the middle step, with aura's
+own tool, and it is in the system (`/usr/lib/mac-stage2/stage2.bin`):
+`bunix-install` copies it to the ESP of an Apple Silicon Mac's own disk,
+and refuses an ESP that has another system's there.  The device trees
+are the kernel's of the same build, and U-Boot hands the one aura picked
+on to the kernel.
+
+Stage 1 is made for one ESP, on the computer bunix is built on:
+`tools/mac-stage1.sh <id of the ESP>`, the id being what the installer
+prints at its end.  It runs aura's tool that writes the id into the
+image, and says what to do with the result in the Mac's recovery system,
+where aura's own script (`enroll-stage1.sh`) checks and then tells the
+Mac.  The Mac is told in place of what its boot container starts now
+("On a Mac"): from then on it no longer waits on USB, and the plain
+Stage 1, which does, is kept beside the new one as the way back.  `tools/mac-stage1.sh <id> try` instead loads that Stage 1 into the
+memory of a Mac that waits on USB, as `boot-mac.sh` does with the plain
+one: the whole chain runs from the disk once, and nothing on the Mac has
+changed if it does not.
+
+Open:
+
+- **Stage 2 is not updated with the system.**  An update brings a kernel
+  image; the device trees on the ESP stay the installed version's.
+  Aurora's systems replace the file on a trial start and keep the old
+  one until the new has worked; nothing here does yet.
+- **Wi-Fi.**  The Mac's own firmware for it, which `boot-mac.sh` puts
+  before the image, has no place on a disk yet.
+- **U-Boot keeps EFI's variables in a file on the ESP** (`ubootefi.var`),
+  written when one changes.  On a Mac that is the ESP aura names,
+  bunix's; in the virtual machine it is the first ESP of the disk,
+  whoever's it is.
+- **aura is a version behind** the one Aurora's NixOS pins (1.0.0b14.1);
+  the kernel and U-Boot are the same commits.
+- **The picture at start-up** is Aurora's; aura takes another when built
+  with one.
+
 ### Where this is going
 
 What bunix is on x86 (`docs/updates.md`,
@@ -256,7 +315,7 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   and the hashes of its blocks (dm-verity), with systemd-repart, and the
   one hash that stands for both.
 - **What starts it.**  A machine with EFI: a virtual machine's so far;
-  a Mac's is to be U-Boot's, and has started nothing yet.  systemd-boot, on the partition
+  a Mac's is U-Boot's ("A Mac starts from its disk").  systemd-boot, on the partition
   the machine boots from, starts the newest unified kernel image there
   (`images/uki.nix`): the kernel, `images/initrd.nix`, and a command line
   with the hash of the one `/usr` that kernel runs (`usrhash=`), as one
@@ -293,7 +352,8 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   (`files/rootfs/usr/bin/bunix-install`, `docs/install.md`) with what its
   first lines list changed: the kernel images on the ESP, no firmware
   boot entry, nothing of Apple's deleted and never a Mac's whole disk,
-  and the person's choice of bash or fish.  It asks for the machine's
+  what an Apple Silicon Mac's boot loader loads from the ESP ("A Mac
+  starts from its disk"), and the person's choice of bash or fish.  It asks for the machine's
   name and one account, an administrator; root's is locked.  The root
   partition it makes ends where the next partition begins: free space
   right after the chosen place becomes bunix's, since systemd-repart
@@ -346,9 +406,12 @@ more than the name of the build's result; the kernel image signed (what would ch
 which a Mac's EFI does not have, so whoever can write the boot
 partition chooses what runs); extensions; a medium the installer finds
 its files on by itself; and any of it
-on a Mac, which needs U-Boot first, and has only been said, not tried:
-that U-Boot's EFI lets systemd-boot rename a file, as counting boots
-needs, and reads a disk of 4096-byte sectors made this way.
+on a Mac.  U-Boot, as built for a virtual machine, has done both things
+that were in doubt: its EFI lets systemd-boot rename a file, as counting
+boots needs (`BUNIX_EFI=u-boot tools/update-test.sh`: the update,
+the three tries of a bad one, and the way back), and it starts a disk
+of 4096-byte sectors laid out as a Mac's (`tools/install-test.sh`).  As
+built for a Mac it has started nothing.
 
 ### Who signs
 
@@ -499,7 +562,8 @@ nix/
   tools.nix      tools/       what a build runs
   base.nix       base/        after elements/base/; the porting rule is at its top
   boot.nix       boot/        the kernel and its device trees; the boot
-                              loader of Apple Silicon Macs
+                              loader of Apple Silicon Macs, U-Boot, and
+                              the file of both that a Mac's ESP has
   images/                     what is made of packages (below)
   tests/<name>/  run.sh
 files/<package>/              patches, and files a package installs as they are
@@ -536,9 +600,12 @@ BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
                                          and accounts tried on it; run0.sh
                                          and passwd-chsh.sh the same way
 tools/update-test.sh                     on a disk: update it, and go back from a bad update
+BUNIX_EFI=u-boot tools/update-test.sh
+                                         the same, started by U-Boot
 tools/install-test.sh                    install it on two disks, and start them
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
+tools/mac-stage1.sh <id of the ESP>      what a Mac is told to start, to start it from its disk
 ```
 
 ## Open questions
@@ -561,6 +628,12 @@ tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
   in a later `/usr` does not reach a file already copied, as on x86.
   sshd's keys are in `/var/lib/sshd` only because `/etc`, in memory, is
   not kept.
+- **Power lost right after the first start.**  The first start fills
+  `/etc` from the copy in `/usr`, and nothing makes sure those files are
+  on the disk before going on: for some seconds a machine that loses
+  power is left with empty files in `/etc` (seen in
+  `tools/install-test.sh`: no message bus at the next start).  x86 fills
+  `/etc` the same way.
 - **A package in two parts, for running and for building against.**  An
   image with glibc has its headers and static libraries; one with ncurses
   has its .pc files.  gcc is split by hand (above); the rest are not.

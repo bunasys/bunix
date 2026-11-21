@@ -31,11 +31,15 @@
 #   - On a disk with Apple's partitions nothing of Apple's is offered for
 #     deletion, and the whole disk is not: a Mac does not start without
 #     them, and they are not put back by installing macOS again.
+#   - The ESP of an Apple Silicon Mac's own disk is also given what the
+#     Mac's boot loader loads from it, before systemd-boot can start:
+#     aura's second stage with U-Boot, the EFI firmware such a Mac does
+#     not have.  An ESP that has another system's is refused.
 #   - The person chooses their shell, bash or fish.  No desktop yet.
 #
 # Nothing outside the chosen space, and free space right after it, is
 # written, except on the disk's ESP: EFI/BOOT/, EFI/Linux/bunix_* and
-# loader/loader.conf.
+# loader/loader.conf; and aurora/stage2.bin on an Apple Silicon Mac's.
 #
 # The partitions it creates in the chosen space (UAPI Discoverable
 # Partitions), the /usr slots first:
@@ -75,8 +79,8 @@ ROOT_MIN_SIZE=8192
 USR_SLOT_SIZE=$((USR_SIZE + USR_VERITY_SIZE + USR_SIGNATURE_SIZE))
 NEEDED_SIZE=$((2 * USR_SLOT_SIZE + ROOT_MIN_SIZE))
 # What an ESP that is already there needs free: two kernel images, the
-# one installed and an update's beside it, of about 100 MiB each, and
-# systemd-boot
+# one installed and an update's beside it, of about 105 MiB each;
+# systemd-boot; and on a Mac what its boot loader loads, of about 14 MiB
 ESP_NEEDED_FREE=256
 
 # The architecture, as the names of a version's files say it
@@ -96,6 +100,9 @@ TYPE_ROOT=$(systemd-id128 -u show --value root)
 # Every partition type of Apple's ends so: APFS, a Mac's recovery, the
 # container its firmware keeps its own state in
 APPLE_TYPES='*-11aa-aa11-00306543ecac'
+# The one of them only the own disk of an Apple Silicon Mac has: where
+# its firmware keeps its state (iBootSystemContainer)
+APPLE_SILICON_FIRMWARE_TYPE=69646961-6700-11aa-aa11-00306543ecac
 # The name the kernel's command line asks for the root partition by
 # (images/uki.nix)
 ROOT_NAME=bunix-root
@@ -212,6 +219,12 @@ systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
 loader_kind=$(basename "$systemd_boot" .efi)
 loader_kind=${loader_kind#systemd-boot}
 default_loader=EFI/BOOT/BOOT${loader_kind^^}.EFI
+# For an Apple Silicon Mac: what aura's first stage loads from the ESP
+# (nix/boot.nix, mac-stage2), from this system's own /usr too: its device
+# trees are this version's kernel's.  The place on the ESP is the one the
+# first stage is told of (tools/mac-stage1.sh).
+mac_stage2=/usr/lib/mac-stage2/stage2.bin
+mac_stage2_on_esp=aurora/stage2.bin
 
 echo "bunix $release installer"
 echo
@@ -290,6 +303,7 @@ linux_partitions=()
 bunix_releases=()
 # A Mac's own disk: one with a partition of Apple's
 is_a_mac_disk=no
+has_apple_silicon_firmware=no
 # so that every partition's type is known to lsblk
 udevadm settle
 while read -r name type; do
@@ -307,6 +321,7 @@ while read -r name type; do
   case ${part_type,,} in
     $APPLE_TYPES)
       is_a_mac_disk=yes
+      [ "${part_type,,}" != $APPLE_SILICON_FIRMWARE_TYPE ] || has_apple_silicon_firmware=yes
       continue ;;
   esac
   case $part_type in
@@ -442,6 +457,14 @@ if [ "$is_a_mac_disk" = yes ]; then
   echo "This is a Mac's own disk: Apple's partitions stay, and the whole disk"
   echo "is not a choice."
 fi
+# An Apple Silicon Mac starts a system on its own disk through aura.  Not
+# an Intel Mac, which has EFI firmware; nor another disk with partitions
+# of Apple's on it, which aura does not read.
+starts_through_aura=no
+if [ "$has_apple_silicon_firmware" = yes ] && [ "$ARCHITECTURE" = arm64 ]; then
+  starts_through_aura=yes
+  [ -f "$mac_stage2" ] || die "this is an Apple Silicon Mac's own disk, and this system has nothing to start one with ($mac_stage2)"
+fi
 echo "Install bunix into (it needs $NEEDED_SIZE MiB, plus $ESP_SIZE MiB if the disk has no ESP):"
 for i in "${!places[@]}"; do
   read -r kind start end _ description <<< "${places[$i]}"
@@ -516,16 +539,22 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
   # An earlier bunix's: systemd-boot, which says what it is in a line of
   # its own file, beside a kernel image of bunix's.  Another system's
   # systemd-boot is another system's loader.
+  bunix_kernel_images=("$WORK"/esp/EFI/Linux/bunix_*.efi)
+  has_bunix_kernel_image=no
+  [ ! -e "${bunix_kernel_images[0]}" ] || has_bunix_kernel_image=yes
   default_loader_is_taken=no
   if [ -e "$WORK/esp/$default_loader" ]; then
     is_systemd_boot=no
     ! grep -q -a 'LoaderInfo: systemd-boot' "$WORK/esp/$default_loader" || is_systemd_boot=yes
-    bunix_kernel_images=("$WORK"/esp/EFI/Linux/bunix_*.efi)
-    has_bunix_kernel_image=no
-    [ ! -e "${bunix_kernel_images[0]}" ] || has_bunix_kernel_image=yes
     if [ "$is_systemd_boot" = no ] || [ "$has_bunix_kernel_image" = no ]; then
       default_loader_is_taken=yes
     fi
+  fi
+  # The same of what aura loads: an earlier bunix's, if a kernel image of
+  # bunix's is beside it; else what another system on this Mac starts by.
+  mac_stage2_is_taken=no
+  if [ -e "$WORK/esp/$mac_stage2_on_esp" ] && [ "$has_bunix_kernel_image" = no ]; then
+    mac_stage2_is_taken=yes
   fi
   if [ -e "$WORK"/esp/loader/loader.conf ]; then
     has_loader_conf=yes
@@ -537,6 +566,11 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
 by default ($default_loader).  bunix would need a firmware boot entry of its
 own beside it, which this installer cannot write yet.  If that system is the
 one being replaced, move the file away first, and run bunix-install again."
+  if [ "$starts_through_aura" = yes ] && [ "$mac_stage2_is_taken" = yes ]; then
+    die "the ESP ($esp) has what another system on this Mac is started by
+($mac_stage2_on_esp), and bunix's would take its place.  If that system is the
+one being replaced, move the file away first, and run bunix-install again."
+  fi
   echo
   echo "bunix's boot files go on the ESP that is there, $esp."
 fi
@@ -735,6 +769,13 @@ rm -f "$WORK"/esp/EFI/Linux/bunix_*.efi
 # The kernel image, under the name systemd-boot and sysupdate know an
 # installed one by
 cp "$uki" "$WORK/esp/EFI/Linux/bunix_$release.efi"
+if [ "$starts_through_aura" = yes ]; then
+  mkdir -p "$WORK/esp/$(dirname "$mac_stage2_on_esp")"
+  # Under another name until it is whole: a Mac that already starts from
+  # this ESP is not left with half of the file
+  cp "$mac_stage2" "$WORK/esp/$mac_stage2_on_esp.new"
+  mv "$WORK/esp/$mac_stage2_on_esp.new" "$WORK/esp/$mac_stage2_on_esp"
+fi
 # The menu stays hidden, and lists only bunix (as images/disk.sh)
 loader_settings=$'timeout 0\nconsole-mode keep\nauto-entries no'
 loader_conf=$WORK/esp/loader/loader.conf
@@ -800,10 +841,11 @@ sync
 echo
 echo "bunix $release is installed on $disk."
 echo "Log in as \"$user_name\"."
-if [ "$is_a_mac_disk" = yes ]; then
-  echo "A Mac starts it once its own loader for a second system (aura, with"
-  echo "U-Boot) is told of the ESP, which this installer does not do:"
-  echo "  $esp, id $(lsblk -ndo PARTUUID "$esp")"
+if [ "$starts_through_aura" = yes ]; then
+  echo "A Mac starts it once the Mac is told, in its recovery system, to start"
+  echo "aura's first stage made for this ESP, which this installer does not do."
+  echo "On the computer bunix is built on:"
+  echo "  tools/mac-stage1.sh $(lsblk -ndo PARTUUID "$esp")"
 else
   echo "It starts when the machine's firmware starts this disk; choose the disk"
   echo "in the firmware's boot menu if another system starts first."

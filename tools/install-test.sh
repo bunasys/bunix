@@ -23,12 +23,16 @@
 #   4. the same of the second disk; and Apple's partitions and the other
 #      system's ESP are then what they were before the installer ran,
 #      byte for byte
+#   5. the second disk again, started by U-Boot: the EFI firmware a Mac
+#      is given (nix/boot.nix), here as built for this virtual machine;
+#      and Apple's partitions are still what they were
 #
 # The person's way in is a key this test puts in their home after the
 # installer has finished: the installed system takes no password over
 # SSH, and root's account is locked.  NOT tested: a login at the console
-# with the password, a disk whose ESP has another system's loader, and
-# real firmware (U-Boot on a Mac).
+# with the password, a disk whose ESP has another system's loader, or
+# what another system on the Mac is started by (both are to be refused),
+# and U-Boot as built for a Mac, on one.
 #
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
@@ -78,11 +82,13 @@ echo "building the system, and the files of its version"
 kernel=$(build /bunix/nix/boot.nix -A linux)
 image=$(build /bunix/nix/images/system.nix)
 update=$(build /bunix/nix/images/update.nix)
+u_boot=$(build /bunix/nix/boot.nix -A u-boot-qemu)
 # the kernel is in a directory named after its release
 vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
 limactl copy "bunix-builder:$vmlinuz" "$work/vmlinuz"
 limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
 limactl copy -r "bunix-builder:$update/." "$work/files/"
+limactl copy "bunix-builder:$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" "$work/u-boot.bin"
 # copied out of the store, where nothing can be written, or removed by
 # the next run
 chmod -R u+w "$work/files"
@@ -99,8 +105,18 @@ truncate -s 24G "$work/mac.raw"
 # ---- Machines --------------------------------------------------------------------
 
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
+# The machine's processor is the Mac's own, through its hypervisor.  But
+# not for U-Boot: the hypervisor stops at an instruction of U-Boot's it
+# cannot carry out.  QEMU plays the processor instead, `max` being the
+# one of its processors with the 16K pages this kernel is built for.
+macs_processor="-accel hvf -cpu host"
+played_processor="-accel tcg,thread=multi -cpu max"
+# qemu_machine <processor> <the rest of QEMU's arguments>
 qemu_machine() {
-    qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
+    processor=$1
+    shift
+    # shellcheck disable=SC2086
+    qemu-system-aarch64 -M virt $processor -smp 4 -m 4G \
         -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net \
         -nographic -no-reboot "$@" < /dev/null >> "$work/console.log" 2>&1 &
     qemu=$!
@@ -108,7 +124,7 @@ qemu_machine() {
 # The second is given sectors of 4096 bytes, wherever it is attached.
 whole_disk="-drive file=$work/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole"
 mac_disk="-drive file=$work/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096"
-firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+qemus_firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
 
 # as <user> <command>: on the machine, over SSH
 # (a name no other function has for a variable: sh has one of each name)
@@ -153,7 +169,7 @@ pull_the_plug() {
 
 echo "starting bunix in memory, with the two disks"
 # shellcheck disable=SC2086  # the disks' words are several each
-qemu_machine -kernel "$work/vmlinuz" -initrd "$work/initramfs.cpio.gz" \
+qemu_machine "$macs_processor" -kernel "$work/vmlinuz" -initrd "$work/initramfs.cpio.gz" \
     -append "console=ttyAMA0 quiet $key_word" $whole_disk $mac_disk
 answers_within 90 root || fail "the system in memory did not answer on SSH"
 # (--no-xattrs: not what macOS notes about a file it copied)
@@ -233,9 +249,10 @@ partitions_of root "$whole" > "$work/whole-partitions"
 echo "2. onto a disk laid out as a Mac's, in place of an earlier Linux"
 # Apple's types: the container its firmware keeps its state in, APFS
 # (macOS, and the small one a second system starts from), recovery.
-# What must be left alone, as "start size" in MiB, for the Mac's side to
+# What must be left alone, as "start:size" in MiB, for the Mac's side to
 # read back (below): Apple's four, and the other system's ESP.
-left_alone="1:100 101:2048 2149:500 2649:300 23551:1024"
+apples_partitions="1:100 101:2048 2149:500 23551:1024"
+left_alone="$apples_partitions 2649:300"
 as root "sfdisk -q $mac" <<'END' || fail "could not lay the Mac's disk out"
 label: gpt
 start=1MiB, size=100MiB, type=69646961-6700-11AA-AA11-00306543ECAC, name="iBootSystemContainer"
@@ -265,8 +282,9 @@ as root "set -e
     sync
     udevadm settle" || fail "could not fill the Mac's disk"
 # Read on the Mac, from the disk's file: not what the machine says of it
-checksums_of_what_is_left_alone() {
-    for stretch in $left_alone; do
+# checksums_of <stretches>
+checksums_of() {
+    for stretch in $1; do
         dd if="$work/mac.raw" bs=1048576 skip="${stretch%:*}" count="${stretch#*:}" 2> /dev/null | shasum -a 256
     done
 }
@@ -274,7 +292,8 @@ checksums_of_what_is_left_alone() {
 table_lines_of_what_is_left_alone() {
     as root "sfdisk -d $mac | grep -i -e aa11-00306543ecac -e other-esp"
 }
-checksums_of_what_is_left_alone > "$work/left-alone-before"
+checksums_of "$left_alone" > "$work/left-alone-before"
+checksums_of "$apples_partitions" > "$work/apples-before"
 table_lines_of_what_is_left_alone > "$work/table-before"
 bunix_esp_id=$(as root "lsblk -ndo PARTUUID ${mac}5")
 
@@ -304,6 +323,11 @@ cmp -s "$work/table-before" "$work/table-after" \
 [ "$(as root "lsblk -ndo PARTUUID ${mac}5")" = "$bunix_esp_id" ] || fail "bunix's ESP is not the partition it was"
 as root "mount -o ro ${mac}5 /run/other-esp && ls /run/other-esp/EFI/Linux/bunix_$version.efi && umount /run/other-esp" > /dev/null \
     || fail "the ESP that was chosen does not have bunix's kernel image"
+# and what a Mac's own boot loader loads from it, whole
+as root "mount -o ro ${mac}5 /run/other-esp && cmp /usr/lib/mac-stage2/stage2.bin /run/other-esp/aurora/stage2.bin && umount /run/other-esp" \
+    || fail "the ESP that was chosen does not have what a Mac's boot loader loads (aurora/stage2.bin)"
+grep -q "tools/mac-stage1.sh $bunix_esp_id" "$work/install-mac.log" \
+    || fail "the installer did not say how the Mac is told of the ESP; see $work/install-mac.log"
 expect_root_locked "$mac"
 give_key_to "$mac" adam
 partitions_of root "$mac" > "$work/mac-partitions"
@@ -362,18 +386,39 @@ expect_installed() {
 
 echo "3. the whole disk starts, and Sara logs in to fish"
 # shellcheck disable=SC2086
-qemu_machine -bios "$firmware" $whole_disk
+qemu_machine "$macs_processor" -bios "$qemus_firmware" $whole_disk
 expect_installed sara "Sara of the Whole Disk" /usr/bin/fish whole-disk "$work/whole-partitions"
 pull_the_plug
 
 echo "4. the Mac's disk starts, and Adam logs in to bash"
 # shellcheck disable=SC2086
-qemu_machine -bios "$firmware" $mac_disk
+qemu_machine "$macs_processor" -bios "$qemus_firmware" $mac_disk
 expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
+# The disk is started once more (5), and this was its first start, which
+# filled /etc: without the sync, the plug pulled now leaves some of those
+# files empty, and the next start without a message bus.  (A machine
+# that loses power right after its first start is left so too:
+# docs/nix-usr-system.md, open questions.)
+as adam sync
 pull_the_plug
-checksums_of_what_is_left_alone > "$work/left-alone-after"
+checksums_of "$left_alone" > "$work/left-alone-after"
 cmp -s "$work/left-alone-before" "$work/left-alone-after" \
     || fail "one of Apple's partitions, or the other system's ESP, is not what it was before the installer ran"
 echo "  Apple's partitions and the other system's ESP: as they were"
+
+echo "5. the Mac's disk starts through U-Boot too"
+# shellcheck disable=SC2086
+qemu_machine "$played_processor" -bios "$work/u-boot.bin" $mac_disk
+expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
+pull_the_plug
+# U-Boot keeps EFI's variables in a file on an ESP, and here that is the
+# first ESP of the disk, the other system's: this U-Boot is not told
+# which.  A Mac's is, by aura (the one written into its first stage,
+# bunix's).  So of what was to be left alone, Apple's partitions are
+# looked at once more, and that ESP is not.
+checksums_of "$apples_partitions" > "$work/apples-after-u-boot"
+cmp -s "$work/apples-before" "$work/apples-after-u-boot" \
+    || fail "one of Apple's partitions is not what it was before U-Boot started the disk"
+echo "  Apple's partitions: as they were"
 
 echo "install-test.sh: passed"

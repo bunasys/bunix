@@ -15,7 +15,8 @@
 #                the space after these, and grows it to the end of the disk
 #
 # A machine with EFI starts it.  A virtual machine's has; a Mac's, which
-# is to be U-Boot's, has not started one yet.  For a disk that is bunix's
+# is U-Boot's, has not started one yet (docs/nix-usr-system.md, "A Mac
+# starts from its disk").  For a disk that is bunix's
 # alone (system/usr/lib/repart.d/50-root.conf says why).
 #
 # What goes on it is images/update.nix: the files a machine downloads to

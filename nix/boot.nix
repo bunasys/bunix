@@ -1,11 +1,12 @@
-# What makes a bunix system boot, after elements/system/: the kernel, and
-# the boot loader of Apple Silicon Macs.
+# What makes a bunix system boot, after elements/system/: the kernel;
+# and for Apple Silicon Macs their boot loader (aura), U-Boot, and the
+# one file of both that a Mac's ESP has.
 #
 #   nix-build /bunix/nix/boot.nix -A linux
 #
-# Built with clang (base.nix: llvm) and the system's tools, without the
-# compiler flags the other groups give every package: the kernel and the
-# boot loader choose their own.
+# Built with the system's tools, without the compiler flags the other
+# groups give every package: each of these chooses its own.  The kernel
+# and aura are built with clang (base.nix: llvm), U-Boot with gcc.
 { system ? builtins.currentSystem }:
 
 let
@@ -44,8 +45,8 @@ let
 
   # Aura, Aurora Silicon's boot loader for Apple Silicon Macs (from m1n1):
   # what the Mac's own firmware starts, and what starts the kernel with
-  # the device tree of the machine.  At the version Aurora's own systems
-  # pin.  It runs on the bare machine and needs nothing of the system.
+  # the device tree of the machine.  At a version Aurora's own systems
+  # have pinned; they are one ahead now (docs/nix-usr-system.md).  It runs on the bare machine and needs nothing of the system.
   aura = mkSystemPackage {
     name = "aura";
     source = sources.aura;
@@ -69,7 +70,44 @@ let
       fatfs_commit = baseNameOf sources.aura-fatfs.url;
     };
   };
+
+  # U-Boot, Aurora Silicon's (from Asahi Linux's): on a Mac it is the EFI
+  # firmware the machine does not have.  aura starts it, and it starts
+  # systemd-boot from the ESP as the firmware of any other machine does
+  # (docs/nix-usr-system.md).  At the version Aurora's own systems pin.
+  u-boot = { machine, configuration }: mkSystemPackage {
+    name = "u-boot-${machine}";
+    source = sources.u-boot;
+    script = ./boot/u-boot.sh;
+    # flex, bc: its configuration and build tools.
+    # openssl: its tools for making images are built with it.
+    buildDepends = [ base.flex base.bc base.openssl ];
+    env = { inherit machine configuration; };
+  };
+  # every Apple Silicon Mac; the configuration's name is from the first
+  # of them
+  u-boot-apple = u-boot { machine = "apple"; configuration = "apple_m1_defconfig"; };
+  # QEMU's virtual machine, for trying on it what U-Boot is to start
+  u-boot-qemu = u-boot { machine = "qemu"; configuration = "qemu_arm64_defconfig"; };
+
+  # What aura's first stage loads from a Mac's ESP: aura's second stage,
+  # then the device tree of every Mac this kernel knows, then U-Boot.
+  # aura picks the tree of the machine it runs on and starts U-Boot with
+  # it; U-Boot hands it on to the kernel.  So the trees are this
+  # kernel's, and the file is made anew with every kernel.
+  mac-stage2 = mkSystemPackage {
+    name = "mac-stage2";
+    version = "aura-${sources.aura.version}-linux-${sources.linux.version}-u-boot-${sources.u-boot.version}";
+    script = ./boot/mac-stage2.sh;
+    # python-zlib: aura's tool that puts the parts together is Python,
+    # and compresses U-Boot.
+    buildDepends = [ aura linux u-boot-apple base.python-zlib ];
+    env = {
+      # the tool writes down which kernel the trees are of
+      kernel_commit = baseNameOf sources.linux.url;
+    };
+  };
 in
 {
-  inherit linux aura;
+  inherit linux aura mac-stage2 u-boot-apple u-boot-qemu;
 }

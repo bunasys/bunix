@@ -33,6 +33,14 @@
 # administrator would say it.  NOT tested: a list past the day it says it
 # is good until.
 #
+#   BUNIX_EFI        `u-boot`: the machine is started by U-Boot, the EFI
+#                    firmware a Mac is given (nix/boot.nix), here as built
+#                    for this virtual machine, in place of the firmware
+#                    that comes with QEMU; but for one start before step
+#                    1, which puts the key on the disk (step 0).  What it
+#                    shows: that U-Boot's EFI lets systemd-boot count the
+#                    tries, which it does by renaming the kernel image.
+#                    Slower: see start_machine.
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT   the Mac's port for the machine's SSH; default 2022
@@ -42,6 +50,10 @@
 # signatures), and the internet (step 1).
 set -eu
 
+case ${BUNIX_EFI:-} in
+    "" | u-boot) ;;
+    *) echo "update-test.sh: BUNIX_EFI is u-boot, or not set" >&2; exit 1 ;;
+esac
 ssh_port=${BUNIX_SSH_PORT:-2022}
 http_port=${BUNIX_HTTP_PORT:-8643}
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
@@ -111,6 +123,11 @@ broken_update=$(build /bunix/nix/images/update.nix --argstr version "$broken")
 # hash.  No partition will have the ids that image looks for.
 stray_uki=$(build /bunix/nix/images/uki.nix --argstr version "$broken" --argstr signing release)
 
+if [ "${BUNIX_EFI:-}" = u-boot ]; then
+    u_boot=$(build /bunix/nix/boot.nix -A u-boot-qemu)
+    limactl copy "bunix-builder:$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" "$work/u-boot.bin"
+fi
+
 limactl copy "bunix-builder:$disk/disk.raw" "$work/disk.raw"
 # copied out of the store, where nothing can be written; and with room
 # after its partitions for the root partition the first boot makes
@@ -171,18 +188,35 @@ server=$!
 # restarts or powers off (-no-reboot), and the disk is the same file for
 # the next.  As tools/boot-vm.sh starts a disk: EFI firmware, and the
 # words for the kernel handed over the way a machine's firmware does.
+#
+# U-Boot is not handed QEMU's words for the kernel, and so not the key:
+# it gets a machine that has the key on its disk (step 0, below).
+# And it does not run on the Mac's own processor: the hypervisor stops at
+# an instruction of U-Boot's it cannot carry out.  QEMU plays the
+# processor instead (tcg), `max` being the one of its processors with the
+# 16K pages this kernel is built for; a start takes about twice as long.
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
-firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
-start_machine() {
-    # QEMU reads a single comma as the end of the value
-    smbios_words=$(printf %s "console=ttyAMA0 quiet $key_word" | sed 's/,/,,/g')
-    qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
+# QEMU reads a single comma as the end of the value
+smbios_words=$(printf %s "console=ttyAMA0 quiet $key_word" | sed 's/,/,,/g')
+qemus_firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+# step 0 changes it to u-boot
+started_by=qemus-firmware
+# qemu_machine <the processor, and the firmware with what it is handed>
+qemu_machine() {
+    qemu-system-aarch64 -M virt -smp 4 -m 4G "$@" \
         -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net \
-        -nographic -no-reboot -bios "$firmware" \
+        -nographic -no-reboot \
         -drive "file=$work/disk.raw,format=raw,if=virtio" \
-        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words" \
         < /dev/null >> "$work/console.log" 2>&1 &
     qemu=$!
+}
+start_machine() {
+    if [ $started_by = u-boot ]; then
+        qemu_machine -accel tcg,thread=multi -cpu max -bios "$work/u-boot.bin"
+        return
+    fi
+    qemu_machine -accel hvf -cpu host -bios "$qemus_firmware" \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 }
 in_guest() {
     ssh -p "$ssh_port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -271,6 +305,15 @@ expect_kernel_image() {
 
 # ---- The test ------------------------------------------------------------------
 
+if [ "${BUNIX_EFI:-}" = u-boot ]; then
+    echo "0. a first start by QEMU's firmware, to put the key on the disk; U-Boot from here on"
+    start_and_expect "$installed"
+    # root's home is on the disk, and sshd reads the key there as well
+    in_guest "mkdir -p -m 700 /root/.ssh && cat > /root/.ssh/authorized_keys" < "$public_key_file"
+    stop_machine poweroff
+    started_by=u-boot
+fi
+
 echo "1. $installed takes what the release key signed"
 start_and_expect "$installed"
 # Asked of the system's gpg directly, as systemd asks it, with the
@@ -333,8 +376,8 @@ echo "6. $broken is tried three times"
 stop_machine reboot
 for try in 1 2 3; do
     start_machine
-    # A start that works answers in about 15 s; this one waits for a /usr
-    # that is not there, with nobody to tell.
+    # A start that works answers in about 15 s, or 30 by U-Boot; this
+    # one waits for a /usr that is not there, with nobody to tell.
     if answers_within 45; then
         fail "a system started on try $try of $broken"
     fi
