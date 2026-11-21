@@ -24,7 +24,9 @@
 #                     it nothing outlasts the boot.
 #   BUNIX_FIRMWARE    an archive of that Mac's own firmware (a cpio with
 #                     /vendorfw in it, made from its macOS), put before the
-#                     image.  Without it the Mac has no Wi-Fi.
+#                     image.  Without it the Mac has no Wi-Fi, unless
+#                     BUNIX_ROOT names the root of an installed bunix,
+#                     which has a copy (/var/lib/vendorfw).
 #   AURADEVICE        the boot loader's serial port, if it is not found
 #
 # Needs: limactl with the bunix-builder VM, and python3.  aura's tools are

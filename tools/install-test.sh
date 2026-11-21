@@ -5,8 +5,9 @@
 #   tools/install-test.sh
 #
 # bunix is started in memory, as on a machine it is to be installed on,
-# with two disks, and is given the files of its own version
-# (nix/images/update.nix).  It installs twice:
+# with two disks, is handed firmware of the machine's own as a Mac is,
+# and is given the files of its own version (nix/images/update.nix).  It
+# installs twice:
 #
 #   1. onto a whole, empty disk
 #   2. onto a disk laid out as a Mac's is, with sectors of 4096 bytes as
@@ -18,8 +19,10 @@
 #   3. the first disk is started by EFI firmware, as a machine would
 #      start it, and the person the installer was told of logs in over
 #      SSH and looks: all of the system started, /usr is checked against
-#      its hash, the account is as asked, and the first boot left the
-#      partitions where they were
+#      its hash, the account is as asked, the machine's firmware is
+#      there and the kernel told of it, the kernel found the wireless
+#      regulatory database, and the first boot left the partitions where
+#      they were
 #   4. the same of the second disk; and Apple's partitions and the other
 #      system's ESP are then what they were before the installer ran,
 #      byte for byte
@@ -32,7 +35,8 @@
 # SSH, and root's account is locked.  NOT tested: a login at the console
 # with the password, a disk whose ESP has another system's loader, or
 # what another system on the Mac is started by (both are to be refused),
-# and U-Boot as built for a Mac, on one.
+# U-Boot as built for a Mac, on one, and a driver that gets its firmware
+# when it is asked again (no device here wants any).
 #
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
@@ -167,10 +171,20 @@ pull_the_plug() {
 
 # ---- Installing --------------------------------------------------------------------
 
+# The machine is handed firmware of its own, as tools/boot-mac.sh hands a
+# Mac its: an archive before the image, not compressed, and the kernel
+# told of its directory.  One file that no driver asks for; what is
+# tested is that the installed systems still have it, and look there.
+rm -rf "$work/firmware"
+mkdir -p "$work/firmware/vendorfw"
+echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
+(cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
+cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
+
 echo "starting bunix in memory, with the two disks"
 # shellcheck disable=SC2086  # the disks' words are several each
-qemu_machine "$macs_processor" -kernel "$work/vmlinuz" -initrd "$work/initramfs.cpio.gz" \
-    -append "console=ttyAMA0 quiet $key_word" $whole_disk $mac_disk
+qemu_machine "$macs_processor" -kernel "$work/vmlinuz" -initrd "$work/initramfs-with-firmware" \
+    -append "console=ttyAMA0 quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
 answers_within 90 root || fail "the system in memory did not answer on SSH"
 # (--no-xattrs: not what macOS notes about a file it copied)
 tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
@@ -378,6 +392,14 @@ expect_installed() {
         *) fail "the account is not as asked: $account" ;;
     esac
     as "$user" id -nG | tr ' ' '\n' | grep -q -x wheel || fail "$user is not an administrator (wheel)"
+    [ "$(as "$user" cat /var/lib/vendorfw/install-test)" = "a file of the machine's own" ] \
+        || fail "the installed system does not have the firmware the machine was handed"
+    [ "$(as "$user" cat /sys/module/firmware_class/parameters/path)" = /var/lib/vendorfw ] \
+        || fail "the kernel was not told where the machine's firmware is"
+    # The kernel asks for it before /usr is there (nix/images/initrd.nix)
+    if as "$user" journalctl --dmesg --boot --no-pager | grep -q "failed to load regulatory.db"; then
+        fail "the kernel did not find the wireless regulatory database"
+    fi
     partitions_of "$user" /dev/vda > "$work/partitions-now"
     same_but_for_the_last_megabyte "$partitions_before" "$work/partitions-now" \
         || fail "the first boot changed the partitions: $(cat "$work/partitions-now")"

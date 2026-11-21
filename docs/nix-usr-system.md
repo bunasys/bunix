@@ -226,7 +226,8 @@ notes say of it.  `/usr/lib/bunix/usb-link` sets such a link up
 
 A machine with a partition for it keeps `/var`, `/home` and `/root`
 there: sshd's keys (`/var/lib/sshd`), so the machine is the same machine
-to SSH at every boot, the networks iwd has joined, the journal.  On a
+to SSH at every boot, the networks iwd has joined, the journal, and on
+an installed Mac its own firmware (`/var/lib/vendorfw`, below).  On a
 Mac, so far, `/usr` and `/etc` are still the image's, in memory.
 
 The image mounts nothing: it is for any machine.  Which partition is a
@@ -294,8 +295,6 @@ Open:
   image; the device trees on the ESP stay the installed version's.
   Aurora's systems replace the file on a trial start and keep the old
   one until the new has worked; nothing here does yet.
-- **Wi-Fi.**  The Mac's own firmware for it, which `boot-mac.sh` puts
-  before the image, has no place on a disk yet.
 - **U-Boot keeps EFI's variables in a file on the ESP** (`ubootefi.var`),
   written when one changes.  On a Mac that is the ESP aura names,
   bunix's; in the virtual machine it is the first ESP of the disk,
@@ -742,6 +741,29 @@ Firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
 each Mac's own macOS, and is added to the image when that Mac is booted
 (`boot/linux/aarch64.config`); the USB-A ports of a Mac mini need
 firmware too, and have none.  The regulatory database is a package.
+
+On a disk that firmware is in `/var/lib/vendorfw`, on the root
+partition: `bunix-install` copies there what the system in memory was
+handed, so a Mac is installed from a boot that had its firmware
+(`BUNIX_FIRMWARE`).  An update replaces `/usr` and leaves it.  The
+drivers are built into the kernel and ask for firmware before the root
+partition is mounted, so `vendor-firmware.service` names the directory
+to the kernel once it can be read, and has the PCI devices that were
+left without a driver tried again (a Mac's Wi-Fi is one).  A system
+that was handed firmware when it was started keeps that.  Asahi keeps the archive on the ESP and
+unpacks it in the initramfs at every start; here the initramfs is the
+same for every machine and knows nothing of this.  Tried on the 13-inch
+MacBook Pro M1, started from its disk: the driver fails as the kernel
+starts, is asked again three seconds later, and the Mac joins its
+network.
+
+The copy is the one of the day bunix was installed: nothing brings a
+newer one after macOS is updated, and a system installed before this
+has none until it is installed again.
+
+The regulatory database is asked for in the same too-early way, by code
+that is built in for every machine, and is the same file everywhere: it
+is in the initramfs as well as in `/usr`.
 
 ## Order of work
 

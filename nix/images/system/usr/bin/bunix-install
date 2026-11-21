@@ -35,6 +35,9 @@
 #     Mac's boot loader loads from it, before systemd-boot can start:
 #     aura's second stage with U-Boot, the EFI firmware such a Mac does
 #     not have.  An ESP that has another system's is refused.
+#   - The machine's own firmware, where the system in memory was handed
+#     some (a Mac's, for its Wi-Fi), is kept on the new root, in
+#     /var/lib/vendorfw: it is in no package.
 #   - The person chooses their shell, bash or fish.  No desktop yet.
 #
 # Nothing outside the chosen space, and free space right after it, is
@@ -465,6 +468,20 @@ if [ "$has_apple_silicon_firmware" = yes ] && [ "$ARCHITECTURE" = arm64 ]; then
   starts_through_aura=yes
   [ -f "$mac_stage2" ] || die "this is an Apple Silicon Mac's own disk, and this system has nothing to start one with ($mac_stage2)"
 fi
+# The machine's own firmware (a Mac's, for its Wi-Fi), if this system was
+# handed some when it was started: the kernel says where it was told to
+# look.  It is copied to the new root further down.  Said now if a Mac
+# has none, before anything is deleted: an earlier bunix on this disk may
+# have the only copy.
+firmware_of_this_boot=$(cat /sys/module/firmware_class/parameters/path)
+was_handed_firmware=no
+if [ -n "$firmware_of_this_boot" ] && [ -d "$firmware_of_this_boot" ]; then
+  was_handed_firmware=yes
+fi
+if [ "$starts_through_aura" = yes ] && [ "$was_handed_firmware" = no ]; then
+  echo "This Mac was started without its own firmware: the installed system"
+  echo "will have no Wi-Fi.  (Start it with BUNIX_FIRMWARE to have it kept.)"
+fi
 echo "Install bunix into (it needs $NEEDED_SIZE MiB, plus $ESP_SIZE MiB if the disk has no ESP):"
 for i in "${!places[@]}"; do
   read -r kind start end _ description <<< "${places[$i]}"
@@ -806,6 +823,16 @@ ln -s usr/lib "$WORK"/root/lib
 # only x86 asks for its loader there
 if [ "$ARCHITECTURE" = x86-64 ]; then
   ln -s usr/lib/x86_64-linux-gnu "$WORK"/root/lib64
+fi
+
+# The machine's own firmware, which the installed system is handed by
+# nobody, and finds here (usr/lib/bunix/vendor-firmware).
+if [ "$was_handed_firmware" = yes ]; then
+  echo "Keeping this machine's firmware..."
+  # Into a directory made here, and the directory's contents: the place
+  # the kernel was told of may be a link to one.
+  mkdir -p "$WORK"/root/var/lib/vendorfw
+  cp -a "$firmware_of_this_boot"/. "$WORK"/root/var/lib/vendorfw/
 fi
 
 # --- the system and its user, on the new root ---------------------------

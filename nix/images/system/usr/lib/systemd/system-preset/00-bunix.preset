@@ -5,6 +5,8 @@ enable systemd-resolved.service
 enable systemd-timesyncd.service
 enable sshd.service
 enable iwd.service
+# the machine's own firmware, where a disk has some
+enable vendor-firmware.service
 # a root shell on the screen, and on the serial port of a virtual machine
 # and of a Mac
 enable console-shell@.service tty1 ttyAMA0 ttySAC0
