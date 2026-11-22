@@ -38,8 +38,13 @@
 #
 #   BUNIX_ARCHITECTURES  what to build for; default "aarch64 x86_64"
 #   BUNIX_X86_BUILDER    where x86_64 is built, for ssh; default
-#                        enas-asus.home.arpa.  (aarch64 is built on this
-#                        Mac, in the builder of tools/nix-builder/lima.yaml.)
+#                        enas-asus.home.arpa
+#   BUNIX_AARCH64_BUILDER
+#                        the Mac that has the builder of
+#                        tools/nix-builder/lima.yaml, where aarch64 is
+#                        built, for ssh; default: this Mac.  For a run
+#                        on another Mac than the builder's: the one
+#                        whose person is at it, for the password manager.
 #   BUNIX_MANIFEST_DAYS  for how long the list is good; default 30
 #   BUNIX_SIGNED_BY      `development`: test systems' files, whose images
 #                        the builds sign with the development key
@@ -49,14 +54,16 @@
 #                        the real keys; the directory says -development
 #                        in its name, and is never to be uploaded.
 #
-# Needs: git, limactl with the builder running, ssh to the x86_64
-# builder, and what tools/sign.sh and tools/sign-list.sh need.
+# Needs: git, limactl with the builder running (here, or on
+# BUNIX_AARCH64_BUILDER), ssh to the x86_64 builder, and what
+# tools/sign.sh and tools/sign-list.sh need.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 out=${1:?usage: tools/publish.sh <output directory>}
 architectures=${BUNIX_ARCHITECTURES:-aarch64 x86_64}
 x86_builder=${BUNIX_X86_BUILDER:-enas-asus.home.arpa}
+aarch64_builders_mac=${BUNIX_AARCH64_BUILDER:-}
 days=${BUNIX_MANIFEST_DAYS:-30}
 signed_by=${BUNIX_SIGNED_BY:-release}
 
@@ -105,8 +112,8 @@ trap 'rm -rf "$unfinished"' EXIT
 
 # in_builder <architecture> <shell commands>: runs them where that
 # architecture is built, in the home directory there (where ssh starts).
-# The commands are to have no single quote in them: x86_64's go to ssh
-# inside a pair of them.
+# The commands are to have no single quote in them: what goes to ssh
+# goes inside a pair of them.
 #
 # The x86_64 builder's own shell is not bash, and its Nix is one
 # installed for its user alone (tools/nix-builder/home-store/nix.conf),
@@ -114,7 +121,12 @@ trap 'rm -rf "$unfinished"' EXIT
 x86_nix='export NIX_CONF_DIR=$HOME/nix-tool PATH=$HOME/nix-tool/bin:$PATH'
 in_builder() {
     case $1 in
-        aarch64) limactl shell bunix-builder bash -c "cd && $2" ;;
+        aarch64)
+            if [ -z "$aarch64_builders_mac" ]; then
+                limactl shell bunix-builder bash -c "cd && $2"
+            else
+                ssh "$aarch64_builders_mac" "limactl shell bunix-builder bash -c 'cd && $2'"
+            fi ;;
         x86_64) ssh "$x86_builder" "bash -c '$x86_nix && $2'" ;;
         *) die "nothing builds for $1" ;;
     esac

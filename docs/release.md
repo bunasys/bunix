@@ -26,9 +26,12 @@ missing).  Not tried on such a machine.
 
 ## What you need
 
-- This Mac's builder (`tools/nix-builder/lima.yaml`), running, for
-  aarch64; and an x86_64 machine with Nix, reachable over SSH
-  (`tools/nix-builder/home-store/nix.conf`; `BUNIX_X86_BUILDER`).
+- The builder for aarch64 (`tools/nix-builder/lima.yaml`), running, on
+  this Mac or on one reachable over SSH (`BUNIX_AARCH64_BUILDER`); and
+  an x86_64 machine with Nix, reachable over SSH
+  (`tools/nix-builder/home-store/nix.conf`; `BUNIX_X86_BUILDER`).  The
+  Mac `tools/publish.sh` is run on is the one you sit at: 1Password
+  asks on its own screen.
 - The image key and the release key, as the 1Password documents "bunix
   verity key" and "bunix release key".  No file has them, and no build
   reads them (`docs/nix-usr-system.md`, "Who signs").
