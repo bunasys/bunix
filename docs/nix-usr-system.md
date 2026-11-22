@@ -410,11 +410,28 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   small script around Sequoia's `sqv` (`base.sqv`, with Botan linked in).
   `tools/update-test.sh` goes through all of it in a virtual machine:
   the list bunix 0.4.0 was published with, taken by the certificate the
-  system comes with; lists that are unsigned, signed by a stranger, or
-  changed after signing, each refused; an update, the restart into it,
-  an update that cannot start, its three tries, and the return.
+  system comes with; lists that are unsigned, signed by a stranger,
+  changed after signing, or past their day, each refused; a version
+  whose kernel image is there for the other architecture only, not
+  taken; an update, the restart into it, an update that cannot start,
+  its three tries, and the return.
+- **A release.**  `tools/publish.sh` puts one together, of both
+  architectures, in one directory (`docs/release.md`).  Each builder is
+  sent the last commit: aarch64's on this Mac, x86_64's over SSH.  Each
+  builds its system and its extension up to their hashes; the hashes
+  are signed on the Mac ("Who signs"), and the builds finished with the
+  signatures.  Then the list of all the files, with the day it is good
+  until, is signed with the release key (`tools/sign-list.sh`: the key
+  from the password manager into Sequoia's `sq`, through a pipe).
+  `tools/release-test.sh` serves the directory to a virtual machine of
+  the version before, which is told where to look, and to ask for the
+  devtools extension: it takes the release, restarts into it and marks
+  it good.  Tried with test systems' files and a list signed with a key
+  made for the trial, which the machine was told to take, for both
+  architectures' builds; the virtual machine is arm64, and nothing has
+  started x86-64's files.
 
-Not there yet: what publishes a version (`tools/publish.sh` is x86's);
+Not there yet: a release made with bunix's keys, and uploaded;
 a machine whose clock is behind (one with no clock of its own starts at
 the first of November 2026, before any signature was made, and takes no
 update until the network has told it the time: what runs updates has to

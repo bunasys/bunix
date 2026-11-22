@@ -16,8 +16,10 @@
 #      comes with (downloaded from where releases are); and not that list
 #      with a byte changed
 #   2. it refuses the next version while the list of its files is not
-#      signed, is signed by a key the machine does not know, or was changed
-#      after it was signed; and nothing of that version is written
+#      signed, is signed by a key the machine does not know, was changed
+#      after it was signed, or is past the day it says it is good until;
+#      and nothing of that version is written.  Nor is it, while the
+#      version's kernel image is there for another architecture only
 #   3. with the list signed as it should be, it updates: the next /usr goes
 #      into the empty slot, its kernel image beside the old one, with three
 #      tries; and, the devtools extension having been asked for, that
@@ -34,8 +36,7 @@
 #
 # The lists of steps 2 to 5 are signed here, with keys made for this run,
 # and the machine is told which of them to take, in /etc, where an
-# administrator would say it.  NOT tested: a list past the day it says it
-# is good until.
+# administrator would say it.
 #
 #   BUNIX_EFI        `u-boot`: the machine is started by U-Boot, the EFI
 #                    firmware a Mac is given (nix/boot.nix), here as built
@@ -174,11 +175,16 @@ for who in signer stranger; do
         --quick-generate-key "bunix update test: $who" ed25519 sign never 2>> "$work/gpg.log" \
         || fail "gpg made no key for the $who; see $work/gpg.log"
 done
-# write_list <served directory>: the list a machine reads to learn what
-# there is, each file and its hash.  Any signature it had is gone with the
-# old list.
+in_a_month=$(date -u -v+30d +%F)
+yesterday=$(date -u -v-1d +%F)
+# write_list <served directory> [<the day it is good until>]: the list a
+# machine reads to learn what there is, each file and its hash, and the
+# day, as tools/publish.sh writes it: an entry like a file's, of no bytes.
+# Any signature it had is gone with the old list.
 write_list() {
-    (cd "$work/served/$1" && rm -f SHA256SUMS SHA256SUMS.gpg && shasum -a 256 * > SHA256SUMS)
+    good_until=BEST-BEFORE-${2:-$in_a_month}
+    (cd "$work/served/$1" && rm -f SHA256SUMS SHA256SUMS.gpg &&
+        touch "$good_until" && shasum -a 256 * > SHA256SUMS && rm "$good_until")
 }
 # sign_list <who> <served directory>
 sign_list() {
@@ -254,6 +260,9 @@ start_and_expect() {
     expected=$1
     start_machine
     answers_within 90 || fail "the machine did not answer on SSH; $expected was to start"
+    # A QEMU that could not have its port ends at once, and what answers
+    # is then whatever machine has the port.
+    kill -0 $qemu 2> /dev/null || fail "QEMU ended, and another machine answers on port $ssh_port"
     state=$(in_guest systemctl is-system-running --wait || true)
     running=$(in_guest "sed -n 's/^IMAGE_VERSION=//p' /usr/lib/os-release")
     echo "  started: bunix $running, systemd $state"
@@ -305,11 +314,15 @@ expect_refusal() {
     fi
     grep -q -F "$3" "$work/update-$1.log" \
         || fail "the update failed, but not because its list of files $2; see $work/update-$1.log"
+    expect_nothing_of_next "its list of files $2"
+    echo "  refused: the list of files $2"
+}
+# expect_nothing_of_next <why not>: that no part of $next is on the disk
+expect_nothing_of_next() {
     on_disk=$(in_guest 'ls /boot/EFI/Linux; lsblk -n -o PARTLABEL') || fail "could not look at the machine's disk"
     case $on_disk in
-        *"$next"*) fail "something of $next was written, though its list of files $2" ;;
+        *"$next"*) fail "something of $next was written, though $1" ;;
     esac
-    echo "  refused: the list of files $2"
 }
 # expect_not_merged <name of the log> <what is wrong with the image that
 #     is in the devtools extension's place>: that none of its programs is
@@ -371,6 +384,24 @@ sign_list signer next
 no_hash=$(printf '%064d' 0)
 echo "$no_hash  added-after-signing" >> "$work/served/next/SHA256SUMS"
 expect_refusal changed "was changed after it was signed" "Signature verification failed"
+
+write_list next "$yesterday"
+sign_list signer next
+expect_refusal stale "is past the day it is good until" "Best before marker indicates out-of-date file list"
+
+# A release is of two architectures, in one place, and a machine is to
+# take a version only if all of it is there for its own: here the kernel
+# image is the other architecture's.
+kernel_image=$(basename "$work"/served/next/*.efi)
+mv "$work/served/next/$kernel_image" "$work/served/next/bunix_$next.x86-64.efi"
+write_list next
+sign_list signer next
+try_update incomplete || fail "looking for an update failed; see $work/update-incomplete.log"
+grep -q -F "No update needed" "$work/update-incomplete.log" \
+    || fail "an update was found in a version without this machine's kernel image; see $work/update-incomplete.log"
+expect_nothing_of_next "its kernel image is another architecture's"
+echo "  not taken: a version whose kernel image is another architecture's"
+mv "$work/served/next/bunix_$next.x86-64.efi" "$work/served/next/$kernel_image"
 
 echo "3. $installed updates to $next"
 # The machine's person asks for the devtools extension, as its feature
