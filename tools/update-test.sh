@@ -588,11 +588,25 @@ expect_kernel_image "bunix_$next.efi" "$next still has tries in its name"
 
 # The extension came with the update, and the boot laid it over /usr:
 # its programs are there, and Nix's daemon is listening.
-in_guest "git --version && gdb --version && strace -V && file --version && bsdtar --version && nix --version" \
+in_guest "git --version && gdb --version && strace -V && file --version && bsdtar --version && nix --version && node --version" \
     > "$work/devtools.log" 2>&1 \
     || fail "the devtools extension's programs do not all run; see $work/devtools.log"
 in_guest systemctl is-active --quiet nix-daemon.socket \
     || fail "nothing listens for Nix's daemon"
+# Node runs a script; npm, npx and corepack, which are scripts it runs,
+# start.
+in_guest "node -e 'console.log([1, 2, 3].map(n => n * 2).join())' &&
+    npm --version && npx --version && corepack --version" > "$work/nodejs.log" 2>&1 \
+    || fail "Node.js, npm, npx or corepack does not start; see $work/nodejs.log"
+grep -qx 2,4,6 "$work/nodejs.log" || fail "node did not run a script; see $work/nodejs.log"
+# npm makes a package of a directory, and installs it for everyone: in
+# /usr/local, as /usr is not to be written to.  The package is the
+# machine's own and needs no other: nothing is downloaded for it.
+in_guest "cd \$(mktemp -d) &&
+    echo '{\"name\": \"probe\", \"version\": \"1.0.0\"}' > package.json &&
+    npm pack && npm install --global probe-1.0.0.tgz &&
+    ls /usr/local/lib/node_modules/probe/package.json" > "$work/npm.log" 2>&1 \
+    || fail "npm did not pack a package and install it in /usr/local; see $work/npm.log"
 echo "  the devtools extension of $next is merged, and its programs run"
 # What is in the extension's place is merged only if it is signed, and
 # the signature is of what is there.  The image as it came is set aside

@@ -345,6 +345,11 @@ nix-x86_64-linux:
   untracked: 'the Nix project''s own static build, named by its number on their build server; moved by hand'
   cpe: 'a:nixos:nix'
   alpine: nix
+nodejs:
+  anitya: 8251
+  cpe: ['a:nodejs:node.js', 'a:nodejs:nodejs']
+  debian: nodejs
+  alpine: nodejs
 openssh:
   anitya: 2565
   cpe: 'a:openbsd:openssh'

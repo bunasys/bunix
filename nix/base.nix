@@ -607,6 +607,26 @@ let
     buildDepends = [ pkgconf ];
   };
 
+  # Node.js 24 with npm and corepack, for the devtools extension.  The
+  # element, up to 0.4.0, was only what Hudhud is built with, and had
+  # neither (--without-npm --without-corepack, not passed here).  24 is
+  # the major version Chromium checks for (docs/browser.md; Hudhud is
+  # not ported yet), so the version follows Chromium's; anyone who needs
+  # another Node fetches it themselves.  Node's own copies of V8, ICU,
+  # OpenSSL and the rest.
+  # coreutils: npm and corepack are scripts that `env` finds node for.
+  nodejs = mkSystemPackage {
+    name = "nodejs";
+    source = sources.nodejs;
+    script = ./base/nodejs.sh;
+    depends = [ glibc toolchain.gccLibraries tools.coreutils ];
+    # python-bz2: Node's configure script imports it when it starts;
+    # python-ctypes: so does gyp, which writes ninja's files;
+    # python-zlib: a build script compresses with it the description of
+    # what a debugger can ask of Node.
+    buildDepends = [ ninja python-bz2 python-ctypes python-zlib ];
+  };
+
   # GMP: arbitrary-precision arithmetic (gdb evaluates expressions with
   # it).  The compiler has its own copy, built into it.
   gmp = mkSystemPackage {
@@ -868,6 +888,20 @@ let
     };
   };
 
+  # bz2: Node's configure script imports it when it starts.
+  python-bz2 = mkSystemPackage {
+    name = "python-bz2";
+    source = sources.python;
+    script = ./base/python-extension.sh;
+    depends = [ glibc tools.python bzip2 ];
+    env = {
+      module = "_bz2";
+      c_files = "Modules/_bz2module.c";
+      flags = "-lbz2";
+      try = "import bz2; bz2.decompress(bz2.compress(b'bunix'))";
+    };
+  };
+
   # ctypes, calls into C from Python: systemd's build makes EFI programs
   # of systemd-boot's with a script that uses it.  The three HAVE_... are
   # what libffi has had for years.
@@ -1063,6 +1097,6 @@ in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
-  inherit strace file libarchive git gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command;
+  inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command;
 }
