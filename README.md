@@ -48,10 +48,18 @@ bunix ext enable devtools    # git, gdb, strace, file, bsdtar and unzip, Nix
 bunix ext enable llvm        # clang and lld, make, cmake, meson, ninja
 ```
 
-`bunix`, the llvm extension and a `/usr/local` that can be written to
-(on the root partition) are in systems after 0.4.1.  A 0.4.1 updates by
-`systemd-sysupdate update`, and has the devtools extension by a file in
-`/etc` (`docs/nix-usr-system.md`).
+Other programs are built on the machine, by the llvm extension, from
+recipes it brings, and installed in `/usr/local`, which is on the root
+partition:
+
+```
+bunix install                # the packages there are recipes for
+bunix install htop
+```
+
+`bunix`, the llvm extension and `/usr/local` are in systems after 0.4.1.
+A 0.4.1 updates by `systemd-sysupdate update`, and has the devtools
+extension by a file in `/etc` (`docs/nix-usr-system.md`).
 
 ## Building
 
@@ -74,6 +82,7 @@ nix/
   tools.nix        what a build runs
   base.nix         the system's packages
   boot.nix         the kernel; for Apple Silicon Macs their boot loader and U-Boot
+  packages.nix     what a person installs on their machine: recipes
   images/          what is made of packages: the system, the initrd, the kernel
                    image, a disk, an update's files, the extensions
 ```

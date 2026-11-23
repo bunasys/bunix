@@ -1,0 +1,7 @@
+# What a login starts with (pam_env, files/rootfs/usr/lib/pam.d/system-login):
+# one over SSH or at the console.  A service has systemd's PATH, not this.
+#
+# /usr/local/bin before /usr/bin: what a person built and installed on
+# this machine (`bunix install`, or make install) is what they mean by
+# its name.  /usr/local is on the root partition (usr/local, a link).
+PATH DEFAULT=/usr/local/bin:/usr/bin

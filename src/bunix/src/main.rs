@@ -6,6 +6,7 @@
 //! telling of what happens (sysupdate.rs, screen.rs).
 
 mod ext;
+mod install;
 mod screen;
 mod sysupdate;
 mod update;
@@ -20,6 +21,9 @@ bunix: look after this bunix system
   bunix ext                 list the extensions, and which are on
   bunix ext enable <name>   turn one on: download it, and lay it over /usr
                             (it comes with the newest release, if this is not it)
+  bunix install             list the packages that can be built here
+  bunix install <name>      build one on this machine, and install it in /usr/local
+                            (with the llvm extension)
 ";
 
 fn main() -> ExitCode {
@@ -44,6 +48,12 @@ fn run(arguments: &[String]) -> Result<(), String> {
         ["ext", "enable", name] => {
             become_root(arguments)?;
             ext::enable(name)
+        }
+        ["install"] => install::list(),
+        ["install", name] => {
+            install::check_there_is(name)?;
+            become_root(arguments)?;
+            install::install(name)
         }
         [] | ["help"] | ["--help"] | ["-h"] => {
             screen::say(USAGE.trim_end());

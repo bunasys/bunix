@@ -9,4 +9,10 @@ password  include   system-auth
 session   required  pam_loginuid.so
 session   optional  pam_keyinit.so force revoke
 session   include   system-auth
+# What every login's programs find set: PATH, with /usr/local/bin for
+# what was built on the machine.  From one file of the system
+# (nix/images/system/usr/lib/bunix/login-environment), and not from
+# /etc/environment as well (readenv=0): one place says it.  Optional: a
+# login is not to fail for it.
+session   optional  pam_env.so conffile=/usr/lib/bunix/login-environment readenv=0
 session   optional  pam_systemd.so

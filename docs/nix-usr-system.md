@@ -532,9 +532,11 @@ no sanitizers, coverage or OpenMP.  The headers of the C library
 and of the system's own libraries are the system's already, an image
 being of whole packages.  About 300 MiB for arm64.  What is built is
 installed in `/usr/local`, a link in the image to `/var/usrlocal` on
-the root partition, as on x86.  Nothing looks there yet: `/usr/local/bin`
-is not on a login's `PATH`, nor are its libraries where the loader and
-pkgconf look.
+the root partition, as on x86.  `/usr/local/bin` is on a login's `PATH`,
+before `/usr/bin` (pam_env, `usr/lib/bunix/login-environment`; tried
+over SSH, not at the console), and not on a service's.  Its libraries
+are not where the loader and pkgconf look: a build that is to find them
+says so (`bunix install` does, below).
 
 `bunix ext enable <name>` turns one on (`src/bunix`): it enables the
 feature, has sysupdate download the running version's image, and
@@ -545,6 +547,38 @@ mkdir -p /etc/sysupdate.d/devtools.feature.d
 printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf
 /usr/lib/systemd/systemd-sysupdate update && systemctl restart systemd-sysext
 ```
+
+### Packages built on the machine
+
+`bunix install <name>` builds a package where it is to run, and installs
+it in `/usr/local` (`src/bunix/src/install.rs`).  `nix/packages.nix` has
+the recipes, as data: a source of `sources.json`, the script that builds
+it, and what it needs.  Each recipe is a system package as well, built
+by Nix for `/usr` and by gcc: one that does not build is not shipped.
+The llvm extension brings them to a machine
+(`/usr/share/bunix/packages`), with `/usr/lib/bunix/build-package`,
+which runs a recipe's script as a build of bunix does, but with clang
+and for `/usr/local`.  On the machine the source is downloaded and
+checked against the recipe's hash, built in a directory that is root's
+alone (the log in `/var/log/bunix`), and copied into place; a list of
+its files is kept (`/var/lib/bunix/installed`), so that a later version
+leaves none of an earlier behind, and so that no file is replaced that
+another package or a person put there.  less and htop are the first two.
+
+What that does not do yet:
+
+- A recipe's script has to take where it installs from
+  `$configure_for_usr`, which the autotools one does; the meson and
+  cmake scripts name `/usr`, and changing them rebuilds every package.
+- A recipe's variables are strings: one that needs a patch cannot be
+  handed to a machine.
+- The build runs as root, on the machine itself and not in a sandbox,
+  and what it makes is not stripped or checked as a system package is.
+- Nothing removes a package.
+- What was installed is linked against the system's libraries as they
+  were: after an update of the system it is not built again.
+- Every package is built from source on every machine: a cache of what
+  was built, for faster installs, is to come.
 
 A machine that has asked takes a version only together with that
 version's extension, as one update, and has it merged at every boot.

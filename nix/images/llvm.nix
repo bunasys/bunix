@@ -1,6 +1,7 @@
 # The llvm extension: what software is built with on a running system --
 # clang and LLVM's linker and tools, make, patch, pkgconf, cmake, meson
-# and ninja.  After x86's gcc extension
+# and ninja; and the recipes `bunix install` builds packages by, with
+# what runs them (packages.nix).  After x86's gcc extension
 # (elements/sysext/gcc-content.bst), with clang where that has gcc.
 #
 #   nix-build /bunix/nix/images/llvm.nix -A image
@@ -29,6 +30,7 @@ let
   toolchain = import ../toolchain.nix { inherit system; };
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
+  packages = import ../packages.nix { inherit system; };
   extension = import ./extension.nix { inherit system signature version; };
 in
 extension {
@@ -36,6 +38,7 @@ extension {
   contents = [
     base.llvm toolchain.clangSetup toolchain.binutils
     tools.make tools.patch base.pkgconf base.cmake base.meson base.ninja
+    packages.recipes
   ];
   # the C++ library's headers (clangSetup)
   keep = [ "include/c++" ];

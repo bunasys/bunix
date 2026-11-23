@@ -1,13 +1,16 @@
-//! What a person sees: a few plain lines, and one bar that moves.
+//! What a person sees: a few plain lines, and one line that moves: a
+//! bar for what says how far it is, a clock for what does not.
 //!
-//! On a terminal the bar is drawn over itself and has bunix's colour;
-//! into a file or a pipe (a log, a script) the same is said as lines,
-//! one for every tenth of the way, and with no colour.
+//! On a terminal the moving line is drawn over itself, and the bar has
+//! bunix's colour; into a file or a pipe (a log, a script) the bar is
+//! said as lines, one for every tenth of the way, with no colour, and
+//! the clock not at all.
 //!
 //! Nothing here fails: what cannot be written (a pipe whose reader has
 //! gone) is not, and the work it tells of goes on.
 
 use std::io::{IsTerminal, Write};
+use std::time::Instant;
 
 const BAR_WIDTH: usize = 28;
 /// bunix's accent
@@ -42,6 +45,12 @@ pub fn heading(text: &str) {
 /// Something worth knowing next, said aside.
 pub fn aside(text: &str) {
     say(&format!("  {}", on_screen(DIM, text)));
+}
+
+/// One step of several, as it starts.  Not dim, as what is said aside
+/// is: it is what is happening now.
+pub fn step(text: &str) {
+    say(&format!("  {text}"));
 }
 
 /// It is done.
@@ -110,6 +119,39 @@ impl Bar {
         if self.is_drawn {
             say("");
             self.is_drawn = false;
+        }
+    }
+}
+
+/// The clock: how long something has been going on that does not say how
+/// far it is (a build).  On a terminal only.
+pub struct Clock {
+    started: Instant,
+}
+
+impl Clock {
+    pub fn new() -> Clock {
+        Clock { started: Instant::now() }
+    }
+
+    pub fn show(&mut self) {
+        let mut screen = std::io::stdout();
+        if !screen.is_terminal() {
+            return;
+        }
+        let seconds = self.started.elapsed().as_secs();
+        let time = format!("{}:{:02}", seconds / 60, seconds % 60);
+        // \r and \x1b[K: over itself, as the bar
+        let _ = write!(screen, "\r    {}\x1b[K", on_screen(DIM, &time));
+        let _ = screen.flush();
+    }
+
+    /// Takes the clock away: what follows starts on its line.
+    pub fn finish(&mut self) {
+        let mut screen = std::io::stdout();
+        if screen.is_terminal() {
+            let _ = write!(screen, "\r\x1b[K");
+            let _ = screen.flush();
         }
     }
 }

@@ -34,20 +34,25 @@
 #   4. the llvm extension builds software: turned on the same way, a C
 #      and a C++ program are compiled and run, and /usr/local takes
 #      what is installed there
-#   5. with the list signed as it should be, `bunix update` updates: the
+#   5. `bunix install` builds two packages from their recipes, their
+#      sources downloaded from where their makers publish them, and a
+#      new login finds them by their names.  It replaces no file it did
+#      not install.  With the extension off again, they still run, and
+#      it says what to turn on
+#   6. with the list signed as it should be, `bunix update` updates: the
 #      next /usr goes into the empty slot, its kernel image beside the
 #      old one, with three tries; and that version's extension with it
-#   6. the machine restarts into the next version, from the second slot,
+#   7. the machine restarts into the next version, from the second slot,
 #      and marks it good once all of it has started.  The extension is
 #      laid over /usr, and its programs run.  It is not, if what is in
 #      its place is not signed, or signed as of another hash
-#   7. it updates to the broken one, over the first slot
-#   8. the broken one is started three times, and does not come up
-#   9. the fourth start is the next version again, and the broken one is
+#   8. it updates to the broken one, over the first slot
+#   9. the broken one is started three times, and does not come up
+#  10. the fourth start is the next version again, and the broken one is
 #      marked bad; the next version's extension is merged, not the
 #      broken one's
 #
-# The lists of steps 2 to 7 are signed here, with keys made for this run,
+# The lists of steps 2 to 8 are signed here, with keys made for this run,
 # and the machine is told which of them to take, in /etc, where an
 # administrator would say it.
 #
@@ -67,7 +72,7 @@
 #   BUNIX_HTTP_PORT  the Mac's port the files are served on; default 8643
 #
 # Needs: what tools/boot-vm.sh needs, python3 (the server), gpg (the
-# signatures), and the internet (step 1).
+# signatures), and the internet (steps 1 and 5).
 set -eu
 
 tool=update-test.sh
@@ -505,16 +510,58 @@ in_guest 'set -e -o pipefail
 in_guest "install -m 755 /tmp/hello-c /usr/local/bin/hello-c && /usr/local/bin/hello-c" > /dev/null \
     || fail "/usr/local cannot be written to, or what is there cannot be run"
 echo "  programs in C and C++ are compiled and run, and /usr/local takes one"
-# Off again.  By hand: bunix has no `ext disable`.  The versions this
-# machine updates to are built here without the extension, and a machine
-# that has it enabled would find them incomplete.
+
+echo "5. bunix install builds packages on $installed"
+# From the recipes the extension brings, their sources downloaded from
+# where their makers publish them (the internet), and found by name by a
+# login made after: /usr/local/bin is on its PATH.
+in_guest bunix install > "$work/install-list.log" 2>&1 || fail "bunix install failed; see $work/install-list.log"
+grep -q -E "^ +less +[0-9]" "$work/install-list.log" \
+    || fail "bunix install does not list less; see $work/install-list.log"
+# A file that is in the way, and not this package's: it stays, and
+# nothing is installed over it.
+in_guest "echo a person put this here > /usr/local/bin/htop"
+if in_guest bunix install htop > "$work/install-in-the-way.log" 2>&1; then
+    fail "bunix install replaced a file it had not installed; see $work/install-in-the-way.log"
+fi
+[ "$(in_guest cat /usr/local/bin/htop)" = "a person put this here" ] \
+    || fail "bunix install changed a file it had refused to replace"
+in_guest "rm /usr/local/bin/htop"
+for package in less htop; do
+    in_guest bunix install $package > "$work/install-$package.log" 2>&1 \
+        || fail "bunix install $package failed; see $work/install-$package.log"
+    grep -q -F "is installed: /usr/local/bin/$package" "$work/install-$package.log" \
+        || fail "bunix install $package did not say what it installed; see $work/install-$package.log"
+    [ "$(in_guest "command -v $package")" = /usr/local/bin/$package ] \
+        || fail "a login does not find $package by its name after bunix install"
+    in_guest "$package --version" > "$work/installed-$package.log" 2>&1 \
+        || fail "$package, as bunix install built it, does not run; see $work/installed-$package.log"
+done
+in_guest bunix install less > "$work/install-less-again.log" 2>&1 \
+    || fail "bunix install less failed the second time; see $work/install-less-again.log"
+grep -q -F "is installed already" "$work/install-less-again.log" \
+    || fail "bunix install built less again, though it is installed; see $work/install-less-again.log"
+echo "  less and htop are built and installed: $(head -n 1 "$work/installed-less.log")"
+
+# The llvm extension off again.  By hand: bunix has no `ext disable`.
+# The versions this machine updates to are built here without the
+# extension, and a machine that has it enabled would find them
+# incomplete.
 in_guest "rm -r /etc/sysupdate.d/llvm.feature.d /var/lib/bunix/extensions/llvm_$installed.raw &&
     systemctl restart systemd-sysext.service" || fail "could not turn the llvm extension off again"
 if in_guest "command -v clang" > /dev/null; then
     fail "clang is still there after the llvm extension was turned off"
 fi
+# What was installed stays, and runs without the extension; installing
+# more says what is missing.
+in_guest "less --version" > /dev/null || fail "less does not run once the llvm extension is off"
+if in_guest bunix install htop > "$work/install-without-llvm.log" 2>&1; then
+    fail "bunix install went through without the llvm extension"
+fi
+grep -q -F "bunix ext enable llvm" "$work/install-without-llvm.log" \
+    || fail "bunix install did not say to turn the llvm extension on; see $work/install-without-llvm.log"
 
-echo "5. $installed updates to $next"
+echo "6. $installed updates to $next"
 look_for_updates_in next
 write_list next
 sign_list signer next
@@ -528,7 +575,7 @@ expect_kernel_image "bunix_$next+3-0.efi" "no kernel image of $next with three t
 in_guest lsblk -n -o PARTLABEL | grep -q -x -F "bunix_$next" \
     || fail "no /usr partition labelled bunix_$next"
 
-echo "6. restart into $next"
+echo "7. restart into $next"
 stop_machine reboot
 start_and_expect "$next"
 # Marked good, and for the reason the system gives (no unit failed), not
@@ -573,14 +620,14 @@ in_guest "mv /var/tmp/as-it-came.raw $extension && chmod 0444 $extension &&
     systemd-sysext refresh > /dev/null 2>&1 && command -v git > /dev/null" \
     || fail "the extension as it came is not merged again"
 
-echo "7. $next updates to $broken, which cannot start"
+echo "8. $next updates to $broken, which cannot start"
 look_for_updates_in broken
 # (by sysupdate itself, as before there was `bunix update`: both ways in
 # are to keep working)
 update broken
 expect_kernel_image "bunix_$broken+3-0.efi" "no kernel image of $broken with three tries"
 
-echo "8. $broken is tried three times"
+echo "9. $broken is tried three times"
 stop_machine reboot
 for try in 1 2 3; do
     start_machine
@@ -595,7 +642,7 @@ for try in 1 2 3; do
     end_qemu
 done
 
-echo "9. the machine goes back to $next"
+echo "10. the machine goes back to $next"
 start_and_expect "$next"
 expect_kernel_image "bunix_$broken+0-3.efi" "$broken is not marked bad"
 # $next has its own extension still, though $broken's is beside it and
