@@ -145,7 +145,7 @@ kept to port from, and no longer builds:
 Five elements stay though Nix builds their part, for what they still
 have beyond it: the kernel's (BTF, its types for BPF tools), the
 initrd's (graphics drivers,
-the boot splash), the kernel image's (its signature, the splash), the
+Plymouth's boot splash), the kernel image's (its signature), the
 ESP's (shim) and the root file system's (what the x86-64 system is made
 of).  Three that are gone have no package of the same extent: the full
 Python of a running system, and the tool that signed a release's list

@@ -36,7 +36,7 @@ let
     depends = [ toolchain.glibc ];
     # llvm: the kernel is built with clang.
     # rust and bindgen: parts of this kernel are written in Rust (a Mac's
-    # drivers; x86 builds none of them).
+    # drivers; and on both, the QR code of a kernel that stops).
     # flex, bc and perl: the kernel's own configuration and build tools.
     # openssl: the configuration has the kernel keep a keyring of
     # certificates, and what puts them into the image is built with
@@ -51,6 +51,9 @@ let
       options_directory = ./boot/linux;
       # whose signature on an image's hash the kernel takes: public
       verity_certificate = ../keys/verity.crt;
+      # bunix's mark in one colour, for the screen of a kernel that
+      # stops (tools/render-branding.sh makes it)
+      logo = ../files/branding/logo-mono.pbm;
     };
   };
 
