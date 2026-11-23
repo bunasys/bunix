@@ -519,8 +519,16 @@ extension of its own version.  (A directory that root puts where
 extensions are looked for is merged as it is.)
 
 `images/devtools.nix` is the first: git, gdb, strace, file, libarchive's
-bsdtar and unzip, as on x86; Nix, which bunix is built by, with its
-daemon; and on x86_64 Firecracker.  The image for arm64 is about 63 MiB.
+bsdtar and unzip, as on x86; Node.js 24 with npm and corepack; Nix,
+which bunix is built by, with its daemon; and on x86_64 Firecracker.
+The image for arm64 is about 134 MiB, more than half of it Node.
+
+`/usr` is read-only, so what npm installs for everyone
+(`npm install --global`) goes to `/usr/local`: npm is told so in the
+extension.  corepack has no such setting, and is told each time:
+`corepack enable --install-directory /usr/local/bin`.  Node's headers
+are not in the extension, as no package's are: for an add-on written
+in C++, npm downloads them.
 
 `images/llvm.nix` is the second, for building software on a machine:
 clang and LLVM's linker and tools, make, patch, pkgconf, cmake, meson

@@ -202,7 +202,7 @@ in_guest systemctl is-active --quiet systemd-bless-boot.service \
     || fail "the boot of $version was not marked good"
 in_guest "ls /boot/EFI/Linux/bunix_$version.efi" > /dev/null \
     || fail "$version still has tries in its name"
-in_guest "git --version && gdb --version && strace -V && file --version && bsdtar --version && nix --version" \
+in_guest "git --version && gdb --version && strace -V && file --version && bsdtar --version && nix --version && node --version" \
     > "$work/devtools.log" 2>&1 \
     || fail "the devtools extension's programs do not all run; see $work/devtools.log"
 echo "  marked good; the devtools extension of $version is merged, and its programs run"

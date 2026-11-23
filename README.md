@@ -44,7 +44,7 @@ downloaded and laid over `/usr` when it is turned on:
 
 ```
 bunix ext                    # the extensions, and which are on
-bunix ext enable devtools    # git, gdb, strace, file, bsdtar and unzip, Nix
+bunix ext enable devtools    # git, gdb, strace, file, bsdtar and unzip, Node.js, Nix
 bunix ext enable llvm        # clang and lld, make, cmake, meson, ninja
 ```
 
@@ -131,8 +131,7 @@ kept to port from, and no longer builds:
 
 - the desktop (niri, the DMS shell and its login screen, GTK 4, Ghostty,
   PipeWire, Mesa, fonts) and its extension;
-- the gcc, rust and swift extensions; Rust built from source, Go, Zig
-  and Node.js;
+- the gcc, rust and swift extensions; Rust built from source, Go and Zig;
 - Hudhud, the browser (`docs/browser.md`; its Mac build,
   `tools/build-macos.sh`, reads the pinned versions from these elements);
 - programs of the x86-64 system that the Nix one does not have: BusyBox
