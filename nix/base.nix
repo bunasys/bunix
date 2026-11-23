@@ -1042,6 +1042,34 @@ let
     };
   };
 
+  # boot-picture: draws the picture of a boot again on a screen that a
+  # GPU's driver has just taken, so that the picture is there and a
+  # kernel that stops has something to draw on (src/boot-picture, which
+  # says more; docs/nix-usr-system.md, "What a boot shows").  udev runs
+  # it, by the rule it comes with.  Rust's standard library and nothing
+  # else, as bunix-command.
+  boot-picture = mkSystemPackage {
+    name = "boot-picture";
+    # as src/boot-picture/Cargo.toml has it
+    version = "0.1.0";
+    script = ./base/boot-picture.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ rust ];
+    env = {
+      source_directory = builtins.path {
+        name = "boot-picture-source";
+        path = ../src/boot-picture;
+        # the source and nothing beside it, as bunix-command's
+        filter = path: type:
+          let name = baseNameOf path; in
+          name == "Cargo.toml" || name == "Cargo.lock" || name == "src" || builtins.match ".*\\.rs" name != null;
+      };
+      # the picture systemd's stub draws (images/uki.nix): the same file
+      picture = ../files/branding/splash.bmp;
+      rule = ./base/boot-picture.rules;
+    };
+  };
+
   # fish: a shell a user may choose in place of bash (chsh).  Written in
   # Rust; it brings its own PCRE2, which its build compiles.
   # ncurses: fish reads the terminfo database when it runs.
@@ -1099,5 +1127,5 @@ in
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture;
 }

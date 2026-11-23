@@ -14,10 +14,12 @@
 # text was written before the console's own program started -- none of
 # the kernel's, none of systemd's.
 #
-# NOT checked: the picture itself and the mark on the screen of a kernel
-# that stops, which only a look at the screen shows (BUNIX_MONITOR,
-# tools/test-machine.sh); a kernel stopping; and that the kernel image
-# asks for a quiet boot by itself (tools/boot-vm.sh asks too).
+# NOT checked: the picture itself (boot-picture.sh reads it back once
+# the GPU's driver has the screen) and the mark on the screen of a
+# kernel that stops, which only a look at the screen shows
+# (BUNIX_MONITOR, tools/test-machine.sh); a kernel stopping; and that
+# the kernel image asks for a quiet boot by itself (tools/boot-vm.sh
+# asks too).
 set -euo pipefail
 
 fail() {

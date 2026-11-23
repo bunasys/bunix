@@ -78,6 +78,9 @@ stagedBuild {
     base.sqv
     # what a person updates it with, and turns its extensions on
     base.bunix-command
+    # the picture of a boot, drawn again when a GPU's driver takes the
+    # screen
+    base.boot-picture
   ]
   # and what a Mac's own boot loader loads from the ESP, for the
   # installer to put there (x86 has no such Mac to start)

@@ -960,21 +960,35 @@ screen as the firmware left it, and its console writes nothing over it
 until there is text to write (`quiet` on the command line, and a console
 that waits: `CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER`): the login
 prompt, a unit that failed or keeps the boot waiting, or a line of the
-kernel's that is worse than an error.  No program draws at boot, and
-nothing says how far one has come.  A kernel that stops says so on a screen of
+kernel's that is worse than an error.  Nothing says how far a boot has
+come: the one program that draws then draws the same picture again
+(below).  A kernel that stops says so on a screen of
 its own, with the mark in one colour and a QR code of its last lines
 (`CONFIG_DRM_PANIC`); the QR code's maker is Rust, which the kernel for
-x86 is built with for this alone.  Not through all of a boot: from when
-a GPU's driver takes the screen until the first text is written, the
-kernel has nothing to draw that screen on, and one that stops then
-leaves the picture standing, with no word of what happened (seen in
-QEMU).  What would close this is a program that draws the picture
-again through the driver, which is not written.  Both architectures' kernels have all
-of it.  `tools/vm-checks/boot-screen.sh` checks that nothing wrote to
-the screen before the console's own program; the picture itself, and
-the screen of a kernel made to stop, were looked at in QEMU for x86
-(`BUNIX_MONITOR`), and on no real screen yet: not a PC's, whose kernel
-may have more to say, and not a Mac's.
+x86 is built with for this alone.  Both architectures' kernels have all
+of it.
+
+One program does draw, once for each screen: `boot-picture`
+(`src/boot-picture`), which udev runs when a screen appears.  When a
+GPU's own driver takes the screen from the firmware's, the kernel has
+nothing of that driver's to draw on until something has drawn through
+it, and a kernel that stops then leaves the picture standing, with no
+word of what happened (seen in QEMU, before this program).  And some
+drivers start with a screen of their own, without the picture.  So the
+program draws the same picture in the middle again, through the driver,
+and leaves a screen alone once the console has text on it.  What is
+left is the time from when a driver takes the screen until udev has run
+the program for it: while the driver starts, which for one that loads
+firmware can be seconds, and on a Mac, whose driver is in the kernel
+image, also the initrd's second or two.  A few old drivers have no
+screen for a kernel that stops at all (radeon).
+`tools/vm-checks/boot-screen.sh` checks that nothing wrote to the
+screen before the console's own program, and
+`tools/vm-checks/boot-picture.sh` reads the picture back from the
+screen, dot for dot; a kernel made to stop before any text was written
+then showed its own screen (looked at in QEMU for x86, as the rest was:
+`BUNIX_MONITOR`), and nothing of this was seen on a real screen yet:
+not a PC's, whose kernel may have more to say, and not a Mac's.
 
 The kernel's build needs libelf (`base.elfutils`), zstd and kmod's
 depmod, which a Mac's does not.  Built on the x86_64 builder, it has started the system in an
