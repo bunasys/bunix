@@ -102,6 +102,10 @@ stagedBuild {
       "usr/lib/systemd/resolved.conf.d/bunix.conf"
       "usr/lib/systemd/timesyncd.conf.d/bunix.conf"
       "usr/lib/systemd/system/console-shell@.service"
+      # /usr/local, where `make install` puts software built on the
+      # machine, is on the root partition: /usr is a read-only image, and
+      # has a link there (system/usr/local)
+      "usr/lib/tmpfiles.d/usrlocal.conf"
       "usr/lib/systemd/system/systemd-sysusers.service.d/bunix.conf"
       # PAM's rules, by the package whose programs ask.  A program with
       # none of its own gets "other", and is refused.

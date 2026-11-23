@@ -16,6 +16,8 @@
 #   bunix_<release>.<arch>.efi            the kernel image that starts it
 #   devtools_<release>.<arch>.raw         the devtools extension
 #                                         (nix/images/devtools.nix)
+#   llvm_<release>.<arch>.raw             the llvm extension
+#                                         (nix/images/llvm.nix)
 #
 # and, once, for all of them:
 #
@@ -25,7 +27,7 @@
 #   SHA256SUMS.gpg  the list's signature, by the release key
 #
 # Two keys sign, and neither is in a file: 1Password asks for the image
-# key four times (a system and an extension for each architecture,
+# key six times (a system and two extensions for each architecture,
 # tools/sign.sh) and for the release key once (tools/sign-list.sh).
 #
 # What a signature here vouches for is what the builders made of the
@@ -156,7 +158,8 @@ leave_signature() {
 
 images=bunix-release/source/nix/images
 system_signature=bunix-release/system.signature
-devtools_signature=bunix-release/devtools.signature
+# each has nix/images/<name>.nix, and a feature of its name in the system
+extensions="devtools llvm"
 for architecture in $architectures; do
     echo "$architecture: sending the source, as of commit $commit"
     git archive "$commit" | in_builder "$architecture" \
@@ -166,43 +169,58 @@ for architecture in $architectures; do
     # are built up to their hashes, the hashes signed here, and the
     # builds then given the signatures.
     system_signed=
-    devtools_signed=
     if [ $signed_by = release ]; then
-        echo "$architecture: building the system and the extension, up to what is signed"
+        echo "$architecture: building the system, up to what is signed, and signing its hash"
         system=$(build "$architecture" $images/system.nix --argstr signing release)
         system_hash=$(in_builder "$architecture" "cat $system/usr-partition/usrhash")
-        devtools_parts=$(build "$architecture" $images/devtools.nix -A parts)
-        devtools_hash=$(in_builder "$architecture" "cat $devtools_parts/roothash")
-
-        echo "$architecture: signing the hash of the system, and of the extension"
         leave_signature "$architecture" "$system_hash" $system_signature
-        leave_signature "$architecture" "$devtools_hash" $devtools_signature
         system_signed="--arg signature ./$system_signature"
-        devtools_signed="--arg signature ./$devtools_signature"
     fi
 
     echo "$architecture: building the files of bunix $version"
-    update=$(build "$architecture" $images/update.nix $system_signed)
-    devtools=$(build "$architecture" $images/devtools.nix -A image $devtools_signed)
+    built_directories=$(build "$architecture" $images/update.nix $system_signed)
+    for extension in $extensions; do
+        extension_signed=
+        if [ $signed_by = release ]; then
+            echo "$architecture: the $extension extension, up to what is signed, and signing its hash"
+            extension_signature=bunix-release/$extension.signature
+            extension_parts=$(build "$architecture" $images/$extension.nix -A parts)
+            extension_hash=$(in_builder "$architecture" "cat $extension_parts/roothash")
+            leave_signature "$architecture" "$extension_hash" $extension_signature
+            extension_signed="--arg signature ./$extension_signature"
+        fi
+        extension_image=$(build "$architecture" $images/$extension.nix -A image $extension_signed)
+        built_directories="$built_directories $extension_image"
+    done
     received=$unfinished/from-$architecture
     mkdir "$received"
-    for built in $update $devtools; do
-        in_builder "$architecture" "cd $built && tar -cf - *" | tar -xf - -C "$received"
+    for directory in $built_directories; do
+        in_builder "$architecture" "cd $directory && tar -cf - *" | tar -xf - -C "$received"
     done
 
-    # Taken of what came: this architecture's five files, and files they
-    # have to be.  A builder is another machine, and what it sends goes
-    # into a list that the release key signs: not a file under the other
-    # architecture's name, and not a link to a file of this Mac's.
+    # Taken of what came: this architecture's files, and files they have
+    # to be: the four of the system, and one for each extension.  A
+    # builder is another machine, and what it sends goes into a list that
+    # the release key signs: not a file under the other architecture's
+    # name, and not a link to a file of this Mac's.
     case $architecture in
         aarch64) named=arm64 ;;
         x86_64) named=x86-64 ;;
     esac
+    extension_files=
+    for extension in $extensions; do
+        extension_files="$extension_files ${extension}_$version.$named.raw"
+    done
     for file in "$received"/*; do
-        case ${file##*/} in
-            "bunix_$version.usr-$named."*.raw | "bunix_$version.usr-$named-verity."*.raw) ;;
-            "bunix_$version.usr-$named-verity-sig."*.raw) ;;
-            "bunix_$version.$named.efi" | "devtools_$version.$named.raw") ;;
+        is_an_extension=no
+        case " $extension_files " in
+            *" ${file##*/} "*) is_an_extension=yes ;;
+        esac
+        case $is_an_extension:${file##*/} in
+            yes:*) ;;
+            no:"bunix_$version.usr-$named."*.raw | no:"bunix_$version.usr-$named-verity."*.raw) ;;
+            no:"bunix_$version.usr-$named-verity-sig."*.raw) ;;
+            no:"bunix_$version.$named.efi") ;;
             *) die "the $architecture builder sent ${file##*/}, which is no file of bunix $version for $named" ;;
         esac
         is_a_file=no
@@ -212,7 +230,10 @@ for architecture in $architectures; do
         [ $is_a_file = yes ] || die "the $architecture builder sent ${file##*/}, which is not a file"
     done
     number_received=$(ls "$received" | wc -l)
-    [ "$number_received" -eq 5 ] || die "the $architecture builder sent $number_received files, not five"
+    number_of_extensions=$(echo $extensions | wc -w)
+    number_expected=$((4 + number_of_extensions))
+    [ "$number_received" -eq "$number_expected" ] \
+        || die "the $architecture builder sent $number_received files, not $number_expected"
     # out of a store they come read-only
     chmod u+w "$received"/*
     mv "$received"/* "$unfinished/"

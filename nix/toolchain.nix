@@ -81,7 +81,18 @@ let
     depends = [ glibc binutils gccLibraries ];
     env = { whole = gccWhole; libraries = gccLibraries; };
   };
+
+  # What clang needs of gcc to compile for this system, and its settings
+  # here (toolchain/clang-setup.sh): for the llvm extension, which has
+  # clang and not gcc (images/llvm.nix).  LLVM is base.nix's.
+  clangSetup = mkSystemPackage {
+    name = "clang-setup";
+    version = sources.gcc.version;
+    script = ./toolchain/clang-setup.sh;
+    depends = [ glibc gccLibraries ];
+    env = { whole = gccWhole; };
+  };
 in
 {
-  inherit glibc binutils gccWhole gccLibraries gcc;
+  inherit glibc binutils gccWhole gccLibraries gcc clangSetup;
 }

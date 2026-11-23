@@ -31,20 +31,23 @@
 #      downloaded and laid over /usr at once, and its programs run.
 #      While no release has the extension, asking leaves the machine as
 #      it was
-#   4. with the list signed as it should be, `bunix update` updates: the
+#   4. the llvm extension builds software: turned on the same way, a C
+#      and a C++ program are compiled and run, and /usr/local takes
+#      what is installed there
+#   5. with the list signed as it should be, `bunix update` updates: the
 #      next /usr goes into the empty slot, its kernel image beside the
 #      old one, with three tries; and that version's extension with it
-#   5. the machine restarts into the next version, from the second slot,
+#   6. the machine restarts into the next version, from the second slot,
 #      and marks it good once all of it has started.  The extension is
 #      laid over /usr, and its programs run.  It is not, if what is in
 #      its place is not signed, or signed as of another hash
-#   6. it updates to the broken one, over the first slot
-#   7. the broken one is started three times, and does not come up
-#   8. the fourth start is the next version again, and the broken one is
+#   7. it updates to the broken one, over the first slot
+#   8. the broken one is started three times, and does not come up
+#   9. the fourth start is the next version again, and the broken one is
 #      marked bad; the next version's extension is merged, not the
 #      broken one's
 #
-# The lists of steps 2 to 6 are signed here, with keys made for this run,
+# The lists of steps 2 to 7 are signed here, with keys made for this run,
 # and the machine is told which of them to take, in /etc, where an
 # administrator would say it.
 #
@@ -137,6 +140,7 @@ broken_update=$(build "$source"/nix/images/update.nix --argstr version "$broken"
 # for the extension when it is on that version already.
 installed_update=$(build "$source"/nix/images/update.nix)
 installed_devtools=$(build "$source"/nix/images/devtools.nix -A image)
+installed_llvm=$(build "$source"/nix/images/llvm.nix -A image)
 next_devtools=$(build "$source"/nix/images/devtools.nix -A image --argstr version "$next")
 # and its file system alone, before anything was signed: what an
 # extension nobody signed would be
@@ -159,6 +163,7 @@ in_machine_directory "truncate -s +2G disk.raw"
 
 copy_built_directory "$installed_update" "$work/served/installed"
 copy_built_directory "$installed_devtools" "$work/served/installed"
+copy_built_directory "$installed_llvm" "$work/served/installed"
 copy_built_directory "$next_update" "$work/served/next"
 copy_built_directory "$broken_update" "$work/served/broken"
 copy_built_directory "$next_devtools" "$work/served/next"
@@ -458,7 +463,58 @@ if in_guest bunix ext enable nothing-of-the-kind > "$work/ext-enable-unknown.log
 fi
 echo "  on, and its programs run: $(head -n 1 "$work/ext-enable-programs.log")"
 
-echo "4. $installed updates to $next"
+echo "4. the llvm extension builds software on $installed"
+# A program in C and one in C++ are compiled by the names a build asks
+# for a compiler by, linked by LLVM's linker and by binutils', one of
+# them optimized at link time, and run; and what builds are driven by is
+# there.  A command a line: one that fails ends the script (set -e).
+in_guest bunix ext enable llvm > "$work/ext-enable-llvm.log" 2>&1 \
+    || fail "bunix ext enable llvm failed; see $work/ext-enable-llvm.log"
+in_guest 'cat > /tmp/hello.c' <<'END' || fail "could not give the machine a C program"
+#include <stdio.h>
+int main(void) { puts("compiled here, in C"); return 0; }
+END
+in_guest 'cat > /tmp/hello.cc' <<'END' || fail "could not give the machine a C++ program"
+#include <iostream>
+#include <vector>
+int main() {
+    std::vector<int> numbers{1, 2};
+    std::cout << "compiled here, in C++" << std::endl;
+    return numbers.size() == 2 ? 0 : 1;
+}
+END
+in_guest 'set -e -o pipefail
+    cd /tmp
+    cc -O2 -o hello-c hello.c
+    ./hello-c
+    c++ -O2 -o hello-cc hello.cc
+    ./hello-cc
+    cc -O2 -flto -o hello-lto hello.c
+    ./hello-lto
+    cc -fuse-ld=bfd -o hello-bfd hello.c
+    ./hello-bfd
+    make --version
+    cmake --version
+    meson --version
+    ninja --version
+    pkgconf --version
+    ar --version' > "$work/llvm.log" 2>&1 \
+    || fail "the llvm extension does not build and run programs; see $work/llvm.log"
+# and where what is built on the machine is installed: on the root
+# partition, by a link in /usr, which is read-only
+in_guest "install -m 755 /tmp/hello-c /usr/local/bin/hello-c && /usr/local/bin/hello-c" > /dev/null \
+    || fail "/usr/local cannot be written to, or what is there cannot be run"
+echo "  programs in C and C++ are compiled and run, and /usr/local takes one"
+# Off again.  By hand: bunix has no `ext disable`.  The versions this
+# machine updates to are built here without the extension, and a machine
+# that has it enabled would find them incomplete.
+in_guest "rm -r /etc/sysupdate.d/llvm.feature.d /var/lib/bunix/extensions/llvm_$installed.raw &&
+    systemctl restart systemd-sysext.service" || fail "could not turn the llvm extension off again"
+if in_guest "command -v clang" > /dev/null; then
+    fail "clang is still there after the llvm extension was turned off"
+fi
+
+echo "5. $installed updates to $next"
 look_for_updates_in next
 write_list next
 sign_list signer next
@@ -472,7 +528,7 @@ expect_kernel_image "bunix_$next+3-0.efi" "no kernel image of $next with three t
 in_guest lsblk -n -o PARTLABEL | grep -q -x -F "bunix_$next" \
     || fail "no /usr partition labelled bunix_$next"
 
-echo "5. restart into $next"
+echo "6. restart into $next"
 stop_machine reboot
 start_and_expect "$next"
 # Marked good, and for the reason the system gives (no unit failed), not
@@ -517,14 +573,14 @@ in_guest "mv /var/tmp/as-it-came.raw $extension && chmod 0444 $extension &&
     systemd-sysext refresh > /dev/null 2>&1 && command -v git > /dev/null" \
     || fail "the extension as it came is not merged again"
 
-echo "6. $next updates to $broken, which cannot start"
+echo "7. $next updates to $broken, which cannot start"
 look_for_updates_in broken
 # (by sysupdate itself, as before there was `bunix update`: both ways in
 # are to keep working)
 update broken
 expect_kernel_image "bunix_$broken+3-0.efi" "no kernel image of $broken with three tries"
 
-echo "7. $broken is tried three times"
+echo "8. $broken is tried three times"
 stop_machine reboot
 for try in 1 2 3; do
     start_machine
@@ -539,7 +595,7 @@ for try in 1 2 3; do
     end_qemu
 done
 
-echo "8. the machine goes back to $next"
+echo "9. the machine goes back to $next"
 start_and_expect "$next"
 expect_kernel_image "bunix_$broken+0-3.efi" "$broken is not marked bad"
 # $next has its own extension still, though $broken's is beside it and

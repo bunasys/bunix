@@ -31,23 +31,27 @@ What can be installed today:
 A system that Nix built updates itself from the latest release:
 
 ```
-/usr/lib/systemd/systemd-sysupdate update
-reboot
+bunix update
+systemctl reboot
 ```
 
 The new version goes beside the running one, and the system goes back by
 itself from a version that does not start.  Every file is checked against
 a signed list, and `/usr` against its signed hash (`docs/updates.md`).
 
-Developer tools (git, gdb, strace, file, bsdtar and unzip, Nix) are a
-system extension, taken with the next update once it is asked for:
+What a machine does not need to run is in system extensions, each
+downloaded and laid over `/usr` when it is turned on:
 
 ```
-mkdir -p /etc/sysupdate.d/devtools.feature.d
-printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf
-/usr/lib/systemd/systemd-sysupdate update
-systemd-sysext refresh
+bunix ext                    # the extensions, and which are on
+bunix ext enable devtools    # git, gdb, strace, file, bsdtar and unzip, Nix
+bunix ext enable llvm        # clang and lld, make, cmake, meson, ninja
 ```
+
+`bunix`, the llvm extension and a `/usr/local` that can be written to
+(on the root partition) are in systems after 0.4.1.  A 0.4.1 updates by
+`systemd-sysupdate update`, and has the devtools extension by a file in
+`/etc` (`docs/nix-usr-system.md`).
 
 ## Building
 
@@ -71,7 +75,7 @@ nix/
   base.nix         the system's packages
   boot.nix         the kernel; for Apple Silicon Macs their boot loader and U-Boot
   images/          what is made of packages: the system, the initrd, the kernel
-                   image, a disk, an update's files, the devtools extension
+                   image, a disk, an update's files, the extensions
 ```
 
 ## Testing

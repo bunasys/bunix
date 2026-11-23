@@ -522,6 +522,24 @@ extensions are looked for is merged as it is.)
 bsdtar and unzip, as on x86; Nix, which bunix is built by, with its
 daemon; and on x86_64 Firecracker.  The image for arm64 is about 63 MiB.
 
+`images/llvm.nix` is the second, for building software on a machine:
+clang and LLVM's linker and tools, make, patch, pkgconf, cmake, meson
+and ninja, and binutils.  Of gcc it has what clang takes from it on
+Linux (the start files, libgcc, the C++ library's headers:
+`toolchain.nix`, `clangSetup`), and not gcc; `cc` and `c++` are clang,
+which links with LLVM's linker.  Without LLVM's own runtime libraries:
+no sanitizers, coverage or OpenMP.  The headers of the C library
+and of the system's own libraries are the system's already, an image
+being of whole packages.  About 300 MiB for arm64.  What is built is
+installed in `/usr/local`, a link in the image to `/var/usrlocal` on
+the root partition, as on x86.  Nothing looks there yet: `/usr/local/bin`
+is not on a login's `PATH`, nor are its libraries where the loader and
+pkgconf look.
+
+`bunix ext enable <name>` turns one on (`src/bunix`): it enables the
+feature, has sysupdate download the running version's image, and
+restarts systemd-sysext.  By hand, which is what a 0.4.1 has:
+
 ```
 mkdir -p /etc/sysupdate.d/devtools.feature.d
 printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf
@@ -731,7 +749,7 @@ disk.nix    (disk.sh)   <-  update.nix
 extension.nix (extension-parts.sh, extension.sh)
                         <-  packages, system.nix's usr-paths, a signature
                         ->  <name>_<version>.<architecture>.raw
-devtools.nix            the one extension so far, by extension.nix
+devtools.nix  llvm.nix  the extensions so far, by extension.nix
 system/  initrd/            bunix's own configuration of the first two
 ```
 
