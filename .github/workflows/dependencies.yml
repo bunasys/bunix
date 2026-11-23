@@ -1,6 +1,7 @@
 # The daily dependency check (docs/dependencies.md): new releases and known
-# vulnerabilities for every element, posted to one tracking issue, which
-# each run replaces with its report.
+# vulnerabilities for every source Nix builds bunix from (nix/sources.json
+# and the crates beside it; not the bootstrap's seed), posted to one
+# tracking issue, which each run replaces with its report.
 #
 # On bunasys' own runners (tools/firecracker-runner): a fresh VM per run.
 # Runs only from main, on a schedule or by hand; never for pull requests.
@@ -39,7 +40,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           # optional: without it NVD allows 5 requests in 30 seconds and the
-          # check takes about 20 minutes
+          # check takes about ten minutes
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: python3 -I bunix/tools/deps.py check report.md
 
