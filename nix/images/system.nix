@@ -75,6 +75,8 @@ stagedBuild {
     # and what checks the signature of an update's list of files, for
     # the gpg below
     base.sqv
+    # what a person updates it with, and turns its extensions on
+    base.bunix-command
   ]
   # and what a Mac's own boot loader loads from the ESP, for the
   # installer to put there (x86 has no such Mac to start)

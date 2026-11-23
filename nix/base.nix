@@ -982,6 +982,31 @@ let
     };
   };
 
+  # bunix: the command a person looks after their system with (update,
+  # ext), written here (src/bunix).  Rust's standard library and nothing
+  # else, so cargo is given no crates.
+  # gccLibraries: a Rust program asks for libgcc_s.
+  bunix-command = mkSystemPackage {
+    name = "bunix-command";
+    # as src/bunix/Cargo.toml has it
+    version = "0.1.0";
+    script = ./base/bunix-command.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ rust ];
+    env = {
+      source_directory = builtins.path {
+        name = "bunix-command-source";
+        path = ../src/bunix;
+        # The source and nothing beside it: not target/, which cargo
+        # leaves when it is run by hand there, nor what an editor or a
+        # Mac's Finder leaves.  Any of those would make another package.
+        filter = path: type:
+          let name = baseNameOf path; in
+          name == "Cargo.toml" || name == "Cargo.lock" || name == "src" || builtins.match ".*\\.rs" name != null;
+      };
+    };
+  };
+
   # fish: a shell a user may choose in place of bash (chsh).  Written in
   # Rust; it brings its own PCRE2, which its build compiles.
   # ncurses: fish reads the terminfo database when it runs.
@@ -1039,5 +1064,5 @@ in
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit strace file libarchive git gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command;
 }
