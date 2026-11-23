@@ -964,7 +964,12 @@ kernel's that is worse than an error.  No program draws at boot, and
 nothing says how far one has come.  A kernel that stops says so on a screen of
 its own, with the mark in one colour and a QR code of its last lines
 (`CONFIG_DRM_PANIC`); the QR code's maker is Rust, which the kernel for
-x86 is built with for this alone.  Both architectures' kernels have all
+x86 is built with for this alone.  Not through all of a boot: from when
+a GPU's driver takes the screen until the first text is written, the
+kernel has nothing to draw that screen on, and one that stops then
+leaves the picture standing, with no word of what happened (seen in
+QEMU).  What would close this is a program that draws the picture
+again through the driver, which is not written.  Both architectures' kernels have all
 of it.  `tools/vm-checks/boot-screen.sh` checks that nothing wrote to
 the screen before the console's own program; the picture itself, and
 the screen of a kernel made to stop, were looked at in QEMU for x86

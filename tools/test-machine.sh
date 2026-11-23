@@ -268,12 +268,10 @@ run_qemu() {
     # reaches QEMU's monitor can have it write files and run programs.
     # Without it the monitor is at the terminal, with the machine's
     # console (Ctrl-a c).
-    monitor=
     if [ -n "${BUNIX_MONITOR:-}" ]; then
-        monitor="-monitor unix:$machine_directory/monitor,server=on,wait=off"
+        set -- "$@" -monitor "unix:$machine_directory/monitor,server=on,wait=off"
     fi
-    # shellcheck disable=SC2086  # the monitor's words are two
-    qemu_itself "$@" -smp 4 -m 4G -nographic -no-reboot $monitor \
+    qemu_itself "$@" -smp 4 -m 4G -nographic -no-reboot \
         -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net
 }
 # run_qemu takes the place of what runs it, which behind the script is a

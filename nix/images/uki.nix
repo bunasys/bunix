@@ -53,10 +53,7 @@ stagedBuild {
     # that keeps the boot waiting.  The picture below stays on the
     # screen until the first text is written: the login prompt, or one
     # of those.
-    # fbcon=logo-count:0: the console does not draw the kernel's logo
-    # above that text; the logo is for the screen of a kernel that stops
-    # (boot/linux/).
-    command_line = "root=PARTLABEL=bunix-root rw mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet fbcon=logo-count:0";
+    command_line = "root=PARTLABEL=bunix-root rw mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet";
     # What is on the screen from before the kernel starts: bunix's mark,
     # which systemd's stub draws in the middle of it, unscaled.
     # tools/render-branding.sh makes it.
