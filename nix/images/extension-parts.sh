@@ -6,6 +6,9 @@
 #   $system_image        the result of images/system.nix, for the list of
 #                        what /usr has already (usr-paths)
 #   $without             paths under usr/ to leave out
+#   $keep                paths under usr/ to keep of what is stripped
+#   $links               names to add, each name=program, the name a path
+#                        under usr/
 #   $extension, $version, $partition_architecture
 set -euo pipefail
 cd /build
@@ -43,18 +46,41 @@ while read -r path; do
     rm -f "./$path"
 done < $system_image/usr-paths
 
-# Documentation and translations; and what is for building software,
-# which no extension so far is for (x86's gcc extension is, and is not
-# ported: this rule is then that extension's to lift).
+# Documentation and translations; and what is for building software
+# against the extension's own packages: headers, static libraries, and
+# what tells a build where they are.  An extension that is for building
+# software says which of these it keeps ($keep: the compiler's own), and
+# they are set aside while the rest goes.
 cd $tree/usr
+mkdir /build/kept
+for path in $keep; do
+    [ -e "$path" ] || { echo "extension-parts.sh: nothing to keep at usr/$path" >&2; exit 1; }
+    mkdir -p "/build/kept/$(dirname "$path")"
+    mv "$path" "/build/kept/$path"
+done
 rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
        share/man share/info share/doc share/locale share/bash-completion share/zsh
 find lib -maxdepth 2 -name '*.a' -delete
+# and back, now that the rest is gone
+cp -a /build/kept/. .
 # and what the extension's own list says
 for path in $without; do
     rm -f "./$path"
 done
 find . -type d -empty -delete
+# Names it adds, each for a program that is there: a name the extension
+# or the system has already, or one for a program that is not there, is
+# a mistake in the list.
+for link in $links; do
+    name=${link%%=*}
+    program=${link#*=}
+    if [ -e "$name" ] || [ -L "$name" ] || grep -q -x -F "usr/$name" $system_image/usr-paths; then
+        echo "extension-parts.sh: usr/$name is there already, and cannot be a new name" >&2
+        exit 1
+    fi
+    ln -s "$program" "$name"
+    [ -e "$name" ] || { echo "extension-parts.sh: usr/$name would be a name for $program, which is not there" >&2; exit 1; }
+done
 
 # sysext merges this only into the version it was built for (SYSEXT_LEVEL
 # in the system's os-release, images/image.sh), on the architecture it is

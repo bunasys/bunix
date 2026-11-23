@@ -1,0 +1,13 @@
+# bunix: the command a person runs to look after their bunix system
+# (src/main.rs).  Nothing but Rust's standard library: every crate a
+# program of the system is built with is one more to pin and to watch
+# (docs/dependencies.md), and this needs none.
+[package]
+name = "bunix"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+# a program of every system: small, and with nothing to unwind into
+opt-level = "s"
+panic = "abort"

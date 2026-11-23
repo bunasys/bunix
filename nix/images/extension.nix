@@ -41,7 +41,12 @@
 #           them, but for what the system has already.
 # without   paths under usr/ that it is not to have: programs of the
 #           packages its own need, which are not what it is for
-{ name, contents, without ? [] }:
+# keep      paths under usr/ that it keeps of what every extension is
+#           stripped of: headers, static libraries, pkg-config and cmake
+#           files (extension-parts.sh)
+# links     names it adds for programs it has, each "name=program", the
+#           name a path under usr/ (bin/cc=clang)
+{ name, contents, without ? [], keep ? [], links ? [] }:
 
 assert builtins.match "[a-z0-9]+" name != null;
 
@@ -71,7 +76,7 @@ let
       # that is made of them.
       system_image = import ./system.nix { inherit system version; };
       partition_architecture = architecture.partitionArchitecture;
-      inherit version without;
+      inherit version without keep links;
     };
   };
 

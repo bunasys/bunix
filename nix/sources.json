@@ -559,6 +559,16 @@
     "url": "https://www.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
     "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d"
   },
+  "less": {
+    "version": "710",
+    "url": "https://www.greenwoodsoftware.com/less/less-710.tar.gz",
+    "sha256": "d1008fb78dcae1323ddab664bcb352a61f022b1b131bd8018548e021d975ec7a"
+  },
+  "htop": {
+    "version": "3.5.3",
+    "url": "https://github.com/htop-dev/htop/releases/download/3.5.3/htop-3.5.3.tar.xz",
+    "sha256": "a8b164386494cb85bb255a415a3f5f80afe7a0c4491da5d113b3a0f951087e65"
+  },
   "qemu": {
     "version": "11.1.3",
     "url": "https://download.qemu.org/qemu-11.1.3.tar.xz",

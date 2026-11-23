@@ -1,0 +1,64 @@
+#!/usr/bin/bash
+# Builds one package on a machine, as `bunix install` asks (src/bunix):
+#
+#   build-package <recipe's directory> <source archive> <where to> <where to work>
+#
+# The recipe's script is the one a build of bunix itself runs
+# (nix/system-package.sh), and finds here most of what it finds there:
+# $src, $out, $triplet, $configure_for_usr, unpack, $jobs,
+# SOURCE_DATE_EPOCH, and the compiler's flags.  What differs:
+#
+#   - /usr/local, not /usr: /usr is the system's, and read-only.  The
+#     script installs into <where to> (DESTDIR), and `bunix install`
+#     puts that in place.  Settings too are /usr/local's (etc/), not the
+#     system's /etc.
+#   - clang, of the llvm extension, not gcc.
+#   - What other packages installed in /usr/local is found: their
+#     headers, their libraries (by programs too, when they run: rpath),
+#     what tells a build of them (pkg-config), and their programs, after
+#     the system's.
+#   - It is the machine itself, and root, with its network: not a
+#     sandbox where only what a package declares is there.
+#   - Nothing is done to the result: it is not stripped, and what it
+#     needs to run is not checked.
+#
+# Names a script is not to use for its own: recipe, prefix, libraries.
+#
+# What it prints is the build's log.
+set -euo pipefail
+# what is made is for everyone to read, whatever root's own mask is
+umask 022
+
+recipe=$(realpath "$1")
+src=$(realpath "$2")
+mkdir -p "$3" "$4"
+out=$(realpath "$3")
+cd "$4"
+
+triplet=@triplet@
+prefix=/usr/local
+libraries=$prefix/lib/$triplet
+# as nix/system-package.sh has it for /usr, but for the settings
+configure_for_usr="--prefix=$prefix --bindir=$prefix/bin --sbindir=$prefix/bin --libdir=$libraries --libexecdir=$prefix/lib --sysconfdir=$prefix/etc --localstatedir=/var --sharedstatedir=/var/lib"
+
+unpack() {
+    mkdir -p "${2:-.}"
+    tar -xf "$1" --strip-components=1 --no-same-owner -C "${2:-.}"
+}
+jobs=$(nproc)
+export MAKEFLAGS=-j$jobs
+export SOURCE_DATE_EPOCH=1
+
+export CC=clang CXX=clang++
+# the flags every package of bunix is built with (nix/tools.nix, put in
+# here when this is packaged), and /usr/local's own
+export CFLAGS="@CFLAGS@" CXXFLAGS="@CXXFLAGS@"
+export CPPFLAGS="-I$prefix/include"
+export LDFLAGS="@LDFLAGS@ -L$libraries -Wl,-rpath,$libraries"
+export PKG_CONFIG_PATH=$libraries/pkgconfig:$prefix/share/pkgconfig
+# the system's programs first: what a person put in /usr/local is not
+# to stand in for make or tar in a build that root runs
+export PATH=/usr/bin:$prefix/bin
+
+source "$recipe/environment"
+source "$recipe/build.sh"

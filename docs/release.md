@@ -11,6 +11,7 @@ Installed systems fetch it with systemd-sysupdate from
 | `bunix_<version>.usr-<arch>*.raw` | the three partitions of a `/usr` slot: its image, the hashes of its blocks, the signed root hash (`nix/images/update.nix`) |
 | `bunix_<version>.<arch>.efi` | the kernel image that starts it |
 | `devtools_<version>.<arch>.raw` | the devtools extension (`nix/images/devtools.nix`) |
+| `llvm_<version>.<arch>.raw` | the llvm extension (`nix/images/llvm.nix`) |
 
 and once, for all of them, `SHA256SUMS` and `SHA256SUMS.gpg`: the list of
 the files and its OpenPGP signature by the release key.
@@ -56,10 +57,12 @@ tools/publish.sh out/updates        # -> out/updates/<version>/
 ```
 
 It sends the last commit to both builders, builds, and has each
-architecture's system and extension signed with the image key
+architecture's system and extensions signed with the image key
 (`tools/sign.sh`), then writes `SHA256SUMS` (good for 30 days,
 `BUNIX_MANIFEST_DAYS`) and has it signed with the release key
-(`tools/sign-list.sh`).  1Password asks five times.  It says what in
+(`tools/sign-list.sh`).  1Password asks seven times: six for the
+image key (a system and two extensions, for each architecture) and once
+for the release key.  It says what in
 the working tree is not in the commit, and so not in the release, and
 ends with the line that tags the commit it built.
 

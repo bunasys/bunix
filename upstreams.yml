@@ -217,6 +217,10 @@ gzip:
   cpe: 'a:gnu:gzip'
   debian: gzip
   alpine: gzip
+htop:
+  anitya: 1332
+  debian: htop
+  alpine: htop
 iproute2:
   anitya: 1392
   cpe: 'a:iproute2_project:iproute2'
@@ -242,6 +246,11 @@ kmod:
   cpe: 'a:kernel:kmod'
   debian: kmod
   alpine: kmod
+less:
+  anitya: 1550
+  cpe: ['a:gnu:less', 'a:greenwoodsoftware:less']
+  debian: less
+  alpine: less
 libarchive:
   anitya: 1558
   cpe: 'a:libarchive:libarchive'
