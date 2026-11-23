@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
-r"""bunix's dependencies: what each element is built from, and whether it is
-out of date or has known vulnerabilities (docs/dependencies.md).
+r"""bunix's dependencies: what bunix is built from, and whether each source
+is out of date or has known vulnerabilities (docs/dependencies.md).
 
-    tools/deps.py inventory [out]   one line per element: version, how it is tracked
+    tools/deps.py inventory [out]   one line per source: version, how it is tracked
     tools/deps.py check [out]       new releases and advisories, as Markdown
     tools/deps.py sbom [out]        CycloneDX software bill of materials
 
-The elements are the database: each one's sources pin a URL and a sha256,
-and the URL carries the version.  What they do not say is where each
-project releases, so upstreams.yml (at the top of the repository) names it
-for every element that downloads something.  It is a separate file because
-BuildStream puts an element's public data in its cache key: keeping this
-there would rebuild the system for every edit.
+Nix's sources are the database: nix/sources.json pins each one's version,
+URL and sha256, and a <source>-crates.json beside the package that uses
+it pins the Rust crates it is built with.  What they do not say is where
+each project releases, so upstreams.yml (at the top of the repository)
+names it for every source.  It is a file of its own because the two are
+written differently: sources.json has what a build needs and is rewritten
+by every update; this is written once for a project, by hand.
 
 Each entry is tracked exactly one way:
 
     anitya: 5303                   release-monitoring.org project id
     github: gavinhoward/bc         the project's newest GitHub release
-    follows: google/fonts@main     pinned to a commit of this branch
-    part-of: base/dbus.bst         another copy of that element's project,
-                                   meant to be on its version
-    pinned-by: base/chromium.bst   pinned by that element's project, and
-                                   moved with it (Crubit, by Chromium)
+    follows: aurora-silicon/u-boot@aurora-wip
+                                   pinned to a commit of this branch, which
+                                   its URL names
+    part-of: rustc-x86_64-linux    another file of that source's project,
+                                   meant to be on its version (the same
+                                   release for the other architecture)
+    pinned-by: fish                pinned by that source's project, and
+                                   moved with it
     untracked: <why>               replaced by hand
 
 and may also have:
@@ -32,22 +36,26 @@ and may also have:
                                    several vendors
     debian: glib2.0                the project's Debian source package and
     alpine: glib                   Alpine package, for their advisories
-    version-regex: LVM2\.([\d.]+)\.tgz
-                                   one group: the version, read from the URL,
-                                   when its file name does not say it plainly
+    version-regex: ([\d.]+)-aurora
+                                   one group: the project's own version,
+                                   when the source's says more (a fork's
+                                   name and commit after it)
 
-Every command first checks that upstreams.yml and the elements agree, and
+Every command first checks that upstreams.yml and the sources agree, and
 stops if they do not.
 
 check asks release-monitoring.org (Anitya) or GitHub for new releases,
 GitHub for new commits on followed branches, OSV.dev for advisories on the
-Rust crates, Go modules and Python packages the elements vendor, NVD for
-advisories by CPE, and Debian's and Alpine's security data by package.
-Debian lists a CVE against a package when it is reported, NVD only once
-it has analysed it, weeks later; Alpine lists the CVEs its updates fixed.
-GITHUB_TOKEN and NVD_API_KEY are used when set (NVD allows 5 requests in
-30 seconds without a key, so a full check then takes about 20 minutes;
-a key NVD refuses is reported, and the check goes on without it).  Needs PyYAML: uv run --with pyyaml tools/deps.py.
+Rust crates, NVD for advisories by CPE, and Debian's and Alpine's security
+data by package.  Debian lists a CVE against a package when it is reported,
+NVD only once it has analysed it, weeks later; Alpine lists the CVEs its
+updates fixed.  GITHUB_TOKEN and NVD_API_KEY are used when set (NVD allows
+5 requests in 30 seconds without a key, so a full check then takes about
+ten minutes; a key NVD refuses is reported, and the check goes on without
+it).  Needs PyYAML: uv run --with pyyaml tools/deps.py.
+
+What is not ported to Nix yet (README.md lists it) is not checked:
+nothing builds it.
 
 The report is read by people and by an agent, and much of it comes from
 outside: version strings are checked against a strict pattern before they
@@ -68,22 +76,17 @@ import yaml
 
 REPO = Path(__file__).resolve().parent.parent
 UPSTREAMS = REPO / "upstreams.yml"
+SOURCES = REPO / "nix" / "sources.json"
+CRATES_SUFFIX = "-crates.json"
 
 TRACKING_KEYS = ("anitya", "github", "follows", "part-of", "pinned-by", "untracked")
 ADVISORY_KEYS = ("cpe", "debian", "alpine")
 OTHER_KEYS = ADVISORY_KEYS + ("version-regex",)
 
-ARCHIVE_SUFFIX = re.compile(r"\.(tar\.(gz|xz|bz2|zst|lz)|tgz|tbz2|txz|zip|crate|deb|pem|ttf|otf)$")
-COMMIT = re.compile(r"[0-9a-f]{40}")
+# (not the first 40 of a longer run of such digits, as a file's path at
+# pythonhosted.org has)
+COMMIT = re.compile(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])")
 SHA256 = re.compile(r"[0-9a-f]{64}")
-# Where a version starts in a file name: after a separator (zlib-1.3.2,
-# at-spi2-core-2.62.1, v258), or else right after letters (tzdata2026f,
-# go1.25.3); it ends before anything that names a platform or how it is
-# packed (go1.25.3.linux-amd64, chromium-157.0.8103.78-lite,
-# swift-6.4.2-RELEASE-ubuntu24.04)
-VERSION_AFTER_SEPARATOR = re.compile(r"(?:^|[-_])v?(\d.*)$")
-VERSION_AFTER_LETTERS = re.compile(r"(?<=[A-Za-z])(\d.*)$")
-PLATFORM_SUFFIX = re.compile(r"[-._](?:linux|x86_64|amd64|aarch64|arm64|src|source|unknown|lite|RELEASE).*$")
 # What a version from outside may look like before it goes into the report
 SAFE_VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+~-]{0,63}")
 CPE = re.compile(r"[aoh]:[a-z0-9_.\-]+:[a-z0-9_.+\-]+")
@@ -119,7 +122,7 @@ def github_headers():
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 
-# --- upstreams.yml and the elements ----------------------------------------
+# --- upstreams.yml and the sources -----------------------------------------
 
 def load_upstreams():
     """upstreams.yml, every entry a dict and every cpe a list."""
@@ -132,101 +135,58 @@ def load_upstreams():
     return upstreams
 
 
-def release_version(url, entry):
-    """The version of the release an element downloads, from its URL: by the
-    entry's version-regex when it has one, else from the file name; the
-    commit, for an archive of a commit; None when the URL does not say."""
+def project_version(version, entry):
+    """The project's own version of a source: the source's, or the part of
+    it the entry's version-regex takes; None when that finds nothing, or
+    is not a regex of one group (disagreements says so)."""
     regex = entry.get("version-regex")
-    if regex:
-        match = re.search(regex, url)
-        return match.group(1) if match else None
-    path = urllib.parse.unquote(url.split("?")[0])
-    commit = COMMIT.search(path)
-    if commit:
-        return commit.group(0)
-    name = ARCHIVE_SUFFIX.sub("", path.rstrip("/").rsplit("/", 1)[-1])
-    match = VERSION_AFTER_SEPARATOR.search(name) or VERSION_AFTER_LETTERS.search(name)
-    if not match:
+    if not regex:
+        return version
+    if re.compile(regex).groups != 1:
         return None
-    version = PLATFORM_SUFFIX.sub("", match.group(1))
-    # SQLite names its files 3XXYYZZ for 3.XX.YY(.ZZ): 3540100 is the 3.54.1
-    # its release notes and Anitya say
-    if name.startswith("sqlite-autoconf-"):
-        major, minor, patch, branch = version[0], int(version[1:3]), int(version[3:5]), int(version[5:7])
-        version = f"{major}.{minor}.{patch}" + (f".{branch}" if branch else "")
-    return version
+    match = re.search(regex, version)
+    return match.group(1) if match else None
 
 
-def vendored_packages(source):
-    """(ecosystem, name, version) for each package a source pins by name.
-    A crate from a git repository is not crates.io's crate of that name:
-    its ecosystem is the repository, which OSV does not know."""
-    kind = source["kind"]
-    if kind == "cargo2":
-        packages = []
-        for crate in source.get("ref") or []:
-            ecosystem = "crates.io" if crate.get("kind", "registry") == "registry" else crate.get("repo", "git")
-            packages.append((ecosystem, crate["name"], crate["version"]))
-        return packages
-    if kind == "pypi":
-        file_name = source["ref"]["suffix"].rsplit("/", 1)[-1]
-        version = ARCHIVE_SUFFIX.sub("", file_name[len(source["name"]) + 1:])
-        return [("PyPI", source["name"], version)]
-    url = source.get("url", "")
-    if url.startswith("goproxy:") and url.endswith(".zip"):
-        module, _, version = url[len("goproxy:"):].rpartition("/@v/")
-        # the proxy's file layout writes capitals as !lowercase
-        module = re.sub(r"!([a-z])", lambda match: match.group(1).upper(), module)
-        return [("Go", module, version[:-len(".zip")])]
-    return []
+def read_crates():
+    """{source: [(name, version)]} from every list of crates under nix/:
+    <source>-crates.json, beside the package it is for.  All of them are
+    crates.io's: one from a repository is a source of its own."""
+    crates = {}
+    for path in sorted((REPO / "nix").rglob("*" + CRATES_SUFFIX)):
+        source = path.name[:-len(CRATES_SUFFIX)]
+        crates[source] = [(crate["name"], crate["version"]) for crate in json.loads(path.read_text())]
+    return crates
 
 
-def read_elements(upstreams):
-    """{element: {"version", "url", "sha256", "vendored"}} for every element
-    that downloads something.  An element's release is its first source
-    with a URL (or its container image); vendored packages are the crates,
-    modules and Python packages its sources pin by name."""
-    aliases = (yaml.safe_load((REPO / "project.conf").read_text()) or {}).get("aliases") or {}
-    elements = {}
-    for path in sorted((REPO / "elements").rglob("*.bst")):
-        name = str(path.relative_to(REPO / "elements"))
-        sources = (yaml.safe_load(path.read_text()) or {}).get("sources") or []
-        release, vendored = None, []
-        for source in sources:
-            packages = vendored_packages(source)
-            vendored += packages
-            is_release = not packages and (source.get("url") or source["kind"] == "docker")
-            if release is None and is_release:
-                release = source
-        if release is None and not vendored:
-            continue
-
-        entry = upstreams.get(name) or {}
-        if release is None:
-            # a Python package and nothing else
-            _, package, version = vendored[0]
-            url, sha256 = f"https://pypi.org/project/{package}/{version}/", None
-        elif release["kind"] == "docker":
-            url = f"docker:{release['image']}"
-            version, sha256 = release.get("track"), release["ref"]
-        else:
-            alias, _, rest = release["url"].partition(":")
-            url = aliases[alias] + rest if alias in aliases else release["url"]
-            version, sha256 = release_version(url, entry), release.get("ref")
-        elements[name] = {"version": version, "url": url, "vendored": vendored,
-                          "sha256": sha256 if isinstance(sha256, str) and SHA256.fullmatch(sha256) else None}
-    return elements
+def read_sources(upstreams, crates):
+    """{source: {"version", "commit", "url", "sha256", "crates"}} for every
+    source of nix/sources.json.  The version is the project's own
+    (project_version), which is what its releases and advisories are
+    known by; the commit is the one the URL names, for an archive of a
+    commit; the crates are those pinned for it."""
+    sources = {}
+    for name, pin in json.loads(SOURCES.read_text()).items():
+        commit = COMMIT.search(pin["url"])
+        sha256 = pin["sha256"]
+        sources[name] = {"version": project_version(pin["version"], upstreams.get(name) or {}),
+                         "commit": commit.group(0) if commit else None,
+                         "url": pin["url"], "crates": crates.get(name, []),
+                         "sha256": sha256 if SHA256.fullmatch(sha256) else None}
+    return sources
 
 
-def disagreements(elements, upstreams):
-    """What keeps upstreams.yml from describing the elements as they are."""
+def disagreements(sources, upstreams, crates):
+    """What keeps upstreams.yml from describing the sources as they are."""
     problems = []
-    for name in sorted(set(elements) - set(upstreams)):
-        problems.append(f"{name}: downloads {elements[name]['url']} but is not in upstreams.yml")
-    for name in sorted(set(upstreams) - set(elements)):
-        problems.append(f"{name}: in upstreams.yml but downloads nothing (removed or renamed?)")
-    for name in sorted(set(upstreams) & set(elements)):
-        entry, version = upstreams[name], elements[name]["version"]
+    for name in sorted(set(crates) - set(sources)):
+        problems.append(f"{name}{CRATES_SUFFIX}: a list of crates for no source of nix/sources.json")
+    for name in sorted(set(sources) - set(upstreams)):
+        problems.append(f"{name}: a source ({sources[name]['url']}) that is not in upstreams.yml")
+    for name in sorted(set(upstreams) - set(sources)):
+        problems.append(f"{name}: in upstreams.yml but no source (removed or renamed?)")
+    for name in sorted(set(upstreams) & set(sources)):
+        entry, version = upstreams[name], sources[name]["version"]
         ways = [key for key in TRACKING_KEYS if key in entry]
         unknown_keys = sorted(set(entry) - set(TRACKING_KEYS) - set(OTHER_KEYS))
         if len(ways) != 1:
@@ -234,15 +194,14 @@ def disagreements(elements, upstreams):
         if unknown_keys:
             problems.append(f"{name}: unknown keys {', '.join(unknown_keys)}")
         for key in ("part-of", "pinned-by"):
-            if key in entry and entry[key] not in elements:
-                problems.append(f"{name}: {key} {entry[key]}, which downloads nothing")
+            if key in entry and entry[key] not in sources:
+                problems.append(f"{name}: {key} {entry[key]}, which is no source")
         regex = entry.get("version-regex")
         if regex and re.compile(regex).groups != 1:
             problems.append(f"{name}: version-regex needs exactly one group")
-        needs_release = "anitya" in entry or "github" in entry
-        if needs_release and not version:
-            problems.append(f"{name}: no version in {elements[name]['url']} (add a version-regex)")
-        if "follows" in entry and not (version and COMMIT.fullmatch(version)):
+        if regex and not version:
+            problems.append(f"{name}: its version-regex finds nothing in the source's version")
+        if "follows" in entry and not sources[name]["commit"]:
             problems.append(f"{name}: follows a branch, but its URL names no commit")
         for cpe in entry.get("cpe", []):
             if not CPE.fullmatch(cpe):
@@ -271,7 +230,7 @@ def anitya_versions(project_id):
     API v2.  stable_versions is marked deprecated there in favour of
     version_details, but only it has the versions with the project's tag
     prefix taken off (1.4, not v1.4; 2.42, not glibc-2.42), as the
-    elements' URLs have them."""
+    nix/sources.json has them."""
     answer = http_json(f"https://release-monitoring.org/api/v2/versions/?project_id={project_id}")
     return answer.get("stable_versions") or []
 
@@ -283,7 +242,7 @@ def github_versions(repo):
 
 
 def release_findings(name, version, versions):
-    """Findings for an element whose project released versions (newest
+    """Findings for a source whose project released versions (newest
     first): the newest release of our own series, a patch, and a newer
     series, a feature release.  Both are reported: Go 1.26.11 is a fix
     that should not wait behind Go 1.27."""
@@ -297,6 +256,11 @@ def release_findings(name, version, versions):
     # a dated release may be written 2026-10-20 here and 20261020 there
     if version not in versions and version.replace("-", "") in versions:
         version = version.replace("-", "")
+    # and a project may write a release's day after its version (json-c's
+    # 0.19-20260627), where the source has the version alone
+    with_its_day = [v for v in versions if re.fullmatch(re.escape(version) + r"-(19|20)\d{6}", v)]
+    if version not in versions and with_its_day:
+        version = with_its_day[0]
     if version not in versions:
         return [("unknown", f"`{name}` `{version}`: not among the project's versions "
                             f"(newest `{'`, `'.join(versions[:3])}`): check the mapping")]
@@ -314,7 +278,7 @@ def release_findings(name, version, versions):
 
 
 def branch_findings(name, follows, pinned_commit):
-    """Findings for an element pinned to a commit of a branch."""
+    """Findings for a source pinned to a commit of a branch."""
     repo, _, branch = follows.partition("@")
     compare = http_json(f"https://api.github.com/repos/{repo}/compare/{pinned_commit}...{branch}",
                         headers=github_headers())
@@ -331,14 +295,14 @@ def branch_findings(name, follows, pinned_commit):
 
 # --- Advisories ------------------------------------------------------------
 
-def osv_advisories(packages):
-    """{(ecosystem, name, version): [advisory ids]} for the affected ones."""
+def osv_advisories(crates):
+    """{(name, version): [advisory ids]} for the crates that have any."""
     found = {}
-    packages = sorted({package for package in packages if package[0] in ("crates.io", "Go", "PyPI")})
-    for start in range(0, len(packages), 500):
-        batch = packages[start:start + 500]
-        queries = [{"package": {"ecosystem": ecosystem, "name": name}, "version": version}
-                   for ecosystem, name, version in batch]
+    crates = sorted(set(crates))
+    for start in range(0, len(crates), 500):
+        batch = crates[start:start + 500]
+        queries = [{"package": {"ecosystem": "crates.io", "name": name}, "version": version}
+                   for name, version in batch]
         answer = http_json("https://api.osv.dev/v1/querybatch",
                            data=json.dumps({"queries": queries}).encode(),
                            headers={"Content-Type": "application/json"})
@@ -545,18 +509,19 @@ def year_and_number(cve_id):
 
 
 def advisory_findings(name, version, entry, feeds):
-    """[(section, line)]: the known vulnerabilities every source the entry
-    names lists, merged by CVE, each with what its sources say about it.
-    feeds holds the distributions' data that could be read, by key."""
+    """[(section, line)]: the known vulnerabilities every database the
+    entry names lists, merged by CVE, each with what the databases say
+    about it.  feeds holds the distributions' data that could be read, by
+    key."""
     findings = []
-    sources = {}  # CVE id: ["NVD", "Debian: fixed in 1.3.2-4", ...]
+    listed_by = {}  # CVE id: ["NVD", "Debian: fixed in 1.3.2-4", ...]
 
-    def add(source, found):
+    def add(database, found):
         for cve_id, note in found:
-            sources.setdefault(cve_id, []).append(f"{source}: {note}" if note else source)
+            listed_by.setdefault(cve_id, []).append(f"{database}: {note}" if note else database)
 
-    def failed(source, error):
-        findings.append(("failures", f"`{name}`: {source}: {type(error).__name__}: {str(error)[:120]}"))
+    def failed(database, error):
+        findings.append(("failures", f"`{name}`: {database}: {type(error).__name__}: {str(error)[:120]}"))
 
     for cpe in entry.get("cpe", []):
         try:
@@ -590,10 +555,10 @@ def advisory_findings(name, version, entry, feeds):
     if not entry.get("cpe") and named_packages and len(unlisted) == len(named_packages):
         findings.append(("no-advisories", f"`{name}`: {' and '.join(unlisted)} never had one"))
 
-    if not sources:
+    if not listed_by:
         return findings
-    cves = sorted(sources, key=year_and_number, reverse=True)
-    listed = [f"{cve_id} ({'; '.join(sorted(sources[cve_id]))})" for cve_id in cves[:10]]
+    cves = sorted(listed_by, key=year_and_number, reverse=True)
+    listed = [f"{cve_id} ({'; '.join(sorted(listed_by[cve_id]))})" for cve_id in cves[:10]]
     more_note = f" and {len(cves) - 10} more" if len(cves) > 10 else ""
     findings.append(("security", f"`{name}` `{version}`: {', '.join(listed)}{more_note}"))
     return findings
@@ -606,21 +571,21 @@ REPORT_SECTIONS = {
     "patch": "Patch releases",
     "feature": "Feature releases",
     "behind": "Behind their branch",
-    "drifted": "Not on the version of the element they are part of",
+    "drifted": "Not on the version of the source they are part of",
     "unknown": "Versions the project's releases do not list",
-    "no-advisories": "No advisory source, or only ones that never listed the project",
+    "no-advisories": "No advisory database, or only ones that never listed the project",
     "failures": "Could not check",
 }
 
 
-def check_element(name, element, entry, elements, feeds):
-    """[(section, line)] for one element.  Each check runs on its own, so
+def check_source(name, source, entry, sources, feeds):
+    """[(section, line)] for one source.  Each check runs on its own, so
     one service failing leaves the others' findings."""
-    version = element["version"]
+    version = source["version"]
     findings = []
 
     main = entry.get("part-of")
-    main_version = elements[main]["version"] if main else None
+    main_version = sources[main]["version"] if main else None
     if main and version != main_version:
         findings.append(("drifted", f"`{name}` `{version}`, but `{main}` is `{main_version}`"))
 
@@ -635,18 +600,18 @@ def check_element(name, element, entry, elements, feeds):
     elif "github" in entry:
         run("GitHub release", lambda: release_findings(name, version, github_versions(entry["github"])))
     elif "follows" in entry:
-        run("GitHub branch", lambda: branch_findings(name, entry["follows"], version))
+        run("GitHub branch", lambda: branch_findings(name, entry["follows"], source["commit"]))
 
     is_tracked = any(key in entry for key in ("anitya", "github", "follows"))
-    has_advisory_source = any(key in entry for key in ADVISORY_KEYS)
-    if has_advisory_source and version:
+    has_advisory_database = any(key in entry for key in ADVISORY_KEYS)
+    if has_advisory_database and version:
         findings += advisory_findings(name, version, entry, feeds)
-    elif is_tracked and not element["vendored"]:
+    elif is_tracked and not source["crates"]:
         findings.append(("no-advisories", f"`{name}`"))
     return findings
 
 
-def check(elements, upstreams):
+def check(sources, upstreams):
     findings = []
     if nvd_refuses_key():
         findings.append(("failures", "NVD refuses NVD_API_KEY (mistyped, or not activated from "
@@ -659,36 +624,36 @@ def check(elements, upstreams):
     try:
         feeds["debian"] = debian_tracker()
     except Exception as error:
-        findings.append(("failures", f"Debian's security tracker, for every element: {str(error)[:120]}"))
+        findings.append(("failures", f"Debian's security tracker, for every source: {str(error)[:120]}"))
     try:
         feeds["alpine"] = alpine_secdb()
     except Exception as error:
-        findings.append(("failures", f"Alpine's security database, for every element: {str(error)[:120]}"))
-    vendored = [package for element in elements.values() for package in element["vendored"]]
+        findings.append(("failures", f"Alpine's security database, for every source: {str(error)[:120]}"))
+    crates = [crate for source in sources.values() for crate in source["crates"]]
     try:
-        vendored_advisories = osv_advisories(vendored)
+        crate_advisories = osv_advisories(crates)
     except Exception as error:
-        vendored_advisories = {}
-        findings.append(("failures", f"OSV, for every vendored package: {str(error)[:120]}"))
-    for name, element in elements.items():
+        crate_advisories = {}
+        findings.append(("failures", f"OSV, for every crate: {str(error)[:120]}"))
+    for name, source in sources.items():
         print(f"{name} ...", file=sys.stderr)
-        findings += check_element(name, element, upstreams[name], elements, feeds)
-        for package in element["vendored"]:
-            if package in vendored_advisories:
-                ecosystem, package_name, package_version = package
-                findings.append(("security", f"`{name}` vendors {ecosystem} `{package_name}` "
-                                             f"`{package_version}`: {', '.join(vendored_advisories[package])}"))
-    return report(findings, len(elements), len(set(vendored)))
+        findings += check_source(name, source, upstreams[name], sources, feeds)
+        for crate in source["crates"]:
+            if crate in crate_advisories:
+                crate_name, crate_version = crate
+                findings.append(("security", f"`{name}` is built with the crate `{crate_name}` "
+                                             f"`{crate_version}`: {', '.join(crate_advisories[crate])}"))
+    return report(findings, len(sources), len(set(crates)))
 
 
-def report(findings, element_count, vendored_count):
+def report(findings, source_count, crate_count):
     count = {section: sum(1 for kind, _ in findings if kind == section) for section in REPORT_SECTIONS}
     lines = [f"# bunix dependencies, {time.strftime('%Y-%m-%d')}", "",
              "Made by tools/deps.py check.", "",
-             f"{element_count} elements, {vendored_count} vendored packages: {count['security']} "
+             f"{source_count} sources, {crate_count} crates: {count['security']} "
              f"with advisories, {count['patch']} patch and {count['feature']} feature releases, "
              f"{count['behind']} behind their branch, {count['failures']} not checked.", "",
-             "Each CVE names the sources that list it.  NVD lists a CVE only once it has "
+             "Each CVE names the databases that list it.  NVD lists a CVE only once it has "
              "analysed it, which can take weeks; Debian lists it when it is reported. "
              "\"Fixed in\": the distribution's first package version with the fix; a "
              "revision after its first package of a release (Debian's -2, Alpine's -r1) "
@@ -701,46 +666,38 @@ def report(findings, element_count, vendored_count):
 
 # --- inventory and sbom ----------------------------------------------------
 
-def inventory(elements, upstreams):
+def inventory(sources, upstreams):
     lines = []
-    for name, element in elements.items():
+    for name, source in sources.items():
         entry = upstreams[name]
         tracking = next(f"{key} {entry[key]}" for key in TRACKING_KEYS if key in entry)
-        vendored_note = f"  +{len(element['vendored'])} vendored" if element["vendored"] else ""
-        version = str(element["version"] or "-")[:20]
-        lines.append(f"{name:42} {version:20} {tracking}{vendored_note}")
+        crates_note = f"  +{len(source['crates'])} crates" if source["crates"] else ""
+        version = str(source["version"] or "-")[:20]
+        lines.append(f"{name:42} {version:20} {tracking}{crates_note}")
     return "\n".join(lines)
 
 
-def sbom(elements, upstreams):
-    """CycloneDX 1.6: one component per element, with its vendored packages
-    as components of it."""
-    purl_types = {"crates.io": "cargo", "Go": "golang", "PyPI": "pypi"}
-
-    def vendored_component(package):
-        ecosystem, name, version = package
-        purl_type = purl_types.get(ecosystem)
-        if purl_type:
-            purl = f"pkg:{purl_type}/{name}@{version}"
-        else:
-            purl = f"pkg:generic/{name}@{version}?vcs_url={urllib.parse.quote(ecosystem, safe='')}"
-        return {"type": "library", "name": name, "version": version, "purl": purl}
+def sbom(sources, upstreams):
+    """CycloneDX 1.6: one component per source, with its crates as
+    components of it."""
+    def crate_component(crate):
+        name, version = crate
+        return {"type": "library", "name": name, "version": version, "purl": f"pkg:cargo/{name}@{version}"}
 
     components = []
-    for name, element in elements.items():
+    for name, source in sources.items():
         entry = upstreams[name]
         component = {"type": "library", "bom-ref": name, "name": name,
-                     "externalReferences": [{"type": "distribution", "url": element["url"]}]}
-        if element["version"]:
-            component["version"] = element["version"]
-        if element["sha256"]:
-            component["hashes"] = [{"alg": "SHA-256", "content": element["sha256"]}]
-        if entry.get("cpe") and element["version"]:
+                     "externalReferences": [{"type": "distribution", "url": source["url"]}]}
+        if source["version"]:
+            component["version"] = source["version"]
+        if source["sha256"]:
+            component["hashes"] = [{"alg": "SHA-256", "content": source["sha256"]}]
+        if entry.get("cpe") and source["version"]:
             # CycloneDX takes one CPE: the first is the project's main name
-            component["cpe"] = f"cpe:2.3:{entry['cpe'][0]}:{element['version']}:*:*:*:*:*:*:*"
-        if element["vendored"]:
-            component["components"] = [vendored_component(package)
-                                       for package in sorted(set(element["vendored"]))]
+            component["cpe"] = f"cpe:2.3:{entry['cpe'][0]}:{source['version']}:*:*:*:*:*:*:*"
+        if source["crates"]:
+            component["components"] = [crate_component(crate) for crate in sorted(set(source["crates"]))]
         components.append(component)
     return json.dumps({"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
                        "metadata": {"component": {"type": "operating-system", "name": "bunix"}},
@@ -753,11 +710,12 @@ def main():
     if command not in commands:
         sys.exit(__doc__)
     upstreams = load_upstreams()
-    elements = read_elements(upstreams)
-    problems = disagreements(elements, upstreams)
+    crates = read_crates()
+    sources = read_sources(upstreams, crates)
+    problems = disagreements(sources, upstreams, crates)
     if problems:
-        sys.exit("upstreams.yml and the elements disagree:\n  " + "\n  ".join(problems))
-    text = commands[command](elements, upstreams)
+        sys.exit("upstreams.yml and the sources disagree:\n  " + "\n  ".join(problems))
+    text = commands[command](sources, upstreams)
     if len(sys.argv) > 2:
         Path(sys.argv[2]).write_text(text + "\n")
     else:
