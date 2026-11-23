@@ -8,8 +8,9 @@
 # architecture.
 #
 # Built with clang and LLVM's linker and tools (LLVM=1), on every
-# architecture: the kernel's Rust code (a Mac's drivers) requires it,
-# Aurora's kernel is tested so, and x86 is built the same way.
+# architecture: the kernel's Rust code (a Mac's drivers, and the QR code
+# of a kernel that stops) requires it, Aurora's kernel is tested so, and
+# x86 is built the same way.
 #
 # Installed in /usr/lib/modules/<release>/, the place UAPI.9 gives the
 # kernel image, as vmlinuz whatever the architecture calls it.
@@ -52,8 +53,10 @@ kernel_make() {
         "$@"
 }
 
-# where the configuration says the kernel's built-in certificate is
+# where the configuration says the kernel's built-in certificate is,
+# and its logo
 install -D -m 644 $verity_certificate bunix/verity.crt
+install -D -m 644 $logo bunix/logo-mono.pbm
 
 kernel_make $default_configuration
 scripts/kconfig/merge_config.sh -m .config $wanted_options

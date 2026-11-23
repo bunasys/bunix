@@ -1,7 +1,8 @@
 # bunix_<version>.efi: what a machine with bunix on its disk starts, as one
 # EFI program (a unified kernel image): the kernel (the one the system
 # was built with, which images/system.nix hands on), on x86 the
-# processor's microcode (boot.nix), images/initrd.nix,
+# processor's microcode (boot.nix), the picture a boot shows,
+# images/initrd.nix,
 # and the kernel's command line, which has the hash of the one /usr this
 # kernel runs (usrhash=).  systemd-boot starts the newest such file on the
 # partition the machine boots from.  After elements/system/uki.bst.
@@ -44,9 +45,21 @@ stagedBuild {
     # partition of that type too, and it is not this system's to mount.
     # rw: it is writable.  mount.usrfstype: said, so that nothing tries to
     # check and repair a file system that is read-only and checked block
-    # by block.  console=tty0: the boot's messages on the screen; a
-    # machine without one adds its own console after it, as its firmware
-    # hands words over (tools/boot-vm.sh).
-    command_line = "root=PARTLABEL=bunix-root rw mount.usrfstype=erofs mount.usrflags=ro console=tty0";
+    # by block.  console=tty0: the console is the screen; a machine
+    # without one adds its own console after it, as its firmware hands
+    # words over (tools/boot-vm.sh).
+    # quiet: the kernel writes only what is worse than an error
+    # (boot/linux/), and systemd only of a unit that failed, or of one
+    # that keeps the boot waiting.  The picture below stays on the
+    # screen until the first text is written: the login prompt, or one
+    # of those.
+    # fbcon=logo-count:0: the console does not draw the kernel's logo
+    # above that text; the logo is for the screen of a kernel that stops
+    # (boot/linux/).
+    command_line = "root=PARTLABEL=bunix-root rw mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet fbcon=logo-count:0";
+    # What is on the screen from before the kernel starts: bunix's mark,
+    # which systemd's stub draws in the middle of it, unscaled.
+    # tools/render-branding.sh makes it.
+    splash = ../../files/branding/splash.bmp;
   };
 }

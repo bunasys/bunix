@@ -952,6 +952,25 @@ image, which hands it to the kernel before anything else runs.
 `tools/vm-checks/firmware.sh` finds the files drivers name.  No device
 has been started with its firmware yet: a virtual machine, which has
 none of them, is still all this has started on.
+
+What a boot shows is one picture: bunix's mark
+(`files/branding/splash.bmp`), which the kernel image carries and
+systemd's stub draws before the kernel starts.  The kernel takes the
+screen as the firmware left it, and its console writes nothing over it
+until there is text to write (`quiet` on the command line, and a console
+that waits: `CONFIG_FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER`): the login
+prompt, a unit that failed or keeps the boot waiting, or a line of the
+kernel's that is worse than an error.  No program draws at boot, and
+nothing says how far one has come.  A kernel that stops says so on a screen of
+its own, with the mark in one colour and a QR code of its last lines
+(`CONFIG_DRM_PANIC`); the QR code's maker is Rust, which the kernel for
+x86 is built with for this alone.  Both architectures' kernels have all
+of it.  `tools/vm-checks/boot-screen.sh` checks that nothing wrote to
+the screen before the console's own program; the picture itself, and
+the screen of a kernel made to stop, were looked at in QEMU for x86
+(`BUNIX_MONITOR`), and on no real screen yet: not a PC's, whose kernel
+may have more to say, and not a Mac's.
+
 The kernel's build needs libelf (`base.elfutils`), zstd and kmod's
 depmod, which a Mac's does not.  Built on the x86_64 builder, it has started the system in an
 emulated PC (QEMU on the Mac, with no hypervisor): from memory, and from

@@ -33,6 +33,9 @@
 #                     failed.
 #   BUNIX_SSH_KEY     the public key that may; default ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT    the Mac's port for it; default 2022
+#   BUNIX_MONITOR     set, to look at the machine's screen: QEMU's
+#                     monitor is then a socket where QEMU runs
+#                     (tools/test-machine.sh: run_qemu)
 #
 # Needs: limactl with the bunix-builder VM, and qemu-system-aarch64 with
 # the EFI firmware that comes with it (share/qemu/edk2-aarch64-code.fd);

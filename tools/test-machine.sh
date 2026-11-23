@@ -64,8 +64,12 @@
 #                       place of the script: it does not come back.
 #                       What every machine here has is added: four
 #                       processors, 4 GB, a network card whose port 22
-#                       is 127.0.0.1's $ssh_port, no screen, and an end
-#                       where a real machine would restart.
+#                       is 127.0.0.1's $ssh_port, no window for its
+#                       screen, and an end where a real machine would
+#                       restart.  With BUNIX_MONITOR set, QEMU's
+#                       monitor is the socket $machine_directory/monitor,
+#                       where QEMU runs: `screendump <file>` sent there
+#                       writes the screen as a picture.
 #   start_qemu <QEMU's arguments>
 #                       the same behind the script, its console in
 #                       $work/console.log; `kill -0 $qemu` asks whether
@@ -260,7 +264,16 @@ release_version() {
 }
 
 run_qemu() {
-    qemu_itself "$@" -smp 4 -m 4G -nographic -no-reboot \
+    # A socket in the machine's own directory, not a port: whoever
+    # reaches QEMU's monitor can have it write files and run programs.
+    # Without it the monitor is at the terminal, with the machine's
+    # console (Ctrl-a c).
+    monitor=
+    if [ -n "${BUNIX_MONITOR:-}" ]; then
+        monitor="-monitor unix:$machine_directory/monitor,server=on,wait=off"
+    fi
+    # shellcheck disable=SC2086  # the monitor's words are two
+    qemu_itself "$@" -smp 4 -m 4G -nographic -no-reboot $monitor \
         -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net
 }
 # run_qemu takes the place of what runs it, which behind the script is a

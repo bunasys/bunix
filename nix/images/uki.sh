@@ -9,8 +9,7 @@ stub=$(echo /usr/lib/systemd/boot/efi/linux*.efi.stub)
 # The kernel is the one the system's build had (image.sh), so that it is
 # of the same build as the modules in that /usr.
 #
-# Of the element, not here: the splash (no Plymouth), and the signature
-# (uki.nix).
+# Of the element, not here: the signature (uki.nix).
 
 with_microcode=
 if [ -n "$microcode" ]; then
@@ -23,6 +22,7 @@ python3 /usr/lib/systemd/ukify build \
     $with_microcode --initrd=$initrd/initramfs.cpio.gz \
     --os-release=@$usr/os-release \
     --cmdline="usrhash=$(cat $usr/usrhash) $command_line" \
+    --splash=$splash \
     --stub=$stub \
     --output=$image
 
