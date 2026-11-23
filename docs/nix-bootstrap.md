@@ -2,6 +2,10 @@
 
 Status: proposal, 2026-11-14.  Nothing here is built yet.
 
+(Since then it is built: `docs/nix-usr-system.md` has what is there.
+BuildStream's tools and elements that this names are gone, and in git's
+history.)
+
 The first steps towards building bunix with Nix instead of BuildStream: a
 Nix store whose toolchain is built from source, starting from bunix 0.4.0
 and nothing else.  No nixpkgs, no binary cache, no Nix binaries we did not

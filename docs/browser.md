@@ -1,5 +1,9 @@
 # A browser for bunix
 
+Hudhud is not in what Nix builds yet (`docs/nix-usr-system.md`).  Its
+elements are kept, to port from, and no longer build: BuildStream's
+tooling, the Fly machine's among it, was removed when Nix took over.
+
 Status (2026-11-06): being built.  Phase 0 (toolchain and libraries)
 built on the Fly machine; Shields' engine built and tested.  Chromium 157
 compiles with Hudhud's changes and runs (headless, on the Fly machine);

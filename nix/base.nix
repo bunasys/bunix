@@ -2,6 +2,10 @@
 # system's own compiler and tools (tools.nix), and nothing of the bootstrap.
 # The exceptions are under "Programs built elsewhere".
 #
+# An element is removed once it is ported, so most of those named here
+# are gone from elements/: `git show v0.4.0:elements/base/x.bst` has one.
+# What is still there is what is left to port.
+#
 #   nix-build /bunix/nix/base.nix -A util-linux
 #
 # Porting elements/base/x.bst:

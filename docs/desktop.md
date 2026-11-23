@@ -1,5 +1,9 @@
 # A graphical bunix: from boot to install
 
+The desktop is not in what Nix builds yet (`docs/nix-usr-system.md`): this
+is the plan and the state of 0.4.0, which BuildStream built.  Its elements
+are kept, to port from, and no longer build.
+
 Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
 real hardware (an Intel Coffee Lake desktop).
 
