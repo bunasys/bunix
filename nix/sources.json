@@ -578,5 +578,15 @@
     "version": "24.22.3",
     "url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3.tar.xz",
     "sha256": "48ca3aa8a9b02133356922ef4fc80200e00598c80a4ef446f7c39a459222593d"
+  },
+  "linux-firmware": {
+    "version": "20261019",
+    "url": "https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-20261019.tar.xz",
+    "sha256": "a10d1ab5baf2c74ba92e8c7cf313e691696c26bddfa6df00db795e48d70cd4ca"
+  },
+  "intel-microcode": {
+    "version": "20260925",
+    "url": "https://github.com/intel/Intel-Linux-Processor-Microcode-Data-Files/archive/refs/tags/microcode-20260925.tar.gz",
+    "sha256": "0ec19023dad1e6dd0c5909174b8dff2555b91cf01671e36271a1ef36655c0cfc"
   }
 }

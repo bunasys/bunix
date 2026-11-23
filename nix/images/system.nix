@@ -67,7 +67,8 @@ stagedBuild {
     # a user's way up: run0 asks polkit, which asks a member of wheel
     # for their own password
     base.polkit
-    # Wi-Fi, without the chip's firmware (boot/linux/)
+    # Wi-Fi; on arm64 without the chip's firmware
+    # (boot/linux/aarch64.config)
     base.dbus base.iwd base.wireless-regdb
     # for a system on a disk: udev told of the device /usr is checked
     # through
@@ -85,7 +86,11 @@ stagedBuild {
   # machine has (boot/linux/x86_64.config).  The package is the whole
   # kernel: its image and configuration come along, where UAPI.9 has
   # them, and gen_init_cpio.
-  ++ (if system == "x86_64-linux" then [ boot.linux ] else []);
+  # boot.firmware: what those drivers load into their devices.
+  # boot.microcode: the processor's, which the kernel image carries
+  # (images/uki.nix); here for its makers' terms, which are to be where
+  # their files go, and a machine's own copy of what it was started with.
+  ++ (if system == "x86_64-linux" then [ boot.linux boot.firmware boot.microcode ] else []);
 
   # What makes it.  systemd: its own tools make the accounts, enable the
   # units and compile the hardware database, on the tree that is to be the
