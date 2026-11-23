@@ -13,7 +13,8 @@
 #
 #   bunix_<release>.usr-<arch>*.<id>.raw  the three partitions of a /usr
 #                                         slot (nix/images/update.nix)
-#   bunix_<release>.<arch>.efi            the kernel image that starts it
+#   bunix_<release>.<arch>.efi            the kernel image that starts it;
+#                                         x86-64's signed for Secure Boot
 #   devtools_<release>.<arch>.raw         the devtools extension
 #                                         (nix/images/devtools.nix)
 #   llvm_<release>.<arch>.raw             the llvm extension
@@ -26,9 +27,11 @@
 #                   mirror cannot keep machines on it forever
 #   SHA256SUMS.gpg  the list's signature, by the release key
 #
-# Two keys sign, and neither is in a file: 1Password asks for the image
+# Three keys sign, and none is in a file: 1Password asks for the image
 # key six times (a system and two extensions for each architecture,
-# tools/sign.sh) and for the release key once (tools/sign-list.sh).
+# tools/sign.sh), for the Secure Boot key once (the x86_64 kernel
+# image, tools/sign-kernel-image.sh), and for the release key once
+# (tools/sign-list.sh).
 #
 # What a signature here vouches for is what the builders made of the
 # commit: a builder says what the hash of its image is.  Each hash is
@@ -58,7 +61,7 @@
 #
 # Needs: git, limactl with the builder running (here, or on
 # BUNIX_AARCH64_BUILDER), ssh to the x86_64 builder, and what
-# tools/sign.sh and tools/sign-list.sh need.
+# tools/sign.sh, tools/sign-kernel-image.sh and tools/sign-list.sh need.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -80,9 +83,20 @@ case $signed_by in
     release)
         # A key from a file is for a trial; left in the environment, it
         # would sign a release in place of bunix's.
-        if [ -n "${BUNIX_RELEASE_KEY_FILE:-}${BUNIX_VERITY_KEY_FILE:-}" ]; then
-            die "a release takes its keys from the password manager: unset BUNIX_RELEASE_KEY_FILE and BUNIX_VERITY_KEY_FILE"
-        fi ;;
+        if [ -n "${BUNIX_RELEASE_KEY_FILE:-}${BUNIX_VERITY_KEY_FILE:-}${BUNIX_SECURE_BOOT_KEY_FILE:-}" ]; then
+            die "a release takes its keys from the password manager: unset BUNIX_RELEASE_KEY_FILE, BUNIX_VERITY_KEY_FILE and BUNIX_SECURE_BOOT_KEY_FILE"
+        fi
+        # and its certificates from the repository
+        if [ -n "${BUNIX_VERITY_CERTIFICATE:-}${BUNIX_SECURE_BOOT_CERTIFICATE:-}" ]; then
+            die "a release's signatures are checked against bunix's certificates: unset BUNIX_VERITY_CERTIFICATE and BUNIX_SECURE_BOOT_CERTIFICATE"
+        fi
+        case " $architectures " in
+            *" x86_64 "*)
+                command -v osslsigncode > /dev/null \
+                    || die "no osslsigncode to sign the x86_64 kernel image with (brew install osslsigncode)"
+                [ -r keys/secureboot.crt ] \
+                    || die "no keys/secureboot.crt: the certificate of the key the x86_64 kernel image is signed with" ;;
+        esac ;;
     development)
         [ -r "${BUNIX_RELEASE_KEY_FILE:-}" ] \
             || die "BUNIX_SIGNED_BY=development needs a key for the list in BUNIX_RELEASE_KEY_FILE (from /, or from the repository)" ;;
@@ -236,6 +250,16 @@ for architecture in $architectures; do
         || die "the $architecture builder sent $number_received files, not $number_expected"
     # out of a store they come read-only
     chmod u+w "$received"/*
+
+    # A release's x86_64 kernel image is signed here, where the password
+    # manager is; a test system's was signed in its build, with the
+    # development key (nix/images/uki.nix).
+    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+        echo "$architecture: signing the kernel image for Secure Boot"
+        kernel_image=$received/bunix_$version.$named.efi
+        tools/sign-kernel-image.sh "$kernel_image" "$kernel_image.signed"
+        mv "$kernel_image.signed" "$kernel_image"
+    fi
     mv "$received"/* "$unfinished/"
     rmdir "$received"
 done

@@ -1042,6 +1042,20 @@ let
     };
   };
 
+  # osslsigncode: signs a kernel image for Secure Boot, as a PC's
+  # firmware and shim check it (tools/sign-kernel-image.sh).  Not in any
+  # image: a build of a test system signs its kernel image with it
+  # (images/uki.nix), and a release is signed with the same script on a
+  # Mac, with Homebrew's.  OpenSSL 3 fetches what a signature's time
+  # stamp needs itself, so not curl.
+  osslsigncode = mkSystemPackage {
+    name = "osslsigncode";
+    source = sources.osslsigncode;
+    script = ./cmake.sh;
+    depends = [ glibc openssl zlib ];
+    buildDepends = [ cmake ninja pkgconf ];
+  };
+
   # boot-picture: draws the picture of a boot again on a screen that a
   # GPU's driver has just taken, so that the picture is there and a
   # kernel that stops has something to draw on (src/boot-picture, which
@@ -1127,5 +1141,5 @@ in
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture osslsigncode;
 }

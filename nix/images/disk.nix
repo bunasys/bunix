@@ -37,21 +37,46 @@
 # A test can ask for less of all three, to have less to build and copy:
 # the disk, at these sizes, is over 5 GB, whole in the builder's store for
 # every system it is built of.
+#
+#   secureBootEnrolment
+#              true for a test machine that is to start with Secure Boot
+#              on (tools/secure-boot-test.sh; x86, and a test system):
+#              systemd-boot is signed with the development key, as the
+#              kernel image of a test system is, and gives the machine's
+#              firmware that key at the first start
+#              (secure-boot-enrolment.sh).  Not for a real machine: its
+#              owner's keys are not this disk's to replace.  A Mac has no
+#              Secure Boot.
 { system ? builtins.currentSystem, signature ? null, version ? import ../release.nix
-, espSize ? "1G", usrSlotSize ? "2G", usrVeritySize ? "32M" }:
+, espSize ? "1G", usrSlotSize ? "2G", usrVeritySize ? "32M", secureBootEnrolment ? false }:
+
+assert secureBootEnrolment -> (signature == null && system == "x86_64-linux");
 
 let
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
   stagedBuild = import ../stage.nix { inherit system; };
   architecture = import ../architecture.nix system;
+
+  developmentKey = ../development-key/development.key;
+  developmentCertificate = ../development-key/development.crt;
+  enrolment = stagedBuild {
+    name = "bunix-secure-boot-enrolment";
+    run = ./secure-boot-enrolment.sh;
+    buildDepends = [ base.openssl tools.bash tools.coreutils ];
+    env = { key = developmentKey; certificate = developmentCertificate; };
+  };
+  # where it is not a test machine with Secure Boot: nothing
+  enrolled = value: if secureBootEnrolment then value else "";
 in
 stagedBuild {
   name = "bunix-disk";
   run = ./disk.sh;
   # systemd: systemd-repart makes the disk, and systemd-boot goes on it.
   # dosfstools and mtools: the ESP's file system, and what fills it.
-  buildDepends = [ base.systemd base.dosfstools base.mtools tools.bash tools.coreutils tools.findutils ];
+  buildDepends = [ base.systemd base.dosfstools base.mtools tools.bash tools.coreutils tools.findutils ]
+    # osslsigncode: what systemd-boot is signed with, there
+    ++ (if secureBootEnrolment then [ base.osslsigncode ] else []);
   env = {
     update = import ./update.nix { inherit system signature version; };
     # what the update's files are named by
@@ -60,5 +85,9 @@ stagedBuild {
     esp_size = espSize;
     usr_slot_size = usrSlotSize;
     usr_verity_size = usrVeritySize;
+    secure_boot_enrolment = enrolled enrolment;
+    sign_kernel_image = enrolled ../../tools/sign-kernel-image.sh;
+    secure_boot_key = enrolled developmentKey;
+    secure_boot_certificate = enrolled developmentCertificate;
   };
 }

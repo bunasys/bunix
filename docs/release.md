@@ -33,10 +33,15 @@ missing).  Not tried on such a machine.
   (`tools/nix-builder/home-store/nix.conf`; `BUNIX_X86_BUILDER`).  The
   Mac `tools/publish.sh` is run on is the one you sit at: 1Password
   asks on its own screen.
-- The image key and the release key, as the 1Password documents "bunix
-  verity key" and "bunix release key".  No file has them, and no build
-  reads them (`docs/nix-usr-system.md`, "Who signs").
-- Sequoia's `sq`, for the list's signature (`brew install sequoia-sq`).
+- The image key, the Secure Boot key and the release key, as the
+  1Password documents "bunix verity key", "bunix secure boot key" and
+  "bunix release key".  No file has them, and no build reads them
+  (`docs/nix-usr-system.md`, "Who signs").
+- `keys/secureboot.crt`, the Secure Boot key's certificate, in the
+  checkout: what the x86-64 kernel image's signature is checked against.
+- Sequoia's `sq`, for the list's signature (`brew install sequoia-sq`),
+  and `osslsigncode`, for the kernel image's (`brew install
+  osslsigncode`).
 - `gh`, logged in with write access to `bunasys/bunix`.
 - QEMU, for the tests.
 
@@ -48,7 +53,8 @@ must increase: sysupdate installs only a version newer than the running
 one.
 
 **2. Test**, with nothing uncommitted in the working tree, which is
-what the tests build: `tools/install-test.sh`, `tools/update-test.sh`.
+what the tests build: `tools/install-test.sh`, `tools/update-test.sh`,
+and `tools/secure-boot-test.sh` (x86-64).
 
 **3. Build and sign:**
 
@@ -58,11 +64,12 @@ tools/publish.sh out/updates        # -> out/updates/<version>/
 
 It sends the last commit to both builders, builds, and has each
 architecture's system and extensions signed with the image key
-(`tools/sign.sh`), then writes `SHA256SUMS` (good for 30 days,
-`BUNIX_MANIFEST_DAYS`) and has it signed with the release key
-(`tools/sign-list.sh`).  1Password asks seven times: six for the
-image key (a system and two extensions, for each architecture) and once
-for the release key.  It says what in
+(`tools/sign.sh`), and the x86-64 kernel image with the Secure Boot key
+(`tools/sign-kernel-image.sh`), then writes `SHA256SUMS` (good for 30
+days, `BUNIX_MANIFEST_DAYS`) and has it signed with the release key
+(`tools/sign-list.sh`).  1Password asks eight times: six for the
+image key (a system and two extensions, for each architecture), once
+for the Secure Boot key, and once for the release key.  It says what in
 the working tree is not in the commit, and so not in the release, and
 ends with the line that tags the commit it built.
 
