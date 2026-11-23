@@ -83,7 +83,7 @@ if [ "$build" = "$target" ]; then
     exit 1
 fi
 
-# The same versions and checksums as elements/bootstrap/.  A version is
+# The same versions and checksums as nix/sources.json.  A version is
 # written here only: the steps below name packages, not versions, except
 # for the two that gcc's and glibc's configure lines need.
 gcc_version=16.2.0

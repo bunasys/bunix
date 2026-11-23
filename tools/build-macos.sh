@@ -81,7 +81,7 @@ UNGOOGLED_MACOS_COMMIT=31f01756a43d55b2c4211e73ca329bfab4ebfcb2
 
 # ungoogled-chromium-macos's patches this build does without, and why
 MACOS_PATCHES_NOT_USED=(
-  # bindgen is built here with cargo, as base/bindgen.bst does
+  # bindgen is built here with cargo, as nix/base.nix builds it
   build-bindgen
   build-bindgen-target-override
   bindgen-disable-static
@@ -120,7 +120,8 @@ RUST_SHA256=9c4c4a07f336342d3d0ba3774094f40020b5ff37d9eda61551353cfc7e77b8ee
 RUSTC_DEV_URL=https://static.rust-lang.org/dist/2026-09-10/rustc-dev-nightly-aarch64-apple-darwin.tar.xz
 RUSTC_DEV_SHA256=f03cac1eeb501b4c214214ba752b4008e7cdc5ad755840a240775c7fc17624f2
 
-# bindgen, the version base/bindgen.bst builds
+# bindgen, the version nix/base.nix builds (sources.json): copied here by
+# hand
 BINDGEN_VERSION=0.73.2
 
 # ungoogled-chromium's tools want Python 3.13 or older; so do Chromium's

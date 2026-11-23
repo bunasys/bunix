@@ -1,5 +1,11 @@
 # Installing bunix
 
+Describes bunix on x86-64 as BuildStream built it, up to 0.4.0 (the live
+image, Secure Boot, installing next to Windows).  What Nix builds, and its
+installer on an Apple Silicon Mac, is in `docs/nix-usr-system.md`; the
+elements and tools named here that are gone are in git's history (the
+elements as of `v0.4.0`).
+
 Status: tested in QEMU (2026-11-03), on a disk laid out like a Windows PC,
 and on real hardware next to Windows with Secure Boot on: install, updates
 from GitHub (0.1.0 -> 0.1.1 -> 0.1.2), the gcc, rust and swift
