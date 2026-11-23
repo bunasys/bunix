@@ -298,6 +298,45 @@ let
     env = { duktape_version = sources.duktape.version; };
   };
 
+  # pixman: pixel compositing on the CPU, which QEMU draws a virtual
+  # machine's screen with.
+  pixman = mkSystemPackage {
+    name = "pixman";
+    source = sources.pixman;
+    script = ./meson.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dtests=disabled -Ddemos=disabled -Dgtk=disabled -Dlibpng=disabled -Dopenmp=disabled"; };
+  };
+
+  # libslirp: a network in a library (TCP/IP, DHCP, DNS forwarding), which
+  # gives a virtual machine of QEMU's a way out through the sockets of
+  # whoever runs it: no root, and no device on the host.  No element.
+  libslirp = mkSystemPackage {
+    name = "libslirp";
+    source = sources.libslirp;
+    script = ./meson.sh;
+    depends = [ glibc glib ];
+    buildDepends = [ meson ninja pkgconf ];
+  };
+
+  # libfdt, of the device tree compiler: QEMU writes with it the device
+  # tree that describes a virtual machine to its kernel (every aarch64
+  # one).  No element.  The library alone, not the compiler and its
+  # Python module (tools, python), nor what only they or the tests use.
+  # default_library=shared: its own default builds a static one as well,
+  # which no system package has.
+  # werror=false: its own default is to fail on any warning, of whatever
+  # compiler comes later.
+  dtc = mkSystemPackage {
+    name = "dtc";
+    source = sources.dtc;
+    script = ./meson.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Ddefault_library=shared -Dwerror=false -Dtools=false -Dtests=false -Dpython=disabled -Dyaml=disabled -Dvalgrind=disabled"; };
+  };
+
   # ---- Commands --------------------------------------------------------------
 
   # mount, and the rest of what talks to the kernel about disks, terminals
@@ -594,6 +633,22 @@ let
     depends = [ glibc expat gmp mpfr ncurses readline tools.xz zlib zstd toolchain.gccLibraries tools.bash tools.coreutils tools.gawk ];
     buildDepends = [ pkgconf ];
     env = { configure_arguments = "--disable-nls --disable-werror --disable-sim --disable-gprofng --with-system-readline --with-system-zlib --with-zstd --with-lzma --with-expat --enable-tui --without-python --without-guile --without-debuginfod --without-babeltrace --without-xxhash --without-intel-pt"; };
+  };
+
+  # QEMU: whole virtual machines, of the architecture it runs on, with
+  # KVM (/dev/kvm) -- firmware, disks, a screen, a network.  What bunix
+  # is tested in as a machine with EFI starts it
+  # (docs/nix-usr-system.md, "QEMU").  No element, and in no image yet.
+  # base/qemu.sh has what is built, and where the firmware comes from.
+  qemu = mkSystemPackage {
+    name = "qemu";
+    source = sources.qemu;
+    script = ./base/qemu.sh;
+    depends = [ glibc glib pixman libslirp dtc zlib ];
+    # python-zlib: the build unpacks the meson that QEMU's source carries.
+    # bzip2: and the firmware it carries, which is compressed.
+    buildDepends = [ ninja pkgconf python-zlib bzip2 ];
+    env = { patches = [ ../files/qemu/no-test-tooling.patch ]; };
   };
 
   # ---- Programs built elsewhere ----------------------------------------------
@@ -979,6 +1034,6 @@ in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
-  inherit strace file libarchive git gmp mpfr gdb nix firecracker;
+  inherit strace file libarchive git gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-ctypes meson gettext cmake llvm bindgen botan sqv fish;
 }

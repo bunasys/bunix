@@ -543,5 +543,25 @@
     "version": "1.18.0",
     "url": "https://github.com/firecracker-microvm/firecracker/releases/download/v1.18.0/firecracker-v1.18.0-x86_64.tgz",
     "sha256": "1ac8eec866dd5eea14efecf6323e22b23eea24054545338a5b34bc5bca6623cd"
+  },
+  "pixman": {
+    "version": "0.46.4",
+    "url": "https://www.cairographics.org/releases/pixman-0.46.4.tar.gz",
+    "sha256": "d09c44ebc3bd5bee7021c79f922fe8fb2fb57f7320f55e97ff9914d2346a591c"
+  },
+  "libslirp": {
+    "version": "4.9.7",
+    "url": "https://gitlab.freedesktop.org/slirp/libslirp/-/archive/v4.9.7/libslirp-v4.9.7.tar.gz",
+    "sha256": "d2567fa06a6357c7755d61c67293b2c0bf069b3f2173bde6b76cf768529a1938"
+  },
+  "dtc": {
+    "version": "1.8.1",
+    "url": "https://www.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
+    "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d"
+  },
+  "qemu": {
+    "version": "11.1.3",
+    "url": "https://download.qemu.org/qemu-11.1.3.tar.xz",
+    "sha256": "5a8289c7940dc77d3873c81a6c29ba3afe1446fc9d36e77fa1658cdbecb84b22"
   }
 }

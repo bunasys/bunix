@@ -1,0 +1,20 @@
+QEMU's configure installs, whatever is asked of it, the Python packages
+its tests and its developers' scripts run with (pythondeps.toml,
+"tooling"): with pip, setuptools and wheel, which bunix's Python does not
+have.  A build of QEMU itself runs none of them.
+
+--- a/configure	2026-11-23 01:12:57
++++ b/configure	2026-11-23 01:12:57
+@@ -982,12 +982,6 @@
+ if test "$download" = "enabled" ; then
+     mkvenv_online_flag=" --online"
+ fi
+-
+-# Unconditionally install our tooling group. PyPI is allowed if enabled here.
+-
+-$mkvenv ensuregroup $mkvenv_online_flag \
+-        --dir "${source_path}/python/wheels" \
+-        ${source_path}/pythondeps.toml tooling || exit 1
+ 
+ # Conditionally ensure Sphinx is installed.
+ 
