@@ -1,9 +1,13 @@
 #!/bin/sh
 # Tests that a machine takes a release as tools/publish.sh put it
-# together, before it is uploaded, in a virtual machine on an Apple
+# together, before it is uploaded, in a virtual machine, from an Apple
 # Silicon Mac:
 #
 #   tools/release-test.sh out/updates/0.4.1 0.4.0
+#   BUNIX_ARCHITECTURE=x86_64 tools/release-test.sh out/updates/0.4.1 0.4.0
+#
+# once for each architecture the release is of: the machine is the Mac's
+# own, or one on the x86_64 builder (tools/test-machine.sh).
 #
 # The first is the release's directory; the second the version machines
 # run now.  A disk of that version is built and started, the Mac serves
@@ -20,15 +24,16 @@
 #      extension is laid over /usr, and its programs run
 #
 # The installed system is this working tree's, under the older version's
-# number: NOT the files that version was published with.  And the machine
-# is arm64: NOT tested is an x86-64 one.  What tools/update-test.sh
-# shows -- refusals, and going back from a version that does not start --
-# is not repeated here.
+# number: NOT the files that version was published with.  What
+# tools/update-test.sh shows -- refusals, and going back from a version
+# that does not start -- is not repeated here.
 #
 #   BUNIX_LIST_CERTIFICATE
 #                    for a directory made with BUNIX_SIGNED_BY=development:
 #                    the certificate of the key its list was signed with,
 #                    which the machine is told to take, in /etc
+#   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
+#                    tools/test-machine.sh
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT   the Mac's port for the machine's SSH; default 2022
@@ -58,14 +63,17 @@ if ! grep -q '  BEST-BEFORE-20' "$release/SHA256SUMS"; then
     echo "release-test.sh: the list in $release does not say until when it is good" >&2
     exit 1
 fi
+
+tool=release-test.sh
+. "$(dirname "$0")/test-machine.sh"
 # the version, of the name of the kernel image this machine will take
-kernel_image=$(cd "$release" && echo bunix_*.arm64.efi)
+kernel_image=$(cd "$release" && echo bunix_*."$architecture_in_file_names".efi)
 if [ ! -f "$release/$kernel_image" ]; then
-    echo "release-test.sh: not one arm64 kernel image in $release; this test's machine is arm64" >&2
+    echo "release-test.sh: not one $architecture_in_file_names kernel image in $release, for this test's machine" >&2
     exit 1
 fi
 version=${kernel_image#bunix_}
-version=${version%.arm64.efi}
+version=${version%."$architecture_in_file_names".efi}
 
 fail() {
     echo "release-test.sh: FAILED: $*" >&2
@@ -91,23 +99,19 @@ for port in $ssh_port $http_port; do
     fi
 done
 
-work=${TMPDIR:-/tmp}/bunix-release-test
-rm -rf "$work"
-mkdir -p "$work"
+prepare_machine
 
 # ---- The machine, and what it is served ----------------------------------------
 
 # Small slots: less to build and copy (as tools/boot-vm.sh).  No pipe
 # after nix-build: a failed build has to stop this script.
 echo "building $installed (the disk)"
-disk=$(limactl shell bunix-builder nix-build /bunix/nix/images/disk.nix --no-out-link \
-    --argstr version "$installed" \
+disk=$(build "$source/nix/images/disk.nix" --argstr version "$installed" \
     --argstr espSize 512M --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
-limactl copy "bunix-builder:$disk/disk.raw" "$work/disk.raw"
-# copied out of the store, where nothing can be written; and with room
-# after its partitions for the root partition the first boot makes
-chmod u+w "$work/disk.raw"
-truncate -s +2G "$work/disk.raw"
+copy_built_file_to_machine "$disk/disk.raw" disk.raw
+# with room after its partitions for the root partition the first boot
+# makes
+in_machine_directory "truncate -s +2G disk.raw"
 
 python3 -m http.server "$http_port" --bind 127.0.0.1 --directory "$release" \
     > "$work/server.log" 2>&1 &
@@ -119,16 +123,12 @@ server=$!
 # with handed over the way a machine's firmware does.
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
 # QEMU reads a single comma as the end of the value
-smbios_words=$(printf %s "console=ttyAMA0 quiet $key_word" | sed 's/,/,,/g')
-qemus_firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+smbios_words=$(printf %s "console=$console quiet $key_word" | sed 's/,/,,/g')
 start_machine() {
-    qemu-system-aarch64 -M virt -smp 4 -m 4G -accel hvf -cpu host -bios "$qemus_firmware" \
-        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words" \
-        -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net \
-        -nographic -no-reboot \
-        -drive "file=$work/disk.raw,format=raw,if=virtio" \
-        < /dev/null >> "$work/console.log" 2>&1 &
-    qemu=$!
+    # shellcheck disable=SC2086  # QEMU's words are several each
+    start_qemu $machine_on_real_processor $efi_firmware \
+        -drive "file=$machine_directory/disk.raw,format=raw,if=virtio" \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 }
 in_guest() {
     ssh -p "$ssh_port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \

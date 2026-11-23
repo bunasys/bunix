@@ -68,11 +68,13 @@ takes it, restarts into it, and marks it good.
 
 ```
 tools/release-test.sh out/updates/<version> <the version before>
+BUNIX_ARCHITECTURE=x86_64 tools/release-test.sh out/updates/<version> <the version before>
 ```
 
-The machine is arm64, and runs this working tree's system under the
-older version's number, not the files that version was published with.
-Nothing starts the x86-64 files before they are uploaded.
+Once for each architecture: the first machine is the Mac's, the second
+runs on the x86_64 builder (`tools/test-machine.sh`).  Each runs this
+working tree's system under the older version's number, not the files
+that version was published with.
 
 **5. Publish:**
 

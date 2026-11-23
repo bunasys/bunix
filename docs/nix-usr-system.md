@@ -14,8 +14,10 @@ from a disk, as a machine with EFI starts one: systemd-boot, a unified
 kernel image, `/usr` read-only on a partition of its own and checked
 against its hash, a second slot for an update, and a root partition
 made at the first boot.  On x86_64 every package builds, and the system
-has started in an emulated PC, from memory and from such a disk; the
-tests of installing and updating run for aarch64 only.
+has started in an emulated PC, from memory and from such a disk.  The
+tests of installing and updating run for both: aarch64's machine on the
+Mac, x86_64's on an x86_64 builder, in QEMU with KVM ("QEMU, for a
+machine with EFI").
 
 `docs/nix-bootstrap.md` ends with an open question: how bunix's packages
 and its `/usr` image come out of the store.  This is the answer.
@@ -154,6 +156,54 @@ building it here is Nix and ten libraries this system does not have
 yet.  Its source is a build of their build server, named by its number,
 which that server may not keep for ever.  And Firecracker, for x86_64,
 as on x86: its makers' release.
+
+## QEMU, for a machine with EFI
+
+QEMU (`base.nix`: `qemu`, with pixman, libslirp and libfdt) is built
+here, on both architectures, each for machines of its own kind, and is
+in no image yet.  It is what a system is tested in as a machine with
+EFI starts it: Firecracker has no firmware, so it starts a kernel and
+never systemd-boot or a unified kernel image, and nothing in it counts
+the tries of an update.  What is not built here is the firmware QEMU
+gives its machines (EDK II for EFI, SeaBIOS, the cards' ROMs): the
+files QEMU's source carries, built by its project.  Not tracked for new
+versions: what looks for them reads `upstreams.yml`, by element, and
+QEMU, libslirp and libfdt have none.
+
+On a builder whose own `/usr` is another
+system's, `tools/nix-builder/with-usr.sh` runs it with `/usr` made of
+its packages, without root:
+
+```
+qemu=$(nix-build nix/base.nix -A qemu --no-out-link)
+tools/nix-builder/with-usr.sh $qemu -- qemu-system-x86_64 -M q35 -accel kvm -cpu host -m 4G \
+    -drive if=pflash,format=raw,readonly=on,file=/usr/share/qemu/edk2-x86_64-code.fd \
+    -drive if=pflash,format=raw,file=vars.fd \
+    -drive file=disk.raw,format=raw,if=virtio \
+    -netdev user,id=net,hostfwd=tcp:127.0.0.1:2022-:22 -device virtio-net-pci,netdev=net \
+    -nographic -no-reboot
+```
+
+(`vars.fd`: a copy of the package's `usr/share/qemu/edk2-i386-vars.fd`,
+which the firmware writes its settings to; `disk.raw`: a copy of
+`images/disk.nix`'s, with room added after it.)  So started, 0.4.1's
+disk came up by systemd-boot and its kernel image, all of the system
+running, the clock set by the network, and SSH taking the key handed
+over as on aarch64 (`tools/boot-vm.sh`).  aarch64's is built, and has
+started nothing: the Mac has a QEMU of its own.
+
+The tests use it.  `tools/test-machine.sh` is where `tools/boot-vm.sh`
+and the three tests learn where to build and where the machine runs:
+with `BUNIX_ARCHITECTURE=x86_64` the working tree is sent to the x86_64
+builder, built there, and started there by this QEMU, while the test
+itself stays on the Mac -- the machine's SSH port, and the port the Mac
+serves an update's files on, are carried by the ssh that runs QEMU.
+What a test shows of x86-64 that it does not of aarch64: EFI firmware
+that keeps its variables from one start to the next, as a PC's does.
+What it leaves out there: what an Apple Silicon Mac alone has (the boot
+loader's files on the ESP, U-Boot, firmware of the machine's own), and
+a disk of a system for release (`BUNIX_SIGNATURE`): the builder is sent
+what git has of the working tree, and a signature is not of that.
 
 ## clang, and the kernel
 
@@ -428,11 +478,11 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   devtools extension: it takes the release, restarts into it and marks
   it good.  Tried with test systems' files and a list signed with a key
   made for the trial, which the machine was told to take, for both
-  architectures' builds; the virtual machine is arm64, and nothing has
-  started x86-64's files.
+  architectures' builds, and then with 0.4.1's own, which is published
+  (`docs/release.md`), for a machine of either architecture; x86-64's
+  files of 0.4.1 were started only after they were uploaded.
 
-Not there yet: a release made with bunix's keys, and uploaded;
-a machine whose clock is behind (one with no clock of its own starts at
+Not there yet: a machine whose clock is behind (one with no clock of its own starts at
 the first of November 2026, before any signature was made, and takes no
 update until the network has told it the time: what runs updates has to
 wait for that); a version that does not
@@ -690,6 +740,8 @@ What a person runs, on a builder:
 ```
 nix-build nix/base.nix -A util-linux     one package
 bash nix/tests/run.sh                    every test
+BUNIX_ARCHITECTURE=x86_64 tools/<boot-vm.sh, or one of the three tests>
+                                         for x86_64, on its builder (tools/test-machine.sh)
 tools/boot-vm.sh                         on the Mac: build the image and boot it
 tools/boot-vm.sh check                   boot it, and ask systemd if all started
 tools/boot-vm.sh disk [check]            the same, installed on a disk, by EFI
@@ -699,9 +751,13 @@ BUNIX_CHECK_SCRIPT=tools/vm-checks/accounts.sh tools/boot-vm.sh disk check
 tools/update-test.sh                     on a disk: update it, with the devtools extension,
                                          and go back from a bad update
 BUNIX_EFI=u-boot tools/update-test.sh
-                                         the same, started by U-Boot
+                                         the same, started by U-Boot (aarch64)
 tools/install-test.sh                    install it on two disks, and start them
+tools/release-test.sh <directory> <version before>
+                                         update to a release as tools/publish.sh made it
 tools/sign.sh <root hash>                sign a system's hash with bunix's key
+tools/nix-builder/with-usr.sh <package>... -- <program>
+                                         on a builder: run a program of the system's packages (QEMU)
 tools/boot-mac.sh t8103-j293             boot it on another Mac, over USB
 tools/mac-stage1.sh <id of the ESP> [try | put root@<address>]
                                          what a Mac is told to start, to start it from its disk

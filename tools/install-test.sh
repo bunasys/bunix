@@ -1,8 +1,14 @@
 #!/bin/sh
 # Tests bunix-install (nix/images/system/usr/bin/bunix-install) in a
-# virtual machine on an Apple Silicon Mac:
+# virtual machine, from an Apple Silicon Mac:
 #
 #   tools/install-test.sh
+#   BUNIX_ARCHITECTURE=x86_64 tools/install-test.sh
+#
+# The machine is the Mac's own, or one on the x86_64 builder
+# (tools/test-machine.sh): a PC, which is given the same two disks.  What
+# only an Apple Silicon Mac has is then left out, and said below: what
+# its boot loader loads from the ESP, and U-Boot.
 #
 # bunix is started in memory, as on a machine it is to be installed on,
 # with two disks, is handed firmware of the machine's own as a Mac is,
@@ -18,7 +24,7 @@
 #      more).  The installer replaces the Linux partition, and is told
 #      which ESP is bunix's; the whole disk is not to be offered.
 #      tools/mac-stage1.sh then puts on that ESP what a Mac's recovery
-#      system is to find there.
+#      system is to find there (aarch64).
 #   3. the first disk is started by EFI firmware, as a machine would
 #      start it, and the person the installer was told of logs in over
 #      SSH and looks: all of the system started, /usr is checked against
@@ -31,7 +37,7 @@
 #      byte for byte
 #   5. the second disk again, started by U-Boot: the EFI firmware a Mac
 #      is given (nix/boot.nix), here as built for this virtual machine;
-#      and Apple's partitions are still what they were
+#      and Apple's partitions are still what they were (aarch64)
 #
 # The person's way in is a key this test puts in their home after the
 # installer has finished: the installed system takes no password over
@@ -41,6 +47,8 @@
 # U-Boot as built for a Mac, on one, and a driver that gets its firmware
 # when it is asked again (no device here wants any).
 #
+#   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
+#                    tools/test-machine.sh
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT   the Mac's port for the machine's SSH; default 2022
@@ -55,12 +63,6 @@ if [ ! -f "$public_key_file" ]; then
     exit 1
 fi
 
-# nix-build prints the store path of what it built, and nothing else, on
-# its standard output.  No pipe after it: a failed build has to stop this
-# script.
-build() {
-    limactl shell bunix-builder nix-build "$@" --no-out-link
-}
 fail() {
     echo "install-test.sh: FAILED: $*" >&2
     echo "the machine's console is in $work/console.log" >&2
@@ -79,59 +81,52 @@ if nc -z 127.0.0.1 "$ssh_port" 2> /dev/null; then
     exit 1
 fi
 
-work=${TMPDIR:-/tmp}/bunix-install-test
-rm -rf "$work"
-mkdir -p "$work/files"
+tool=install-test.sh
+. "$(dirname "$0")/test-machine.sh"
+# What only an Apple Silicon Mac has is tested on a machine of its kind:
+# the files its boot loader loads, U-Boot, firmware of the machine's own.
+# (The x86_64 machine is a PC with the same two disks, the second as a
+# Mac with Intel's processor has it; its firmware starts systemd-boot
+# itself.)
+like_an_apple_silicon_mac=no
+if [ "$architecture" = aarch64 ]; then
+    like_an_apple_silicon_mac=yes
+fi
+prepare_machine
+mkdir "$work/files"
 
 # ---- What is installed, and what installs it ------------------------------------
 
 echo "building the system, and the files of its version"
-kernel=$(build /bunix/nix/boot.nix -A linux)
-image=$(build /bunix/nix/images/system.nix)
-update=$(build /bunix/nix/images/update.nix)
-u_boot=$(build /bunix/nix/boot.nix -A u-boot-qemu)
+kernel=$(build "$source/nix/boot.nix" -A linux)
+image=$(build "$source/nix/images/system.nix")
+update=$(build "$source/nix/images/update.nix")
 # the kernel is in a directory named after its release
-vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
-limactl copy "bunix-builder:$vmlinuz" "$work/vmlinuz"
-limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
-limactl copy -r "bunix-builder:$update/." "$work/files/"
-limactl copy "bunix-builder:$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" "$work/u-boot.bin"
-# copied out of the store, where nothing can be written, or removed by
-# the next run
-chmod -R u+w "$work/files"
-# the version, as Nix prints a string: in quotes
-version=$(limactl shell bunix-builder nix-instantiate --eval /bunix/nix/release.nix)
-version=${version#\"}
-version=${version%\"}
+copy_built_file_to_machine "$kernel/usr/lib/modules/*/vmlinuz" vmlinuz
+copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
+copy_built_directory "$update" "$work/files"
+if [ $like_an_apple_silicon_mac = yes ]; then
+    u_boot=$(build "$source/nix/boot.nix" -A u-boot-qemu)
+    copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
+fi
+version=$(release_version)
 
-# Empty, and as large as they are only in name: the Mac keeps what is
-# written of them.
-truncate -s 16G "$work/whole.raw"
-truncate -s 24G "$work/mac.raw"
+# Empty, and as large as they are only in name: what is written of them
+# is all that is kept.
+in_machine_directory "truncate -s 16G whole.raw && truncate -s 24G mac.raw"
 
 # ---- Machines --------------------------------------------------------------------
 
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
-# The machine's processor is the Mac's own, through its hypervisor.  But
-# not for U-Boot: the hypervisor stops at an instruction of U-Boot's it
-# cannot carry out.  QEMU plays the processor instead, `max` being the
-# one of its processors with the 16K pages this kernel is built for.
-macs_processor="-accel hvf -cpu host"
-played_processor="-accel tcg,thread=multi -cpu max"
-# qemu_machine <processor> <the rest of QEMU's arguments>
-qemu_machine() {
-    processor=$1
-    shift
-    # shellcheck disable=SC2086
-    qemu-system-aarch64 -M virt $processor -smp 4 -m 4G \
-        -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net \
-        -nographic -no-reboot "$@" < /dev/null >> "$work/console.log" 2>&1 &
-    qemu=$!
-}
+# The machine's processor is the real one (tools/test-machine.sh).  But
+# not for U-Boot: the Mac's hypervisor stops at an instruction of
+# U-Boot's it cannot carry out.  QEMU plays the processor instead, `max`
+# being the one of its processors with the 16K pages this kernel is
+# built for.
+machine_on_played_processor="-M virt -accel tcg,thread=multi -cpu max"
 # The second is given sectors of 4096 bytes, wherever it is attached.
-whole_disk="-drive file=$work/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole"
-mac_disk="-drive file=$work/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096"
-qemus_firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+whole_disk="-drive file=$machine_directory/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole"
+mac_disk="-drive file=$machine_directory/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096"
 
 # as <user> <command>: on the machine, over SSH
 # (a name no other function has for a variable: sh has one of each name)
@@ -168,8 +163,7 @@ power_off() {
 # is not looked at again, and the person logged in may not power it off
 # from afar without their password.
 pull_the_plug() {
-    kill $qemu 2> /dev/null || true
-    wait $qemu 2> /dev/null || true
+    end_qemu
 }
 
 # ---- Installing --------------------------------------------------------------------
@@ -183,11 +177,12 @@ mkdir -p "$work/firmware/vendorfw"
 echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
 (cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
 cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
+send_to_machine initramfs-with-firmware
 
 echo "starting bunix in memory, with the two disks"
 # shellcheck disable=SC2086  # the disks' words are several each
-qemu_machine "$macs_processor" -kernel "$work/vmlinuz" -initrd "$work/initramfs-with-firmware" \
-    -append "console=ttyAMA0 quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
+start_qemu $machine_on_real_processor -kernel "$machine_directory/vmlinuz" -initrd "$machine_directory/initramfs-with-firmware" \
+    -append "console=$console quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
 answers_within 90 root || fail "the system in memory did not answer on SSH"
 # (--no-xattrs: not what macOS notes about a file it copied)
 tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
@@ -202,9 +197,10 @@ mac=$(disk_with_sectors_of 4096)
 [ -n "$whole" ] && [ -n "$mac" ] || fail "the machine does not have the two disks: '$whole' '$mac'"
 # The number the installer lists a disk under: it lists what lsblk does,
 # in that order, but for what is too small for bunix.  Here that is the
-# virtual machine's flash chip, and the test's own two disks are not.
+# virtual machine's flash chip, and the swap in memory, which a PC's
+# kernel lists before its disks; the test's own two disks are not.
 number_of() {
-    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock/ { number++; if (\$1 == \"$1\") print number }'"
+    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram/ { number++; if (\$1 == \"$1\") print number }'"
 }
 
 # run_installer <name of the log> <answers, a line each>: fails the test
@@ -302,11 +298,11 @@ as root "set -e
     mkfs.ext4 -q -F ${mac}6
     sync
     udevadm settle" || fail "could not fill the Mac's disk"
-# Read on the Mac, from the disk's file: not what the machine says of it
+# Read from the disk's file, where it is: not what the machine says of it
 # checksums_of <stretches>
 checksums_of() {
     for stretch in $1; do
-        dd if="$work/mac.raw" bs=1048576 skip="${stretch%:*}" count="${stretch#*:}" 2> /dev/null | shasum -a 256
+        in_machine_directory "dd if=mac.raw bs=1048576 skip=${stretch%:*} count=${stretch#*:} 2> /dev/null | sha256sum"
     done
 }
 # and their lines in the partition table: type, id, name, place
@@ -344,26 +340,28 @@ cmp -s "$work/table-before" "$work/table-after" \
 [ "$(as root "lsblk -ndo PARTUUID ${mac}5")" = "$bunix_esp_id" ] || fail "bunix's ESP is not the partition it was"
 as root "mount -o ro ${mac}5 /run/other-esp && ls /run/other-esp/EFI/Linux/bunix_$version.efi && umount /run/other-esp" > /dev/null \
     || fail "the ESP that was chosen does not have bunix's kernel image"
-# and what a Mac's own boot loader loads from it, whole
-as root "mount -o ro ${mac}5 /run/other-esp && cmp /usr/lib/mac-stage2/stage2.bin /run/other-esp/aurora/stage2.bin && umount /run/other-esp" \
-    || fail "the ESP that was chosen does not have what a Mac's boot loader loads (aurora/stage2.bin)"
-grep -q "tools/mac-stage1.sh $bunix_esp_id put " "$work/install-mac.log" \
-    || fail "the installer did not say how the Mac is told of the ESP; see $work/install-mac.log"
-# and that, done: what the Mac's recovery system is to find is on the ESP,
-# whole (the first stage made for it, by its checksum)
-# (made in the test's own directory: the default one may have the files
-# of a real Mac)
-BUNIX_STAGE1_DIRECTORY="$work/mac-stage1" "$(dirname "$0")/mac-stage1.sh" "$bunix_esp_id" put "ssh://root@127.0.0.1:$ssh_port" \
-    > "$work/mac-stage1.log" 2>&1 \
-    || fail "tools/mac-stage1.sh could not put its files on the ESP; see $work/mac-stage1.log"
-as root "mount -o ro ${mac}5 /run/other-esp" || fail "could not mount the ESP that was chosen"
-files_on_the_esp=$(as root "cd /run/other-esp/bunix-enroll && LC_ALL=C ls | tr '\n' ' '")
-checksum_on_the_esp=$(as root "md5sum /run/other-esp/bunix-enroll/aura-stage1.bin | cut -d' ' -f1")
-as root "umount /run/other-esp"
-[ "$files_on_the_esp" = "aura-stage1.bin aura.bin enroll-stage1.sh enroll.sh way-back.sh " ] \
-    || fail "the ESP does not have the files the Mac's recovery system needs, but: $files_on_the_esp"
-[ "$checksum_on_the_esp" = "$(md5 -q "$work/mac-stage1/aura-stage1.bin")" ] \
-    || fail "the first stage on the ESP is not the one that was made"
+if [ $like_an_apple_silicon_mac = yes ]; then
+    # and what a Mac's own boot loader loads from it, whole
+    as root "mount -o ro ${mac}5 /run/other-esp && cmp /usr/lib/mac-stage2/stage2.bin /run/other-esp/aurora/stage2.bin && umount /run/other-esp" \
+        || fail "the ESP that was chosen does not have what a Mac's boot loader loads (aurora/stage2.bin)"
+    grep -q "tools/mac-stage1.sh $bunix_esp_id put " "$work/install-mac.log" \
+        || fail "the installer did not say how the Mac is told of the ESP; see $work/install-mac.log"
+    # and that, done: what the Mac's recovery system is to find is on the ESP,
+    # whole (the first stage made for it, by its checksum)
+    # (made in the test's own directory: the default one may have the files
+    # of a real Mac)
+    BUNIX_STAGE1_DIRECTORY="$work/mac-stage1" "$(dirname "$0")/mac-stage1.sh" "$bunix_esp_id" put "ssh://root@127.0.0.1:$ssh_port" \
+        > "$work/mac-stage1.log" 2>&1 \
+        || fail "tools/mac-stage1.sh could not put its files on the ESP; see $work/mac-stage1.log"
+    as root "mount -o ro ${mac}5 /run/other-esp" || fail "could not mount the ESP that was chosen"
+    files_on_the_esp=$(as root "cd /run/other-esp/bunix-enroll && LC_ALL=C ls | tr '\n' ' '")
+    checksum_on_the_esp=$(as root "md5sum /run/other-esp/bunix-enroll/aura-stage1.bin | cut -d' ' -f1")
+    as root "umount /run/other-esp"
+    [ "$files_on_the_esp" = "aura-stage1.bin aura.bin enroll-stage1.sh enroll.sh way-back.sh " ] \
+        || fail "the ESP does not have the files the Mac's recovery system needs, but: $files_on_the_esp"
+    [ "$checksum_on_the_esp" = "$(md5 -q "$work/mac-stage1/aura-stage1.bin")" ] \
+        || fail "the first stage on the ESP is not the one that was made"
+fi
 expect_root_locked "$mac"
 give_key_to "$mac" adam
 partitions_of root "$mac" > "$work/mac-partitions"
@@ -414,10 +412,15 @@ expect_installed() {
         *) fail "the account is not as asked: $account" ;;
     esac
     as "$user" id -nG | tr ' ' '\n' | grep -q -x wheel || fail "$user is not an administrator (wheel)"
-    [ "$(as "$user" cat /var/lib/vendorfw/install-test)" = "a file of the machine's own" ] \
-        || fail "the installed system does not have the firmware the machine was handed"
-    [ "$(as "$user" cat /sys/module/firmware_class/parameters/path)" = /var/lib/vendorfw ] \
-        || fail "the kernel was not told where the machine's firmware is"
+    # A PC's firmware is in /usr, and its kernel is not to look on the
+    # root partition first
+    # (system/usr/lib/systemd/system/vendor-firmware.service).
+    if [ $like_an_apple_silicon_mac = yes ]; then
+        [ "$(as "$user" cat /var/lib/vendorfw/install-test)" = "a file of the machine's own" ] \
+            || fail "the installed system does not have the firmware the machine was handed"
+        [ "$(as "$user" cat /sys/module/firmware_class/parameters/path)" = /var/lib/vendorfw ] \
+            || fail "the kernel was not told where the machine's firmware is"
+    fi
     # The kernel asks for it before /usr is there (nix/images/initrd.nix)
     if as "$user" journalctl --dmesg --boot --no-pager | grep -q "failed to load regulatory.db"; then
         fail "the kernel did not find the wireless regulatory database"
@@ -430,13 +433,13 @@ expect_installed() {
 
 echo "3. the whole disk starts, and Sara logs in to fish"
 # shellcheck disable=SC2086
-qemu_machine "$macs_processor" -bios "$qemus_firmware" $whole_disk
+start_qemu $machine_on_real_processor $efi_firmware $whole_disk
 expect_installed sara "Sara of the Whole Disk" /usr/bin/fish whole-disk "$work/whole-partitions"
 pull_the_plug
 
 echo "4. the Mac's disk starts, and Adam logs in to bash"
 # shellcheck disable=SC2086
-qemu_machine "$macs_processor" -bios "$qemus_firmware" $mac_disk
+start_qemu $machine_on_real_processor $efi_firmware $mac_disk
 expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
 # The disk is started once more (5), and this was its first start, which
 # filled /etc: without the sync, the plug pulled now leaves some of those
@@ -450,19 +453,21 @@ cmp -s "$work/left-alone-before" "$work/left-alone-after" \
     || fail "one of Apple's partitions, or the other system's ESP, is not what it was before the installer ran"
 echo "  Apple's partitions and the other system's ESP: as they were"
 
-echo "5. the Mac's disk starts through U-Boot too"
-# shellcheck disable=SC2086
-qemu_machine "$played_processor" -bios "$work/u-boot.bin" $mac_disk
-expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
-pull_the_plug
-# U-Boot keeps EFI's variables in a file on an ESP, and here that is the
-# first ESP of the disk, the other system's: this U-Boot is not told
-# which.  A Mac's is, by aura (the one written into its first stage,
-# bunix's).  So of what was to be left alone, Apple's partitions are
-# looked at once more, and that ESP is not.
-checksums_of "$apples_partitions" > "$work/apples-after-u-boot"
-cmp -s "$work/apples-before" "$work/apples-after-u-boot" \
-    || fail "one of Apple's partitions is not what it was before U-Boot started the disk"
-echo "  Apple's partitions: as they were"
+if [ $like_an_apple_silicon_mac = yes ]; then
+    echo "5. the Mac's disk starts through U-Boot too"
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_played_processor -bios "$machine_directory/u-boot.bin" $mac_disk
+    expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
+    pull_the_plug
+    # U-Boot keeps EFI's variables in a file on an ESP, and here that is the
+    # first ESP of the disk, the other system's: this U-Boot is not told
+    # which.  A Mac's is, by aura (the one written into its first stage,
+    # bunix's).  So of what was to be left alone, Apple's partitions are
+    # looked at once more, and that ESP is not.
+    checksums_of "$apples_partitions" > "$work/apples-after-u-boot"
+    cmp -s "$work/apples-before" "$work/apples-after-u-boot" \
+        || fail "one of Apple's partitions is not what it was before U-Boot started the disk"
+    echo "  Apple's partitions: as they were"
+fi
 
 echo "install-test.sh: passed"

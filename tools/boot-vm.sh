@@ -1,8 +1,9 @@
 #!/bin/sh
-# Boots bunix in a virtual machine on an Apple Silicon Mac: the kernel and
-# the image are built in the builder (the Lima VM of
+# Boots bunix in a virtual machine, from an Apple Silicon Mac: the kernel
+# and the image are built in the builder (the Lima VM of
 # tools/nix-builder/lima.yaml), copied out of its store, and run by QEMU
-# with the Mac's own hypervisor.
+# with the Mac's own hypervisor.  Or, with BUNIX_ARCHITECTURE=x86_64,
+# built and run on the x86_64 builder (tools/test-machine.sh says how).
 #
 #   tools/boot-vm.sh [disk] [check] [words for the kernel's command line]
 #
@@ -20,6 +21,8 @@
 #               the clock by the network's.
 #
 # While it runs, `ssh -p 2022 root@127.0.0.1` logs in (see below).
+#   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
+#                     tools/test-machine.sh
 #   BUNIX_SIGNATURE   with disk: the signature of a system for release, a
 #                     file in the repository (tools/sign.sh has the
 #                     steps); the disk is then of that system
@@ -32,15 +35,10 @@
 #   BUNIX_SSH_PORT    the Mac's port for it; default 2022
 #
 # Needs: limactl with the bunix-builder VM, and qemu-system-aarch64 with
-# the EFI firmware that comes with it (share/qemu/edk2-aarch64-code.fd).
+# the EFI firmware that comes with it (share/qemu/edk2-aarch64-code.fd);
+# or, for x86_64, ssh to its builder.
 set -eu
 
-# nix-build prints the store path of what it built, and nothing else, on
-# its standard output.  No pipe after it: a failed build has to stop this
-# script.
-build() {
-    limactl shell bunix-builder nix-build "$@" --no-out-link
-}
 # the two words, in either order, before any for the kernel
 on_disk=
 check=
@@ -64,36 +62,38 @@ if [ -n "$check_script" ] && [ ! -f "$check_script" ]; then
     exit 1
 fi
 
-boot=${TMPDIR:-/tmp}/bunix-boot
-mkdir -p "$boot"
-# Not over the copies of the last run: every file of the store has the
-# same date, and a copy is skipped when the date and the size are what
-# they were, as a kernel image's size is from build to build.
-rm -f "$boot/vmlinuz" "$boot/initramfs.cpio.gz" "$boot/disk.raw"
+ssh_port=${BUNIX_SSH_PORT:-2022}
+tool=boot-vm.sh
+. "$(dirname "$0")/test-machine.sh"
+# The x86_64 builder is sent what git has of the working tree, and a
+# signature is not of that (tools/sign.sh leaves it in out/).
+if [ -n "${BUNIX_SIGNATURE:-}" ] && [ "$architecture" != aarch64 ]; then
+    echo "boot-vm.sh: BUNIX_SIGNATURE is for aarch64 so far" >&2
+    exit 1
+fi
+prepare_machine
 
 if [ -n "$on_disk" ]; then
     # Small slots: less to copy out of the builder.  A disk with no
     # signature given is a test system's (images/disk.nix).
     if [ -n "${BUNIX_SIGNATURE:-}" ]; then
-        disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
+        disk=$(build "$source/nix/images/disk.nix" --argstr espSize 512M \
             --argstr usrSlotSize 512M --argstr usrVeritySize 8M \
-            --arg signature "/bunix/$BUNIX_SIGNATURE")
+            --arg signature "$source/$BUNIX_SIGNATURE")
     else
-        disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
+        disk=$(build "$source/nix/images/disk.nix" --argstr espSize 512M \
             --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
     fi
-    limactl copy "bunix-builder:$disk/disk.raw" "$boot/disk.raw"
-    # copied out of the store, where nothing can be written; and with room
-    # after its partitions for the root partition the first boot makes
-    chmod u+w "$boot/disk.raw"
-    truncate -s +2G "$boot/disk.raw"
+    copy_built_file_to_machine "$disk/disk.raw" disk.raw
+    # with room after its partitions for the root partition the first
+    # boot makes
+    in_machine_directory "truncate -s +2G disk.raw"
 else
-    kernel=$(build /bunix/nix/boot.nix -A linux)
-    image=$(build /bunix/nix/images/system.nix)
+    kernel=$(build "$source/nix/boot.nix" -A linux)
+    image=$(build "$source/nix/images/system.nix")
     # the kernel is in a directory named after its release
-    vmlinuz=$(limactl shell bunix-builder sh -c "echo $kernel/usr/lib/modules/*/vmlinuz")
-    limactl copy "bunix-builder:$vmlinuz" "$boot/vmlinuz"
-    limactl copy "bunix-builder:$image/initramfs.cpio.gz" "$boot/initramfs.cpio.gz"
+    copy_built_file_to_machine "$kernel/usr/lib/modules/*/vmlinuz" vmlinuz
+    copy_built_file_to_machine "$image/initramfs.cpio.gz" initramfs.cpio.gz
 fi
 
 # A network card behind QEMU's own small network, which gives the guest
@@ -102,7 +102,6 @@ fi
 #   ssh -p 2022 -o UserKnownHostsFile=/dev/null root@127.0.0.1
 #
 # (no known_hosts: the guest makes new host keys at every boot).
-ssh_port=${BUNIX_SSH_PORT:-2022}
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
 
 # The key that may log in is this user's, given on the kernel's command
@@ -115,38 +114,39 @@ else
     echo "boot-vm.sh: no public key in $public_key_file; nobody can log in over SSH" >&2
 fi
 
-# -accel hvf: the Mac's hypervisor; the guest runs on the real processor.
-# -nographic: the guest's serial port is this terminal.
-qemu() {
-    exec qemu-system-aarch64 -M virt -accel hvf -cpu host -smp 4 -m 4G \
-        -netdev user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22 -device virtio-net-pci,netdev=net \
-        -nographic -no-reboot "$@"
-}
-
-# run_qemu [words for the kernel's command line]
+# boot_by <run_qemu|start_qemu> [words for the kernel's command line]:
+# the machine at this terminal, or behind this script
+# (tools/test-machine.sh).
 #
-# console=ttyAMA0: the kernel's and systemd's messages, and root's shell,
-#   on the serial port.
+# console=: the kernel's and systemd's messages, and root's shell, on
+#   the serial port, which is QEMU's own input and output.
 #
 # In memory, QEMU itself starts the kernel, and gives it its command line.
 # On a disk, QEMU starts EFI firmware (the one that comes with it), which
 # finds systemd-boot on the disk; the command line is in the kernel
 # image, and the words here are added to it the way a machine's firmware
 # hands such things over (SMBIOS).
-run_qemu() {
-    kernel_words="console=ttyAMA0 $key_word $*"
+boot_by() {
+    run_or_start=$1
+    shift
+    kernel_words="console=$console $key_word $*"
+    # shellcheck disable=SC2086  # QEMU's words are several each
     if [ -z "$on_disk" ]; then
-        qemu -kernel "$boot/vmlinuz" -initrd "$boot/initramfs.cpio.gz" -append "$kernel_words"
+        $run_or_start $machine_on_real_processor -kernel "$machine_directory/vmlinuz" \
+            -initrd "$machine_directory/initramfs.cpio.gz" -append "$kernel_words"
+        return
     fi
-    firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
     # QEMU reads a single comma as the end of the value
     smbios_words=$(printf %s "$kernel_words" | sed 's/,/,,/g')
-    qemu -bios "$firmware" -drive "file=$boot/disk.raw,format=raw,if=virtio" \
+    # shellcheck disable=SC2086
+    $run_or_start $machine_on_real_processor $efi_firmware \
+        -drive "file=$machine_directory/disk.raw,format=raw,if=virtio" \
         -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 }
 
+# (run_qemu does not come back)
 if [ -z "$check" ]; then
-    run_qemu "$@"
+    boot_by run_qemu "$@"
 fi
 
 # check: the machine runs behind this script, and is asked how it is.
@@ -154,8 +154,7 @@ if [ -z "$key_word" ]; then
     echo "boot-vm.sh: check asks over SSH, and has no key to log in with" >&2
     exit 1
 fi
-run_qemu quiet "$@" < /dev/null > "$boot/console.log" 2>&1 &
-qemu=$!
+boot_by start_qemu quiet "$@"
 # however this script ends, the machine does not stay behind it, holding
 # the port for the next one
 trap 'kill $qemu 2> /dev/null || true' EXIT
@@ -170,7 +169,7 @@ until in_guest true 2> /dev/null; do
     tries_left=$((tries_left - 1))
     # kill -0: is it still there?  It ends at once if the port is taken.
     if [ $tries_left = 0 ] || ! kill -0 $qemu 2> /dev/null; then
-        echo "boot-vm.sh: the guest did not answer on SSH; its console is in $boot/console.log" >&2
+        echo "boot-vm.sh: the guest did not answer on SSH; its console is in $work/console.log" >&2
         exit 1
     fi
     sleep 2

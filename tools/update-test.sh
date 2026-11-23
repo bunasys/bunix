@@ -1,9 +1,13 @@
 #!/bin/sh
 # Tests that a bunix on a disk updates itself, and goes back from an update
-# that does not start (docs/updates.md, step 2), in a virtual machine on an
-# Apple Silicon Mac:
+# that does not start (docs/updates.md, step 2), in a virtual machine, from
+# an Apple Silicon Mac:
 #
 #   tools/update-test.sh
+#   BUNIX_ARCHITECTURE=x86_64 tools/update-test.sh
+#
+# The machine is the Mac's own, or one on the x86_64 builder
+# (tools/test-machine.sh).
 #
 # Three versions are built: the release's (nix/release.nix), which is
 # installed on the disk; a next one, which is the same system under a later
@@ -45,7 +49,9 @@
 #                    1, which puts the key on the disk (step 0).  What it
 #                    shows: that U-Boot's EFI lets systemd-boot count the
 #                    tries, which it does by renaming the kernel image.
-#                    Slower: see start_machine.
+#                    Slower: see start_machine.  For aarch64 only.
+#   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
+#                    tools/test-machine.sh
 #   BUNIX_SSH_KEY    the public key the test logs in with; default
 #                    ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT   the Mac's port for the machine's SSH; default 2022
@@ -55,10 +61,16 @@
 # signatures), and the internet (step 1).
 set -eu
 
+tool=update-test.sh
+. "$(dirname "$0")/test-machine.sh"
 case ${BUNIX_EFI:-} in
     "" | u-boot) ;;
     *) echo "update-test.sh: BUNIX_EFI is u-boot, or not set" >&2; exit 1 ;;
 esac
+if [ "${BUNIX_EFI:-}" = u-boot ] && [ "$architecture" != aarch64 ]; then
+    echo "update-test.sh: U-Boot is the EFI firmware of a Mac: for aarch64" >&2
+    exit 1
+fi
 ssh_port=${BUNIX_SSH_PORT:-2022}
 http_port=${BUNIX_HTTP_PORT:-8643}
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
@@ -67,12 +79,6 @@ if [ ! -f "$public_key_file" ]; then
     exit 1
 fi
 
-# nix-build prints the store path of what it built, and nothing else, on
-# its standard output.  No pipe after it: a failed build has to stop this
-# script.
-build() {
-    limactl shell bunix-builder nix-build "$@" --no-out-link
-}
 fail() {
     echo "update-test.sh: FAILED: $*" >&2
     echo "the machine's console is in $work/console.log" >&2
@@ -104,57 +110,51 @@ for port in $ssh_port $http_port; do
     fi
 done
 
-# the version, as Nix prints a string: in quotes
-installed=$(limactl shell bunix-builder nix-instantiate --eval /bunix/nix/release.nix)
-installed=${installed#\"}
-installed=${installed%\"}
+prepare_machine
+mkdir -p "$work/served/next" "$work/served/broken"
+
+installed=$(release_version)
 next=$installed.1
 broken=$installed.2
-
-work=${TMPDIR:-/tmp}/bunix-update-test
-rm -rf "$work"
-mkdir -p "$work/served/next" "$work/served/broken"
 
 # ---- The three versions --------------------------------------------------------
 
 # Small slots: less to build and copy (as tools/boot-vm.sh).
 echo "building $installed (the disk), $next and $broken (updates)"
-disk=$(build /bunix/nix/images/disk.nix --argstr espSize 512M \
+installed_disk=$(build "$source"/nix/images/disk.nix --argstr espSize 512M \
     --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
-next_update=$(build /bunix/nix/images/update.nix --argstr version "$next")
-broken_update=$(build /bunix/nix/images/update.nix --argstr version "$broken")
+next_update=$(build "$source"/nix/images/update.nix --argstr version "$next")
+broken_update=$(build "$source"/nix/images/update.nix --argstr version "$broken")
 # The devtools extension of each: a machine that has asked for it takes a
 # version only with its extension, as one update.
-next_devtools=$(build /bunix/nix/images/devtools.nix -A image --argstr version "$next")
+next_devtools=$(build "$source"/nix/images/devtools.nix -A image --argstr version "$next")
 # and its file system alone, before anything was signed: what an
 # extension nobody signed would be
-next_devtools_parts=$(build /bunix/nix/images/devtools.nix -A parts --argstr version "$next")
-broken_devtools=$(build /bunix/nix/images/devtools.nix -A image --argstr version "$broken")
+next_devtools_parts=$(build "$source"/nix/images/devtools.nix -A parts --argstr version "$next")
+broken_devtools=$(build "$source"/nix/images/devtools.nix -A image --argstr version "$broken")
 # The kernel image of another system of the broken version: one for
 # release, whose /usr differs (it takes fewer certificates), and so its
 # hash.  No partition will have the ids that image looks for.
-stray_uki=$(build /bunix/nix/images/uki.nix --argstr version "$broken" --argstr signing release)
+stray_uki=$(build "$source"/nix/images/uki.nix --argstr version "$broken" --argstr signing release)
 
 if [ "${BUNIX_EFI:-}" = u-boot ]; then
-    u_boot=$(build /bunix/nix/boot.nix -A u-boot-qemu)
-    limactl copy "bunix-builder:$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" "$work/u-boot.bin"
+    u_boot=$(build "$source"/nix/boot.nix -A u-boot-qemu)
+    copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
 fi
 
-limactl copy "bunix-builder:$disk/disk.raw" "$work/disk.raw"
-# copied out of the store, where nothing can be written; and with room
-# after its partitions for the root partition the first boot makes
-chmod u+w "$work/disk.raw"
-truncate -s +2G "$work/disk.raw"
+copy_built_file_to_machine "$installed_disk/disk.raw" disk.raw
+# with room after its partitions for the root partition the first boot
+# makes
+in_machine_directory "truncate -s +2G disk.raw"
 
-limactl copy -r "bunix-builder:$next_update/." "$work/served/next/"
-limactl copy -r "bunix-builder:$broken_update/." "$work/served/broken/"
-limactl copy -r "bunix-builder:$next_devtools/." "$work/served/next/"
-limactl copy "bunix-builder:$next_devtools_parts/root.raw" "$work/devtools-file-system.raw"
-limactl copy -r "bunix-builder:$broken_devtools/." "$work/served/broken/"
-chmod -R u+w "$work/served"
+copy_built_directory "$next_update" "$work/served/next"
+copy_built_directory "$broken_update" "$work/served/broken"
+copy_built_directory "$next_devtools" "$work/served/next"
+copy_built_file "$next_devtools_parts/root.raw" "$work/devtools-file-system.raw"
+copy_built_directory "$broken_devtools" "$work/served/broken"
 broken_uki=$(basename "$work"/served/broken/*.efi)
 rm "$work/served/broken/$broken_uki"
-limactl copy "bunix-builder:$stray_uki/bunix_$broken.efi" "$work/served/broken/$broken_uki"
+copy_built_file "$stray_uki/bunix_$broken.efi" "$work/served/broken/$broken_uki"
 
 # ---- The lists of files, and who signs them ------------------------------------
 
@@ -217,25 +217,17 @@ server=$!
 # 16K pages this kernel is built for; a start takes about twice as long.
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
 # QEMU reads a single comma as the end of the value
-smbios_words=$(printf %s "console=ttyAMA0 quiet $key_word" | sed 's/,/,,/g')
-qemus_firmware=$(dirname "$(command -v qemu-system-aarch64)")/../share/qemu/edk2-aarch64-code.fd
+smbios_words=$(printf %s "console=$console quiet $key_word" | sed 's/,/,,/g')
 # step 0 changes it to u-boot
 started_by=qemus-firmware
-# qemu_machine <the processor, and the firmware with what it is handed>
-qemu_machine() {
-    qemu-system-aarch64 -M virt -smp 4 -m 4G "$@" \
-        -netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22" -device virtio-net-pci,netdev=net \
-        -nographic -no-reboot \
-        -drive "file=$work/disk.raw,format=raw,if=virtio" \
-        < /dev/null >> "$work/console.log" 2>&1 &
-    qemu=$!
-}
+disk="file=$machine_directory/disk.raw,format=raw,if=virtio"
 start_machine() {
     if [ $started_by = u-boot ]; then
-        qemu_machine -accel tcg,thread=multi -cpu max -bios "$work/u-boot.bin"
+        start_qemu -M virt -accel tcg,thread=multi -cpu max -bios "$machine_directory/u-boot.bin" -drive "$disk"
         return
     fi
-    qemu_machine -accel hvf -cpu host -bios "$qemus_firmware" \
+    # shellcheck disable=SC2086  # QEMU's words are several each
+    start_qemu $machine_on_real_processor $efi_firmware -drive "$disk" \
         -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 }
 in_guest() {
@@ -393,7 +385,11 @@ expect_refusal stale "is past the day it is good until" "Best before marker indi
 # take a version only if all of it is there for its own: here the kernel
 # image is the other architecture's.
 kernel_image=$(basename "$work"/served/next/*.efi)
-mv "$work/served/next/$kernel_image" "$work/served/next/bunix_$next.x86-64.efi"
+case $architecture_in_file_names in
+    arm64) another_architecture=x86-64 ;;
+    *) another_architecture=arm64 ;;
+esac
+mv "$work/served/next/$kernel_image" "$work/served/next/bunix_$next.$another_architecture.efi"
 write_list next
 sign_list signer next
 try_update incomplete || fail "looking for an update failed; see $work/update-incomplete.log"
@@ -401,7 +397,7 @@ grep -q -F "No update needed" "$work/update-incomplete.log" \
     || fail "an update was found in a version without this machine's kernel image; see $work/update-incomplete.log"
 expect_nothing_of_next "its kernel image is another architecture's"
 echo "  not taken: a version whose kernel image is another architecture's"
-mv "$work/served/next/bunix_$next.x86-64.efi" "$work/served/next/$kernel_image"
+mv "$work/served/next/bunix_$next.$another_architecture.efi" "$work/served/next/$kernel_image"
 
 echo "3. $installed updates to $next"
 # The machine's person asks for the devtools extension, as its feature
@@ -477,9 +473,10 @@ for try in 1 2 3; do
     if answers_within 45; then
         fail "a system started on try $try of $broken"
     fi
+    # still there, waiting: a QEMU that ended by itself was no try
+    kill -0 $qemu 2> /dev/null || fail "QEMU ended on try $try of $broken, and tried nothing"
     echo "  try $try: did not come up"
-    kill $qemu 2> /dev/null || true
-    wait $qemu 2> /dev/null || true
+    end_qemu
 done
 
 echo "7. the machine goes back to $next"
