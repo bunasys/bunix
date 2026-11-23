@@ -56,7 +56,8 @@ stagedBuild {
     command_line = "root=PARTLABEL=bunix-root rw mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet";
     # What is on the screen from before the kernel starts: bunix's mark,
     # which systemd's stub draws in the middle of it, unscaled.
-    # tools/render-branding.sh makes it.
+    # tools/render-branding.sh makes it.  base.boot-picture draws the
+    # same file again, when a GPU's driver takes the screen.
     splash = ../../files/branding/splash.bmp;
   };
 }

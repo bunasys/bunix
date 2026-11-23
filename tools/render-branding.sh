@@ -6,7 +6,9 @@
 #                                  the mark, 256 dots high; what Plymouth
 #                                  showed, up to 0.4.0
 #   files/branding/splash.bmp      that as the picture the kernel image
-#                                  carries (nix/images/uki.nix)
+#                                  carries (nix/images/uki.nix), and
+#                                  src/boot-picture draws again: a BMP of
+#                                  24 bits a dot, which is all that reads
 #   files/branding/logo-mono.pbm   the mark in one colour, for the screen
 #                                  of a kernel that stops (nix/boot/linux/)
 #

@@ -1,0 +1,12 @@
+# boot-picture: draws the picture of a boot on a screen that a graphics
+# driver has just taken (src/main.rs).  Nothing but Rust's standard
+# library, as src/bunix.
+[package]
+name = "boot-picture"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+# a program of every system: small, and with nothing to unwind into
+opt-level = "s"
+panic = "abort"

@@ -1,0 +1,7 @@
+# 90: after the rules that name a device and give it to its users.
+#
+# The picture of a boot, drawn again on every screen as its driver brings
+# it (src/boot-picture says why): the firmware's screen first, when this
+# system's udev starts, then the GPU's own when its driver has loaded.
+# The program leaves a screen alone once the console has text on it.
+ACTION=="add", SUBSYSTEM=="graphics", KERNEL=="fb[0-9]*", RUN+="/usr/lib/bunix/boot-picture /dev/%k"
