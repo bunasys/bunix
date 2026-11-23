@@ -1,0 +1,567 @@
+{
+  "bash": {
+    "version": "5.3",
+    "url": "https://mirrors.kernel.org/gnu/bash/bash-5.3.tar.gz",
+    "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba"
+  },
+  "bc": {
+    "version": "7.0.3",
+    "url": "https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz",
+    "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4"
+  },
+  "binutils": {
+    "version": "2.47",
+    "url": "https://mirrors.kernel.org/gnu/binutils/binutils-2.47.tar.xz",
+    "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff"
+  },
+  "bison": {
+    "version": "3.8.2",
+    "url": "https://mirrors.kernel.org/gnu/bison/bison-3.8.2.tar.xz",
+    "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
+  },
+  "coreutils": {
+    "version": "9.12",
+    "url": "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.12.tar.xz",
+    "sha256": "a480198559733e9b3da999e90543ac6f888a2caa544d8d664c5a1f17e528e210"
+  },
+  "diffutils": {
+    "version": "3.12",
+    "url": "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz",
+    "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd"
+  },
+  "file": {
+    "version": "5.48",
+    "url": "https://astron.com/pub/file/file-5.48.tar.gz",
+    "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283"
+  },
+  "findutils": {
+    "version": "4.11.0",
+    "url": "https://mirrors.kernel.org/gnu/findutils/findutils-4.11.0.tar.xz",
+    "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd"
+  },
+  "flex": {
+    "version": "2.6.4",
+    "url": "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz",
+    "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995"
+  },
+  "gawk": {
+    "version": "5.3.2",
+    "url": "https://mirrors.kernel.org/gnu/gawk/gawk-5.3.2.tar.xz",
+    "sha256": "f8c3486509de705192138b00ef2c00bbbdd0e84c30d5c07d23fc73a9dc4cc9cc"
+  },
+  "gcc": {
+    "version": "16.2.0",
+    "url": "https://mirrors.kernel.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
+    "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"
+  },
+  "glibc": {
+    "version": "2.44",
+    "url": "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz",
+    "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667"
+  },
+  "gmp": {
+    "version": "6.3.0",
+    "url": "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz",
+    "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+  },
+  "grep": {
+    "version": "3.12",
+    "url": "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz",
+    "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9"
+  },
+  "gzip": {
+    "version": "1.15",
+    "url": "https://mirrors.kernel.org/gnu/gzip/gzip-1.15.tar.xz",
+    "sha256": "9aa0cc780dec156b8282844833b342ab7cb08c25d2cd9a1869cdd0df31deff48"
+  },
+  "linux": {
+    "version": "7.3.0-aurora-9125b31",
+    "url": "https://codeload.github.com/aurora-silicon/linux/tar.gz/9125b31475836ce0a6634df45b539c6d604f36a5",
+    "sha256": "9a3969b52c6f41017b36e8bc805b63b0215fddf31b91fc5d45dd7854ab3c4f7b"
+  },
+  "m4": {
+    "version": "1.4.21",
+    "url": "https://mirrors.kernel.org/gnu/m4/m4-1.4.21.tar.xz",
+    "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66"
+  },
+  "make": {
+    "version": "4.4.1",
+    "url": "https://mirrors.kernel.org/gnu/make/make-4.4.1.tar.gz",
+    "sha256": "dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3"
+  },
+  "mpc": {
+    "version": "1.4.1",
+    "url": "https://mirrors.kernel.org/gnu/mpc/mpc-1.4.1.tar.xz",
+    "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931"
+  },
+  "mpfr": {
+    "version": "4.2.2",
+    "url": "https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
+    "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
+  },
+  "ncurses": {
+    "version": "6.6",
+    "url": "https://mirrors.kernel.org/gnu/ncurses/ncurses-6.6.tar.gz",
+    "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11"
+  },
+  "patch": {
+    "version": "2.8.1",
+    "url": "https://mirrors.kernel.org/gnu/patch/patch-2.8.1.tar.xz",
+    "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17"
+  },
+  "perl": {
+    "version": "5.44.0",
+    "url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz",
+    "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91"
+  },
+  "pkgconf": {
+    "version": "3.0.10",
+    "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.10.tar.xz",
+    "sha256": "9371b2f6372da574d4c6dc96fe9b1463037bcf6afcb6671c1555afde7b17e2de"
+  },
+  "python": {
+    "version": "3.15.2",
+    "url": "https://www.python.org/ftp/python/3.15.2/Python-3.15.2.tar.xz",
+    "sha256": "8b5536d280142ecf6cdfe15d12a21ba1c65e300bbf7b28a8d0cdb849575797de"
+  },
+  "readline": {
+    "version": "8.3",
+    "url": "https://mirrors.kernel.org/gnu/readline/readline-8.3.tar.gz",
+    "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc"
+  },
+  "sed": {
+    "version": "4.10",
+    "url": "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz",
+    "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7"
+  },
+  "tar": {
+    "version": "1.35",
+    "url": "https://mirrors.kernel.org/gnu/tar/tar-1.35.tar.xz",
+    "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16"
+  },
+  "util-linux": {
+    "version": "2.42.4",
+    "url": "https://cdn.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz",
+    "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec"
+  },
+  "xz": {
+    "version": "5.8.4",
+    "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz",
+    "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b"
+  },
+  "zlib": {
+    "version": "1.4",
+    "url": "https://github.com/madler/zlib/releases/download/v1.4/zlib-1.4.tar.xz",
+    "sha256": "4f11c512053d7bab8d9e9b89bde3575add3e4c50a383b42ef6cb837035fc5a7c"
+  },
+  "bzip2": {
+    "version": "1.0.8",
+    "url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+    "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+  },
+  "openssl": {
+    "version": "3.5.9",
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+    "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a"
+  },
+  "openssh": {
+    "version": "10.6p2",
+    "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p2.tar.gz",
+    "sha256": "9ae44872090cf2f06b3cf9ff147e7f16f309671340763ed2f99248398ae29d5b"
+  },
+  "libmnl": {
+    "version": "1.0.5",
+    "url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2",
+    "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525"
+  },
+  "iproute2": {
+    "version": "7.3.0",
+    "url": "https://cdn.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.3.0.tar.xz",
+    "sha256": "5c1789d290bba048a6135ed1ab81b0402dd0fb528d1f1421765c42b1fc3d6289"
+  },
+  "ninja": {
+    "version": "1.13.2",
+    "url": "https://github.com/ninja-build/ninja/archive/v1.13.2.tar.gz",
+    "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17"
+  },
+  "cmake": {
+    "version": "4.4.5",
+    "url": "https://github.com/Kitware/CMake/releases/download/v4.4.5/cmake-4.4.5.tar.gz",
+    "sha256": "a0c54c88abb8078dd8eccadb717fc6bb194bf18e7d44c86309910288886e04e2"
+  },
+  "elfutils": {
+    "version": "0.196",
+    "url": "https://sourceware.org/pub/elfutils/0.196/elfutils-0.196.tar.bz2",
+    "sha256": "fd5cc6b77ad6773cac93cb3f415f9318ac3b3455eecf801f6b4a742c4f6c7209"
+  },
+  "zstd": {
+    "version": "1.5.7",
+    "url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+    "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+  },
+  "llvm": {
+    "version": "23.1.5",
+    "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.5/llvm-project-23.1.5.src.tar.xz",
+    "sha256": "fb50b1eac93ddeb3aa8dab4cfe324dff74f4a9c2bdee6160c9e36188f8d06a6e"
+  },
+  "rustc-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustc-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "acdcdfe09ae1f103aa9a2b7f88903a9588bc2e99288af10e6fbf5514e2e49f25"
+  },
+  "rustc-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustc-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "2ff05ff9c08a90861e7f6e4065b40a8b87463b4576186fd613871c3e37f2091f"
+  },
+  "rust-std-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "e25668477083d6a9ddb87b9beb9c00742225f38233ccb4bfba3afa7a07427f52"
+  },
+  "rust-std-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "109b074225bf5b9ea3820890876bfdf4ed161adbfaf94b2b4b5984c85ee5d958"
+  },
+  "rustfmt-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustfmt-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "26b3200b1461921415927abf7fe410202a6eda2db3e419abde59e0abfcd93fc2"
+  },
+  "rustfmt-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rustfmt-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "e3b36c4c7ec3486c059d8067ff48787676612007123aad7a4e8ec12c48ee9ba2"
+  },
+  "cargo-aarch64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/cargo-1.99.1-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "5156832e0c1254e9b49a79edabdc6d4c35f32f8fc1cf3ca700f268ff96087ab0"
+  },
+  "cargo-x86_64-linux": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/cargo-1.99.1-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "53f3521949404d595efb06a55c12c5658d4ed1c75566f33d3d514eaebe70bd8a"
+  },
+  "rust-src": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-src-1.99.1.tar.xz",
+    "sha256": "e485a88c45db546b73571df7bebfcb4454ba4fb552c492e25fc5b00eeb5bf22d"
+  },
+  "linux-pam": {
+    "version": "1.7.3",
+    "url": "https://github.com/linux-pam/linux-pam/releases/download/v1.7.3/Linux-PAM-1.7.3.tar.xz",
+    "sha256": "2ce4765fd49df6693771ef2941f81e33d8ee14b94a81a5c7b369aa3b137b85a5"
+  },
+  "shadow": {
+    "version": "4.20.3",
+    "url": "https://github.com/shadow-maint/shadow/releases/download/4.20.3/shadow-4.20.3.tar.xz",
+    "sha256": "623be9429f64fa2165bfc5957c6a642ec309c5cf23c0d53855c99f7591922297"
+  },
+  "botan": {
+    "version": "3.13.0",
+    "url": "https://botan.randombit.net/releases/Botan-3.13.0.tar.xz",
+    "sha256": "12f5a8358890bbee82edfe9d2e7769b0a610b6dd0e0698aea13d20a675d84620"
+  },
+  "sqv": {
+    "version": "1.5.0",
+    "url": "https://static.crates.io/crates/sequoia-sqv/sequoia-sqv-1.5.0.crate",
+    "sha256": "d4eb1f22746894dd654a8fa50576200d047f0de0e1ae2a361d7ebe263d351bc8"
+  },
+  "bindgen": {
+    "version": "0.73.2",
+    "url": "https://static.crates.io/crates/bindgen-cli/bindgen-cli-0.73.2.crate",
+    "sha256": "5622e043625b6d1f32c84f53699690a44d1419e657879de26eb252699f5ebb7c"
+  },
+  "rust-std-aarch64-none": {
+    "version": "1.99.1",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.99.1-aarch64-unknown-none-softfloat.tar.xz",
+    "sha256": "6ff3ecba5ae285c5286ad6f5024994d818cee569c59d980aa2edc9e5fa3bcd4e"
+  },
+  "aura": {
+    "version": "1.0.0b13.1",
+    "url": "https://codeload.github.com/aurora-silicon/aura/tar.gz/5dcf62d0bf28e42c0e3f4ece44908643ffd40837",
+    "sha256": "a9a8c81ac7631931688adffbb6c2899ffaf28ef5b1a807e78a9f87dbb46c505d"
+  },
+  "u-boot": {
+    "version": "2026.07-aurora-250385f",
+    "url": "https://codeload.github.com/aurora-silicon/u-boot/tar.gz/250385f8c8aaafd47a8f7990f6efe0443c28d0b5",
+    "sha256": "54733c99013b87f7703065fd7a96e0960dfbbeeefaf3462c1fd0789526105e8a"
+  },
+  "aura-fatfs": {
+    "version": "7d505fb",
+    "url": "https://codeload.github.com/aurora-silicon/fatfs/tar.gz/7d505fbfa37a945af5549517f47c1d2e87a8333e",
+    "sha256": "b6fd473d43aa9a62f04c3c4560ae75c42ab86906ad833b439077eb5f80d1a5e2"
+  },
+  "procps-ng": {
+    "version": "4.0.7",
+    "url": "https://downloads.sourceforge.net/project/procps-ng/Production/procps-ng-4.0.7.tar.xz",
+    "sha256": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d"
+  },
+  "iputils": {
+    "version": "20250605",
+    "url": "https://github.com/iputils/iputils/releases/download/20250605/iputils-20250605.tar.xz",
+    "sha256": "6f213700dbf96b5cc4499ca70cb15ecd69c09f405b06785bb4a1a10b572b6276"
+  },
+  "e2fsprogs": {
+    "version": "1.47.4",
+    "url": "https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.xz",
+    "sha256": "fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b"
+  },
+  "dosfstools": {
+    "version": "4.2",
+    "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz",
+    "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527"
+  },
+  "libcap": {
+    "version": "2.78",
+    "url": "https://cdn.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz",
+    "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11"
+  },
+  "libxcrypt": {
+    "version": "4.5.2",
+    "url": "https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz",
+    "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071"
+  },
+  "gperf": {
+    "version": "3.3",
+    "url": "https://mirrors.kernel.org/gnu/gperf/gperf-3.3.tar.gz",
+    "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8"
+  },
+  "kmod": {
+    "version": "34.3",
+    "url": "https://cdn.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.3.tar.xz",
+    "sha256": "985554de49c21a58abd68c6cda2251384e1e5bb08b3b14c7f02b51f4c90c2958"
+  },
+  "attr": {
+    "version": "2.6.0",
+    "url": "https://download.savannah.nongnu.org/releases/attr/attr-2.6.0.tar.xz",
+    "sha256": "6c8a2148a7b85043b68492bce43316b0e2e214fc4e628c7ede078e76e216330b"
+  },
+  "acl": {
+    "version": "2.4.0",
+    "url": "https://download.savannah.nongnu.org/releases/acl/acl-2.4.0.tar.xz",
+    "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3"
+  },
+  "python-markupsafe": {
+    "version": "3.0.4",
+    "url": "https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8/markupsafe-3.0.4.tar.gz",
+    "sha256": "2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6"
+  },
+  "python-jinja2": {
+    "version": "3.1.6",
+    "url": "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz",
+    "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"
+  },
+  "systemd": {
+    "version": "261.3",
+    "url": "https://github.com/systemd/systemd/archive/refs/tags/v261.3.tar.gz",
+    "sha256": "3f8d3d3969af7214bda600930e14c6a24135eb3dce1ba7f1b980b74e6dc15b72"
+  },
+  "popt": {
+    "version": "1.19",
+    "url": "https://ftp.osuosl.org/pub/rpm/popt/releases/popt-1.x/popt-1.19.tar.gz",
+    "sha256": "c25a4838fc8e4c1c8aacb8bd620edb3084a3d63bf8987fdad3ca2758c63240f9"
+  },
+  "device-mapper": {
+    "version": "2.03.44",
+    "url": "https://sourceware.org/pub/lvm2/LVM2.2.03.44.tgz",
+    "sha256": "42f829927d2d459f5733fcdb38a5bf2455a8b84072193092450a9c69d6596eca"
+  },
+  "json-c": {
+    "version": "0.19",
+    "url": "https://github.com/json-c/json-c/archive/refs/tags/json-c-0.19-20260627.tar.gz",
+    "sha256": "f17a6d7d265cf840dfd8f0f46a606d98c6b5b26dc7cfe27275d1546a213086c8"
+  },
+  "cryptsetup": {
+    "version": "2.8.8",
+    "url": "https://cdn.kernel.org/pub/linux/utils/cryptsetup/v2.8/cryptsetup-2.8.8.tar.xz",
+    "sha256": "3acfa685f2dd7fcc832e0b77bc7093aa7da554a51ce8dafbb4138eaa854eee35"
+  },
+  "lz4": {
+    "version": "1.10.0",
+    "url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz",
+    "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+  },
+  "autoconf": {
+    "version": "2.73",
+    "url": "https://mirrors.kernel.org/gnu/autoconf/autoconf-2.73.tar.xz",
+    "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e"
+  },
+  "automake": {
+    "version": "1.19",
+    "url": "https://mirrors.kernel.org/gnu/automake/automake-1.19.tar.xz",
+    "sha256": "e3e2c2e3abf37898138db5b6c1d1dc35c9160c5978be7947d2c741705251d445"
+  },
+  "libtool": {
+    "version": "2.6.2",
+    "url": "https://mirrors.kernel.org/gnu/libtool/libtool-2.6.2.tar.xz",
+    "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e"
+  },
+  "erofs-utils": {
+    "version": "1.9.4",
+    "url": "https://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git/snapshot/erofs-utils-1.9.4.tar.gz",
+    "sha256": "7d135aa2550326a5acf20f53c518aea5a8900015ce50700044e40f818c31dd80"
+  },
+  "ca-certificates": {
+    "version": "2026-10-20",
+    "url": "https://curl.se/ca/cacert-2026-10-20.pem",
+    "sha256": "796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe"
+  },
+  "curl": {
+    "version": "8.23.0",
+    "url": "https://curl.se/download/curl-8.23.0.tar.xz",
+    "sha256": "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5"
+  },
+  "python-pefile": {
+    "version": "2024.8.26",
+    "url": "https://files.pythonhosted.org/packages/03/4f/2750f7f6f025a1507cd3b7218691671eecfd0bbebebe8b39aa0fe1d360b8/pefile-2024.8.26.tar.gz",
+    "sha256": "3ff6c5d8b43e8c37bb6e6dd5085658d658a7a0bdcd20b6a07b1fcfc1c4e9d632"
+  },
+  "python-pyelftools": {
+    "version": "0.33",
+    "url": "https://files.pythonhosted.org/packages/a3/11/767522582afab1b884d277de0e6e011640cb9d7292a38694b4b1a1df1ae8/pyelftools-0.33.tar.gz",
+    "sha256": "660d82dcbeb8e83d1702bd97f223f761625da06111c0cc988eac6b8ab0c1b61f"
+  },
+  "mtools": {
+    "version": "4.0.50",
+    "url": "https://mirrors.kernel.org/gnu/mtools/mtools-4.0.50.tar.bz2",
+    "sha256": "f3a58e6cfc2634b03c240442548e3b00103692357afc28e1e7104744dd6478b5"
+  },
+  "libffi": {
+    "version": "3.8.0",
+    "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz",
+    "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4"
+  },
+  "expat": {
+    "version": "2.9.0",
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
+    "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051"
+  },
+  "meson": {
+    "version": "1.12.1",
+    "url": "https://github.com/mesonbuild/meson/releases/download/1.12.1/meson-1.12.1.tar.gz",
+    "sha256": "ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743"
+  },
+  "dbus": {
+    "version": "1.16.4",
+    "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.4.tar.xz",
+    "sha256": "d08b05526c2cb7966a5fb79210d6112b1aca3d135f315c1b302e14b4b0297dac"
+  },
+  "iwd": {
+    "version": "3.12",
+    "url": "https://cdn.kernel.org/pub/linux/network/wireless/iwd-3.12.tar.xz",
+    "sha256": "d89a5e45c7180170e19be828f9e944a768c593758094fc57a358d0e7c4cb1a49"
+  },
+  "wireless-regdb": {
+    "version": "2026.09.03",
+    "url": "https://cdn.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2026.09.03.tar.xz",
+    "sha256": "b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d"
+  },
+  "pcre2": {
+    "version": "10.49",
+    "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2",
+    "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384"
+  },
+  "python-packaging": {
+    "version": "26.3",
+    "url": "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz",
+    "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"
+  },
+  "glib": {
+    "version": "2.90.1",
+    "url": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz",
+    "sha256": "93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396"
+  },
+  "duktape": {
+    "version": "2.7.0",
+    "url": "https://duktape.org/duktape-2.7.0.tar.xz",
+    "sha256": "90f8d2fa8b5567c6899830ddef2c03f3c27960b11aca222fa17aa7ac613c2890"
+  },
+  "gettext": {
+    "version": "1.0",
+    "url": "https://mirrors.kernel.org/gnu/gettext/gettext-1.0.tar.xz",
+    "sha256": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7"
+  },
+  "polkit": {
+    "version": "128",
+    "url": "https://github.com/polkit-org/polkit/archive/refs/tags/128.tar.gz",
+    "sha256": "6edb06bf1448e49e428f9597a97af6a05d62146dd0b58f86eeaebcee3f5ecfaa"
+  },
+  "fish": {
+    "version": "4.9.3",
+    "url": "https://github.com/fish-shell/fish-shell/releases/download/4.9.3/fish-4.9.3.tar.xz",
+    "sha256": "20998a25f73217ddcc19f499055fd587e9912d1ad6e7109120fbcf2871f0b98c"
+  },
+  "fish-fluent-rs": {
+    "version": "cf712bced280b217b6307edabc2089b3e57204ab",
+    "url": "https://github.com/danielrainer/fluent-rs/archive/cf712bced280b217b6307edabc2089b3e57204ab.tar.gz",
+    "sha256": "c010922974bae311801d760cc46a398744ef6427dbef819baeb415979e570c51"
+  },
+  "fish-fluent-ftl-tools": {
+    "version": "5917664c8f2e4928ef1e480ff5c13bbe1e226066",
+    "url": "https://codeberg.org/danielrainer/fluent-ftl-tools/archive/5917664c8f2e4928ef1e480ff5c13bbe1e226066.tar.gz",
+    "sha256": "091b164ed0f7d28928c6af0e76518ff5ea2c6c3cdf1a2b850d36e81c52cd74be"
+  },
+  "fish-rust-pcre2": {
+    "version": "85b7afba1a9d9bd445779800e5bcafeb732e4421",
+    "url": "https://github.com/fish-shell/rust-pcre2/archive/85b7afba1a9d9bd445779800e5bcafeb732e4421.tar.gz",
+    "sha256": "b5bb6d49f8e779d6a54778229d45c4213d56bfabb264481744d8e1b42dbb4dec"
+  },
+  "strace": {
+    "version": "7.3",
+    "url": "https://github.com/strace/strace/releases/download/v7.3/strace-7.3.tar.xz",
+    "sha256": "529634c40910895a9a1f3c5c1e65da2ca9ed72fb158dfc4bcc89efdf05e39b72"
+  },
+  "libarchive": {
+    "version": "3.8.11",
+    "url": "https://www.libarchive.org/downloads/libarchive-3.8.11.tar.xz",
+    "sha256": "a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2"
+  },
+  "git": {
+    "version": "2.56.1",
+    "url": "https://cdn.kernel.org/pub/software/scm/git/git-2.56.1.tar.xz",
+    "sha256": "f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f"
+  },
+  "gdb": {
+    "version": "18.1",
+    "url": "https://mirrors.kernel.org/gnu/gdb/gdb-18.1.tar.xz",
+    "sha256": "cd9fc3fe2b47743840e42c1592d3d87f8302eb18639c0b8b4ba0898002e2348f"
+  },
+  "nix-aarch64-linux": {
+    "version": "2.35.7",
+    "url": "https://hydra.nixos.org/build/353287192/download/1/nix",
+    "sha256": "f7c1c1c3440d5cf6e04cdf14787c28563505a2bfbdf7a299c0a03aa1122a1179"
+  },
+  "nix-x86_64-linux": {
+    "version": "2.35.7",
+    "url": "https://hydra.nixos.org/build/353287205/download/1/nix",
+    "sha256": "84b0875c7071394b20cc860ddf5ed38a58057d816907c8b505bc970fcdf4b73f"
+  },
+  "firecracker-x86_64-linux": {
+    "version": "1.18.0",
+    "url": "https://github.com/firecracker-microvm/firecracker/releases/download/v1.18.0/firecracker-v1.18.0-x86_64.tgz",
+    "sha256": "1ac8eec866dd5eea14efecf6323e22b23eea24054545338a5b34bc5bca6623cd"
+  },
+  "pixman": {
+    "version": "0.46.4",
+    "url": "https://www.cairographics.org/releases/pixman-0.46.4.tar.gz",
+    "sha256": "d09c44ebc3bd5bee7021c79f922fe8fb2fb57f7320f55e97ff9914d2346a591c"
+  },
+  "libslirp": {
+    "version": "4.9.7",
+    "url": "https://gitlab.freedesktop.org/slirp/libslirp/-/archive/v4.9.7/libslirp-v4.9.7.tar.gz",
+    "sha256": "d2567fa06a6357c7755d61c67293b2c0bf069b3f2173bde6b76cf768529a1938"
+  },
+  "dtc": {
+    "version": "1.8.1",
+    "url": "https://www.kernel.org/pub/software/utils/dtc/dtc-1.8.1.tar.xz",
+    "sha256": "23526015a6f1550e0541a53fe7acea1b5a11e3697cdf3a3bdc076abc38f6045d"
+  },
+  "qemu": {
+    "version": "11.1.3",
+    "url": "https://download.qemu.org/qemu-11.1.3.tar.xz",
+    "sha256": "5a8289c7940dc77d3873c81a6c29ba3afe1446fc9d36e77fa1658cdbecb84b22"
+  }
+}

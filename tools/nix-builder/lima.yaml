@@ -1,0 +1,63 @@
+# The aarch64-linux machine that Nix builds on, as a VM on an Apple Silicon
+# Mac (macOS cannot run Linux builds itself):
+#
+#   limactl create --name=bunix-builder tools/nix-builder/lima.yaml
+#   limactl start bunix-builder
+#   limactl stop bunix-builder && limactl start bunix-builder   (once, see below)
+#   limactl shell bunix-builder
+#
+# The first start installs Nix and puts the guest's user in the group that
+# may talk to the Nix daemon; a login from before that does not have the
+# group, and Lima keeps its login open until the VM stops.  Hence the one
+# restart.
+#
+# The guest's distribution does not matter to what is built: every build
+# runs in Nix's sandbox and sees only /nix/store.  Debian is here to carry a
+# kernel and the Nix daemon, nothing else.
+#
+# Only the image comes from Lima's Debian template.  The template itself
+# (template:debian-13) also mounts the Mac's whole home directory in the
+# guest, and Lima adds mount lists together, so it cannot be used as a base.
+base: template:_images/debian-13
+
+# Apple's Virtualization.framework: the same CPU architecture as the Mac, so
+# nothing is emulated.
+vmType: vz
+arch: aarch64
+
+cpus: 8
+memory: 10GiB
+# grows as it fills; this is the limit
+disk: 40GiB
+
+# The repository, read-only, and nothing else of the Mac: derivations are
+# evaluated from it in the guest, and a build cannot write back into it.
+# The location is where this checkout is; change it for another.
+mounts:
+- location: "~/Projects/bunix/bunix"
+  mountPoint: /bunix
+  writable: false
+
+# Lima installs containerd by default; nothing here uses containers.
+containerd:
+  system: false
+  user: false
+
+# Nix, from Debian's own package: built by Debian from source, so the store
+# starts empty and holds only what is built here.  The package creates the
+# nixbld users builds run as, and the nix-users group that may talk to the
+# daemon.
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v nix-build > /dev/null || {
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y nix-setup-systemd
+    }
+    install -m 644 /bunix/tools/nix-builder/nix.conf /etc/nix/nix.conf
+    # nix.conf's build-dir
+    mkdir -p /nix/var/nix/builds
+    usermod -aG nix-users "{{.User}}"
+    systemctl restart nix-daemon

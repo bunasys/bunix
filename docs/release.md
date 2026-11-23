@@ -2,103 +2,87 @@
 
 A release is a GitHub release of `bunasys/bunix`, tagged `v<version>`.
 Installed systems fetch it with systemd-sysupdate from
-`releases/latest/download/`; the live image fetches its extensions from
-`releases/download/v<version>/`.  Every release holds
+`releases/latest/download/`.  It is built by Nix, for both architectures
+(`docs/nix-usr-system.md`), and holds, for each (`<arch>`: `arm64`,
+`x86-64`)
 
 | File | What it is |
 | --- | --- |
-| `bunix-x86_64-live.img` | the live system and installer, for a USB stick (`system/live.bst`; up to 0.2.2 `bunix-x86_64.iso`) |
-| `bunix_<version>.usr-x86-64*.raw` | the three partitions of a `/usr` slot: erofs, dm-verity hash tree, signed root hash (`system/usr.bst`) |
-| `bunix_<version>.efi` | the signed kernel image that boots it (`system/uki.bst`) |
-| `gcc_`, `rust_`, `swift_`, `devtools_`, `desktop_<version>.raw` | the system extensions (`sysext/*.bst`) |
-| `SHA256SUMS`, `SHA256SUMS.gpg` | the manifest and its OpenPGP signature by the release key |
+| `bunix_<version>.usr-<arch>*.raw` | the three partitions of a `/usr` slot: its image, the hashes of its blocks, the signed root hash (`nix/images/update.nix`) |
+| `bunix_<version>.<arch>.efi` | the kernel image that starts it |
+| `devtools_<version>.<arch>.raw` | the devtools extension (`nix/images/devtools.nix`) |
+
+and once, for all of them, `SHA256SUMS` and `SHA256SUMS.gpg`: the list of
+the files and its OpenPGP signature by the release key.
+
+Not in a release yet, which BuildStream's had (up to 0.4.0): the live
+image to install from, and the gcc, rust, swift and desktop extensions.
+A machine installed from 0.4.0 or before should find no update in these
+releases: it asks for a kernel image named `bunix_<version>.efi`, and so
+reads the architecture in these names as part of the version, which no
+`/usr` then has; and a version is taken only if all of it is there
+(`tools/update-test.sh`, step 2, shows that for a kernel image that is
+missing).  Not tried on such a machine.
 
 ## What you need
 
-- An x86_64 Linux build host reachable over SSH, with KVM for the boot
-  tests.  `tools/bst-remote.sh` copies the project there and installs the
-  pinned BuildStream on first use; `BUNIX_BUILD_HOST` picks the host
-  (default `pro13.home.arpa`).
-- The three signing keys in `keys/` (README.md, "Keys").  They are not in
-  this repository.  Keep a backup: installed systems trust only these keys,
-  so new keys mean reinstalling every machine.
+- The builder for aarch64 (`tools/nix-builder/lima.yaml`), running, on
+  this Mac or on one reachable over SSH (`BUNIX_AARCH64_BUILDER`); and
+  an x86_64 machine with Nix, reachable over SSH
+  (`tools/nix-builder/home-store/nix.conf`; `BUNIX_X86_BUILDER`).  The
+  Mac `tools/publish.sh` is run on is the one you sit at: 1Password
+  asks on its own screen.
+- The image key and the release key, as the 1Password documents "bunix
+  verity key" and "bunix release key".  No file has them, and no build
+  reads them (`docs/nix-usr-system.md`, "Who signs").
+- Sequoia's `sq`, for the list's signature (`brew install sequoia-sq`).
 - `gh`, logged in with write access to `bunasys/bunix`.
-- QEMU and OVMF on the build host for `tools/boot-test.py`.
+- QEMU, for the tests.
 
 ## Steps
 
-**1. Set the version** in `include/release.yml` (`release-version`).  It
-goes into os-release and into every file name.  Versions must increase:
-sysupdate installs only a version newer than the running one.
+**1. Set the version** in `include/release.yml` (`release-version`), and
+commit.  It goes into os-release and into every file name.  Versions
+must increase: sysupdate installs only a version newer than the running
+one.
 
-**2. Build** everything a release contains:
+**2. Test**, with nothing uncommitted in the working tree, which is
+what the tests build: `tools/install-test.sh`, `tools/update-test.sh`.
 
-```
-tools/bst-remote.sh build system/uki.bst system/usr.bst system/live.bst \
-  sysext/gcc.bst sysext/rust.bst sysext/swift.bst sysext/devtools.bst \
-  sysext/desktop.bst
-```
-
-A version change rebuilds only the images, not the packages (the version
-is an include, not a project variable).
-
-**3. Sign the update files:**
+**3. Build and sign:**
 
 ```
 tools/publish.sh out/updates        # -> out/updates/<version>/
 ```
 
-It checks the built files out on the build host, writes `SHA256SUMS`
-(valid for 30 days, `BUNIX_MANIFEST_DAYS`) and signs it with
-`keys/release.key`.
+It sends the last commit to both builders, builds, and has each
+architecture's system and extension signed with the image key
+(`tools/sign.sh`), then writes `SHA256SUMS` (good for 30 days,
+`BUNIX_MANIFEST_DAYS`) and has it signed with the release key
+(`tools/sign-list.sh`).  1Password asks five times.  It says what in
+the working tree is not in the commit, and so not in the release, and
+ends with the line that tags the commit it built.
 
-**4. Fetch the live image** and put everything in one directory:
-
-```
-v=0.1.3
-ssh pro13.home.arpa "cd src/bunix && rm -rf ~/bt-out/live &&
-  ~/.local/share/bunix-bst/bin/bst artifact checkout system/live.bst --directory ~/bt-out/live"
-mkdir -p out/release-$v
-scp pro13.home.arpa:bt-out/live/bunix-x86_64-live.img out/release-$v/
-cp out/updates/$v/* out/release-$v/
-```
-
-**5. Test** in QEMU on the build host (`scp` `tools/boot-test.py`,
-`tools/serve-updates.py` and `tools/boot-checks/*.txt` to `/tmp` there):
-
-- The new live image boots, with checks for the splash:
-  `BOOT_CHECKS=/tmp/splash.txt python3 /tmp/boot-test.py bunix-x86_64-live.img uefi ~/bt-live`
-- The update path that machines take: install the *previous* release's
-  live image next to a stand-in Windows, boot it, update it to the new
-  release from a local server, boot again.
-
-  ```
-  mkdir -p ~/bt-upd && truncate -s 24G ~/bt-upd/disk.raw
-  BOOT_DISK=~/bt-upd/disk.raw BOOT_CHECKS=/tmp/install-windows.txt \
-    python3 /tmp/boot-test.py previous-live.img uefi ~/bt-upd
-  BOOT_CHECKS=/tmp/dual-boot.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
-
-  mkdir -p ~/upd-serve && ln -s ~/bunix-publish/$v ~/upd-serve/latest
-  python3 /tmp/serve-updates.py ~/upd-serve &      # stop it by its pid afterwards
-  BOOT_CHECKS=/tmp/os-update.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
-  BOOT_CHECKS=/tmp/after-update.txt python3 /tmp/boot-test.py ~/bt-upd/disk.raw uefi ~/bt-upd
-  ```
-
-  `previous-live.img` is the previous release's live image; up to 0.2.2
-  that is `bunix-x86_64.iso`, which boot-test.py boots as a CD.
-  install-windows.txt answers the installer of the image it comes with: for
-  a previous release from before 0.2 (no account questions), take that release's
-  copy from git (`git show v<previous>:tools/boot-checks/install-windows.txt`).
-
-  `serial.log` in the output directory must show `update exit 0`, then
-  `IMAGE_VERSION=<new version>` and `systemd-bless-boot ... good` after the
-  reboot.
-
-**6. Publish:**
+**4. Test the release** as it will be downloaded: a virtual machine
+takes it, restarts into it, and marks it good.
 
 ```
+tools/release-test.sh out/updates/<version> <the version before>
+BUNIX_ARCHITECTURE=x86_64 tools/release-test.sh out/updates/<version> <the version before>
+```
+
+Once for each architecture: the first machine is the Mac's, the second
+runs on the x86_64 builder (`tools/test-machine.sh`).  Each runs this
+working tree's system under the older version's number, not the files
+that version was published with.
+
+**5. Publish:**
+
+```
+v=<version>
+git tag v$v <the commit publish.sh built> && git push origin v$v
 gh release create v$v -R bunasys/bunix --title "bunix $v" \
-  --notes "What changed, in a sentence or two." out/release-$v/*
+  --notes "What changed, in a sentence or two." out/updates/$v/*
 ```
 
 Pass the files on the same line as the command: without them `gh` creates
@@ -113,15 +97,18 @@ the previous is there to go back to):
 gh release delete v<older> -R bunasys/bunix --yes --cleanup-tag
 ```
 
-**7. On a real machine:** `/usr/lib/systemd/systemd-sysupdate update`,
+**6. On a real machine:** `/usr/lib/systemd/systemd-sysupdate update`,
 then `reboot`; `grep IMAGE_VERSION /etc/os-release` shows the new version.
 
-## The manifest expires
+## The list expires
 
 Each `SHA256SUMS` carries a `BEST-BEFORE` date 30 days out, and sysupdate
-refuses a manifest past it, so a mirror cannot freeze machines on an old
+refuses a list past it, so a mirror cannot freeze machines on an old
 release.  That also means a release older than 30 days stops working as an
-update source.  Publish a new release before then, or re-sign the current
-one: run `tools/publish.sh` again with the same version and replace
-`SHA256SUMS` and `SHA256SUMS.gpg` on the release (`gh release upload
---clobber`).
+update source.  Publish a new release before then, or sign the current
+one's list again: run `tools/publish.sh` at the release's commit, into
+another directory, and replace `SHA256SUMS` and `SHA256SUMS.gpg` on the
+release (`gh release upload --clobber`).  Only if the other files came
+out the same to the byte, as they do while the builders still have what
+they built: the new list must differ from the published one in the
+`BEST-BEFORE` line alone (`diff`), or machines would refuse every file.

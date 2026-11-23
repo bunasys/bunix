@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+# The console (console-shell@.service, files/rootfs's; after its
+# console-shell, with bash where that has fish): root's shell straight
+# away while root has never had a password -- a system in memory, or a
+# new disk, where nobody could log in otherwise -- and a login prompt in
+# every other case.
+# "Never had one": the field holds no hash at all ('', '*', '!*', or
+# sysusers' '!unprovisioned').  A locked password ('!' before a hash,
+# `passwd -l root`) means "no logins as root" and gets the login prompt,
+# as does an /etc/shadow that cannot be read.
+[ -r /etc/shadow ] || exec /usr/bin/login
+root_password=$(awk -F: '$1 == "root" { print $2 }' /etc/shadow)
+case $root_password in
+    *'$'*) exec /usr/bin/login ;;
+esac
+exec /usr/bin/bash --login

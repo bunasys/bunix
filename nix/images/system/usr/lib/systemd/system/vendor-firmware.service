@@ -1,0 +1,27 @@
+# The machine's own firmware, for drivers that asked for it before the
+# disk could be read (usr/lib/bunix/vendor-firmware says why and how).
+[Unit]
+Description=Give drivers the machine's own firmware
+# Only where the installer kept some: most machines have none of this
+# kind.
+ConditionDirectoryNotEmpty=/var/lib/vendorfw
+# A system that was handed firmware when it was started keeps that
+# (tools/boot-mac.sh): it is the newer, and its drivers have it already.
+ConditionKernelCommandLine=!firmware_class.path
+# Only where a machine's maker keeps firmware out of everybody's hands
+# (a Mac).  Elsewhere firmware is /usr's, checked with it, and files on
+# the root partition are not to come before those.
+ConditionArchitecture=arm64
+# The devices are asked again before iwd starts.  The adapter appears a
+# moment after that, when its driver has read the firmware; iwd takes it
+# then, as it would one plugged in.
+Before=network-pre.target iwd.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/bunix/vendor-firmware
+
+[Install]
+WantedBy=multi-user.target

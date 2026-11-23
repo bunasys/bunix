@@ -1,0 +1,14 @@
+# After upstream's misc/systemd/nix-daemon.socket.in, without its
+# [Install]: the package makes the link that has it started
+# (nix/base/nix.sh).
+[Unit]
+Description=Nix daemon socket
+Before=multi-user.target
+
+[Socket]
+# The store and Nix's settings, if they are not there yet: this arrives
+# with an extension, which may be merged long after the boot's tmpfiles
+# ran.  Here and not in the service: nix reads both before it asks the
+# daemon for anything.
+ExecStartPre=/usr/bin/systemd-tmpfiles --create /usr/lib/tmpfiles.d/nix.conf
+ListenStream=/nix/var/nix/daemon-socket/socket

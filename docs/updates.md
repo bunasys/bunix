@@ -138,7 +138,10 @@ Build side:
   extension merges only into the release it was built with.
 * `tools/publish.sh <dir>`: `<dir>/<release>/` with the image, SHA256SUMS
   (with `BEST-BEFORE-<date>`, 30 days by default) and SHA256SUMS.gpg, signed
-  with `keys/release.key` by `sqop` in `bst shell tools/sqop.bst`.
+  with the release key.  (Up to 0.4.0 by `sqop` in `bst shell
+  tools/sqop.bst`, on the build host, of BuildStream's artifacts; since,
+  of Nix's builds, with the key from a password manager:
+  `docs/release.md`.)
 
 System side:
 

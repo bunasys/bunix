@@ -1,0 +1,16 @@
+# After upstream's misc/systemd/nix-daemon.service.in, without its
+# [Install]: it is started by its socket, when something first asks.
+# The daemon is the one that writes the store; whoever asks it for a
+# build need not be root.
+[Unit]
+Description=Nix daemon
+Documentation=man:nix-daemon https://nix.dev/manual/nix
+Requires=nix-daemon.socket
+ConditionPathIsReadWrite=/nix/var/nix/daemon-socket
+
+[Service]
+ExecStart=/usr/bin/nix-daemon --daemon
+KillMode=process
+LimitNOFILE=1048576
+TasksMax=infinity
+Delegate=yes

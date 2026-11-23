@@ -1,0 +1,28 @@
+#!/usr/bin/bash
+# The machine's own firmware (vendor-firmware.service): what the maker
+# gives each machine and nobody may pass on, as Apple's for a Mac's
+# Wi-Fi.  It is not in /usr, which is the same on every machine.  On a
+# disk it is in /var/lib/vendorfw, where bunix-install put it; the unit
+# starts this only where that directory has something in it.
+#
+# The kernel has to be told of the directory, and told late: the drivers
+# are built in, and asked for their firmware when the kernel started,
+# before there was a root file system to find it on.  They gave up, and
+# their devices are left without a driver.  So, once the directory can be
+# read: name it to the kernel, and have every such device tried again.
+#
+# Only PCI devices are tried again: a Mac's Wi-Fi is one, and nothing
+# else here waits for firmware yet.
+set -eu
+
+echo -n /var/lib/vendorfw > /sys/module/firmware_class/parameters/path
+
+for device in /sys/bus/pci/devices/*; do
+    [ -e "$device" ] || continue
+    [ ! -e "$device/driver" ] || continue
+    # One device that cannot be tried does not keep the rest from being
+    # tried.  Whether a driver that took one got its firmware is not
+    # known here: it asks after this has returned, and says so in the
+    # kernel's log.
+    echo "${device##*/}" > /sys/bus/pci/drivers_probe || true
+done

@@ -26,6 +26,7 @@ chmod 0700 /etc/fc-runner
 chmod 0600 /etc/fc-runner/github.conf /etc/fc-runner/app.pem
 
 # A user per instance, for its Firecracker (fc-runner@.service)
+mkdir -p /etc/sysusers.d
 for index in "$@"; do
   echo "u fc-runner-$index - \"Firecracker runner VM $index\" /var/lib/fc-runner/$index"
 done > /etc/sysusers.d/fc-runner.conf

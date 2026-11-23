@@ -1,0 +1,24 @@
+# What runs is decided by the image: these, and nothing a package would
+# have liked.  Applied when the image is made (images/image.sh).
+enable systemd-networkd.service
+enable systemd-resolved.service
+enable systemd-timesyncd.service
+enable sshd.service
+enable iwd.service
+# the machine's own firmware, where a disk has some
+enable vendor-firmware.service
+# a root shell on the screen, and on the serial port of a virtual machine
+# and of a Mac
+enable console-shell@.service tty1 ttyAMA0 ttySAC0
+# polkit's password check, for run0: started for each request, and so
+# not a set-user-id program
+enable polkit-agent-helper.socket
+# Extensions the machine's person asked for (sysupdate.d/*.feature) are
+# laid over /usr at every boot.
+enable systemd-sysext.service
+# On a disk, a new version is given three boots to show that it starts
+# (sysupdate.d/90-uki.transfer).  This says what "starts" is: no unit
+# failed.  A boot that passes it is marked good, and one that never does
+# is gone back from.
+enable systemd-boot-check-no-failures.service
+disable *

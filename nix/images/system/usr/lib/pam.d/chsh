@@ -1,0 +1,5 @@
+# bunix: chsh -- a user changes their own shell (their password first),
+# root anyone's without one.  Not among x86's rules: it has no chsh.
+auth      sufficient  pam_rootok.so
+auth      include     system-auth
+account   include     system-auth

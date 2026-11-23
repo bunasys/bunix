@@ -1,0 +1,28 @@
+# The unified kernel image: the kernel, what it starts from, and the
+# command line with usrhash=.  Written last, so that the new version can
+# only be started once its /usr is whole.  It starts with three tries
+# (+3): systemd-boot counts them down, and starts the version before once
+# they are used up, unless the new one gets as far as boot-complete.target
+# first (systemd-bless-boot).
+#
+# The file to download says its architecture, where x86's
+# (bunix_<version>.efi) does not: the two are published side by side.
+[Transfer]
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=bunix_@v.%a.efi
+
+[Target]
+Type=regular-file
+Path=/EFI/Linux
+PathRelativeTo=boot
+MatchPattern=bunix_@v+@l-@d.efi bunix_@v+@l.efi bunix_@v.efi
+# writable: systemd-boot does not count the boots of a file it cannot
+# rename
+Mode=0644
+TriesLeft=3
+TriesDone=0
+InstancesMax=2

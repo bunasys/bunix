@@ -1,0 +1,27 @@
+#!/usr/bin/bash
+# The extensions systemd-sysext is to lay over /usr: of those the machine
+# has, the ones made for the version that is running
+# (systemd-sysext.service.d/bunix.conf runs this first).
+#
+# An update brings a version's extensions with it, and the ones of the
+# version before stay beside them, as its /usr does: a machine goes back
+# to that version if the new one does not start.  systemd-sysext would
+# take the newest of them, find it is not for this system, and merge
+# none.  So they are kept where it does not look
+# (sysupdate.d/53-devtools.transfer), and it is shown this version's
+# only, by links where it does look.
+set -eu
+
+source /usr/lib/os-release
+kept=/var/lib/bunix/extensions
+shown=/run/extensions
+
+mkdir -p $shown
+# the links of an earlier run: an extension may be gone since
+find $shown -maxdepth 1 -lname "$kept/*" -delete
+for image in $kept/*_"$IMAGE_VERSION".raw; do
+    [ -e "$image" ] || continue
+    file=${image##*/}
+    # sysext takes the name up to the first "_" for the extension's
+    ln -s "$image" $shown/"${file%%_*}".raw
+done

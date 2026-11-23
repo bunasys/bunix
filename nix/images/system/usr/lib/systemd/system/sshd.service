@@ -1,0 +1,37 @@
+# After files/rootfs's, without what is not here yet: the firewall; and
+# without its look at the configuration before the start (sshd -t), which
+# would need the options below a second time, for what sshd says itself
+# when it starts.  And with two things of its own: the host keys in /var,
+# and a key for this boot (both below).
+[Unit]
+Description=OpenSSH server
+Documentation=man:sshd(8) file:/etc/ssh/sshd_config
+After=network.target
+
+[Service]
+Type=notify
+# This machine's host keys, made the first time, in /var/lib/sshd: /etc is
+# new at every boot, and /var is on a disk where there is one.  (-f: under
+# this directory, in its etc/ssh.)
+StateDirectory=sshd
+ExecStartPre=/usr/bin/mkdir -p /var/lib/sshd/etc/ssh
+ExecStartPre=/usr/bin/ssh-keygen -A -f /var/lib/sshd
+# Whoever boots the machine may give it a key that logs in as root, on
+# the kernel's command line (tools/boot-vm.sh, boot-mac.sh).  sshd reads
+# it where systemd puts it for this service, beside root's own keys: it
+# is for this boot, and is written nowhere that outlasts it.
+ImportCredential=bunix.authorized_keys
+# UsePAM here, not in /etc/ssh/sshd_config: a machine keeps its own copy
+# of that file, and this reaches it with an update.  PAM makes each login
+# a session logind knows (usr/lib/pam.d/sshd); keys stay the only way in.
+ExecStart=/usr/bin/sshd -D -o UsePAM=yes \
+    -o HostKey=/var/lib/sshd/etc/ssh/ssh_host_ed25519_key \
+    -o HostKey=/var/lib/sshd/etc/ssh/ssh_host_rsa_key \
+    -o HostKey=/var/lib/sshd/etc/ssh/ssh_host_ecdsa_key \
+    -o "AuthorizedKeysFile=.ssh/authorized_keys %d/bunix.authorized_keys"
+ExecReload=/usr/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
