@@ -67,7 +67,7 @@ stagedBuild {
     # a user's way up: run0 asks polkit, which asks a member of wheel
     # for their own password
     base.polkit
-    # Wi-Fi, without the chip's firmware (boot/linux/aarch64.config)
+    # Wi-Fi, without the chip's firmware (boot/linux/)
     base.dbus base.iwd base.wireless-regdb
     # for a system on a disk: udev told of the device /usr is checked
     # through
@@ -80,11 +80,17 @@ stagedBuild {
   ]
   # and what a Mac's own boot loader loads from the ESP, for the
   # installer to put there (x86 has no such Mac to start)
-  ++ (if system == "aarch64-linux" then [ boot.mac-stage2 ] else []);
+  ++ (if system == "aarch64-linux" then [ boot.mac-stage2 ] else [])
+  # x86: the kernel's modules, which udev loads for the hardware a
+  # machine has (boot/linux/x86_64.config).  The package is the whole
+  # kernel: its image and configuration come along, where UAPI.9 has
+  # them, and gen_init_cpio.
+  ++ (if system == "x86_64-linux" then [ boot.linux ] else []);
 
   # What makes it.  systemd: its own tools make the accounts, enable the
   # units and compile the hardware database, on the tree that is to be the
-  # image.  gen_init_cpio comes with the kernel.
+  # image.  gen_init_cpio comes with the kernel, and so does the kernel
+  # image that is handed on to what starts this /usr (image.sh).
   # erofs-utils: the file system of /usr's image.
   buildDepends = [ boot.linux base.systemd base.erofs-utils tools.bash tools.coreutils tools.tar tools.findutils tools.grep tools.sed tools.gzip ];
   env = {

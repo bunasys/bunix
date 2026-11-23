@@ -98,11 +98,10 @@ mkdir "$work/files"
 # ---- What is installed, and what installs it ------------------------------------
 
 echo "building the system, and the files of its version"
-kernel=$(build "$source/nix/boot.nix" -A linux)
 image=$(build "$source/nix/images/system.nix")
 update=$(build "$source/nix/images/update.nix")
-# the kernel is in a directory named after its release
-copy_built_file_to_machine "$kernel/usr/lib/modules/*/vmlinuz" vmlinuz
+# the kernel the system was built with: its modules are in the image
+copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
 copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
 copy_built_directory "$update" "$work/files"
 if [ $like_an_apple_silicon_mac = yes ]; then

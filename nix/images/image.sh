@@ -254,6 +254,8 @@ mkdir -p $out
 #                                            files' names are to say
 #   usr-partition/os-release                 what the system says it is,
 #                                            for what starts it (uki.sh)
+#   usr-partition/vmlinuz, kernel-release    the kernel to start it with,
+#                                            and its name (below)
 # Only read from the tree: the archive below is the same with or without.
 mkdir -p $out
 if [ -n "${usr_partition:-}" ]; then
@@ -308,6 +310,15 @@ if [ -n "${usr_partition:-}" ]; then
     [ -s $out/usr-partition/usrhash ]
     echo $version > $out/usr-partition/version
     cp $root/usr/lib/os-release $out/usr-partition/os-release
+    # The kernel this build has is the one whose modules went into the
+    # tree, where a kernel has modules.  It goes out beside the image, for
+    # what starts this /usr to take from here: a kernel loads the modules
+    # of its own build only (boot/linux/x86_64.config), and a kernel
+    # built again, after the store lost the first, is another build
+    # under the same name.  Kept together here, the two stay a pair.
+    kernel=$(echo /usr/lib/modules/*)
+    cp $kernel/vmlinuz $out/usr-partition/vmlinuz
+    basename $kernel > $out/usr-partition/kernel-release
 fi
 
 # ---- The archive -------------------------------------------------------------

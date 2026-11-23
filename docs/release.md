@@ -115,3 +115,6 @@ release (`gh release upload --clobber`).  Only if the other files came
 out the same to the byte, as they do while the builders still have what
 they built: the new list must differ from the published one in the
 `BEST-BEFORE` line alone (`diff`), or machines would refuse every file.
+The x86-64 files are the same only from the builder's store: its kernel
+signs its modules with a key each build makes anew
+(`nix/boot/linux/x86_64.config`), so a kernel built again is another.

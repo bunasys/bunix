@@ -89,10 +89,9 @@ if [ -n "$on_disk" ]; then
     # boot makes
     in_machine_directory "truncate -s +2G disk.raw"
 else
-    kernel=$(build "$source/nix/boot.nix" -A linux)
     image=$(build "$source/nix/images/system.nix")
-    # the kernel is in a directory named after its release
-    copy_built_file_to_machine "$kernel/usr/lib/modules/*/vmlinuz" vmlinuz
+    # the kernel the system was built with: its modules are in the image
+    copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
     copy_built_file_to_machine "$image/initramfs.cpio.gz" initramfs.cpio.gz
 fi
 
