@@ -221,6 +221,10 @@ htop:
   anitya: 1332
   debian: htop
   alpine: htop
+intel-microcode:
+  anitya: 20614
+  cpe: 'a:intel:microcode'
+  alpine: intel-ucode
 iproute2:
   anitya: 1392
   cpe: 'a:iproute2_project:iproute2'
@@ -290,6 +294,9 @@ linux:
   follows: aurora-silicon/linux@integration/aurora
   version-regex: '([\d.]+)-aurora'
   cpe: 'o:linux:linux_kernel'
+linux-firmware:
+  anitya: 141464
+  alpine: linux-firmware
 linux-pam:
   anitya: 12244
   cpe: 'a:kernel:linux-pam'

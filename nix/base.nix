@@ -542,7 +542,8 @@ let
 
   # iwd, the wireless daemon: scans, authenticates and keeps the link up,
   # and leaves addresses to whatever hands them out.  iwctl is its client.
-  # The chip's firmware is not a package (boot/linux/aarch64.config).
+  # On arm64 the chip's firmware is not a package
+  # (boot/linux/aarch64.config); on x86 it is boot.nix's firmware.
   iwd = mkSystemPackage {
     name = "iwd";
     source = sources.iwd;

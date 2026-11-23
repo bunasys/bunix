@@ -1,12 +1,14 @@
 # What makes a bunix system boot, after elements/system/: the kernel;
-# and for Apple Silicon Macs their boot loader (aura), U-Boot, and the
-# one file of both that a Mac's ESP has.
+# for Apple Silicon Macs their boot loader (aura), U-Boot, and the one
+# file of both that a Mac's ESP has; and for PCs the firmware of their
+# devices and their processors' microcode.
 #
 #   nix-build /bunix/nix/boot.nix -A linux
 #
 # Built with the system's tools, without the compiler flags the other
 # groups give every package: each of these chooses its own.  The kernel
-# and aura are built with clang (base.nix: llvm), U-Boot with gcc.
+# and aura are built with clang (base.nix: llvm), U-Boot with gcc; the
+# firmware and the microcode are files as their makers publish them.
 { system ? builtins.currentSystem }:
 
 let
@@ -116,7 +118,40 @@ let
       kernel_commit = baseNameOf sources.linux.url;
     };
   };
+
+  # Device firmware from linux-firmware, cut down to what the kernel's
+  # modules (boot/linux/x86_64.config) load on PCs and laptops: GPUs
+  # (Intel, AMD), Wi-Fi and Bluetooth (Intel, Qualcomm/Atheros, Realtek,
+  # MediaTek, Broadcom), Intel's touch and sensor hub, the wired network
+  # chips that need it.  zstd-compressed, in /usr/lib/firmware.  About
+  # 240 MB of linux-firmware's 2 GB; most of the rest is for servers,
+  # phones, routers, TV tuners and sound DSPs.  For x86: a Mac's firmware
+  # is the Mac's own, and not anyone else's to hand out.
+  firmware = mkSystemPackage {
+    name = "firmware";
+    source = sources.linux-firmware;
+    script = ./boot/firmware.sh;
+    # zstd: every file is compressed
+    buildDepends = [ base.zstd ];
+  };
+
+  # CPU microcode for Intel (Intel's releases) and AMD (linux-firmware's
+  # amd-ucode), as the kernel loads it at its very start: an archive that
+  # the kernel image carries (images/uki.sh), and systemd's stub hands to
+  # the kernel before the initrd.  The firmware's own microcode is often
+  # years old, and the kernel's mitigations for several CPU flaws (MDS,
+  # SRBDS, GDS, MMIO stale data) depend on current microcode.  For x86.
+  microcode = mkSystemPackage {
+    name = "microcode";
+    source = sources.intel-microcode;
+    script = ./boot/microcode.sh;
+    # linux: its gen_init_cpio makes the archive, as it makes an
+    # initramfs (images/image.sh); cpio is not a package here
+    buildDepends = [ linux ];
+    # AMD's microcode comes in linux-firmware; the version is Intel's
+    env = { linux_firmware = fetch sources.linux-firmware; };
+  };
 in
 {
-  inherit linux aura mac-stage2 u-boot-apple u-boot-qemu;
+  inherit linux aura mac-stage2 u-boot-apple u-boot-qemu firmware microcode;
 }

@@ -1,6 +1,7 @@
 # bunix_<version>.efi: what a machine with bunix on its disk starts, as one
 # EFI program (a unified kernel image): the kernel (the one the system
-# was built with, which images/system.nix hands on), images/initrd.nix,
+# was built with, which images/system.nix hands on), on x86 the
+# processor's microcode (boot.nix), images/initrd.nix,
 # and the kernel's command line, which has the hash of the one /usr this
 # kernel runs (usrhash=).  systemd-boot starts the newest such file on the
 # partition the machine boots from.  After elements/system/uki.bst.
@@ -23,6 +24,7 @@
 let
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
+  boot = import ../boot.nix { inherit system; };
   stagedBuild = import ../stage.nix { inherit system; };
 in
 stagedBuild {
@@ -30,8 +32,11 @@ stagedBuild {
   run = ./uki.sh;
   # systemd: ukify, and the stub the image starts with.  python and
   # pefile: ukify is Python, and puts the file together with pefile.
-  buildDepends = [ base.systemd tools.python base.python-pefile tools.bash tools.coreutils ];
+  buildDepends = [ base.systemd tools.python base.python-pefile tools.bash tools.coreutils tools.grep ];
   env = {
+    # x86: the processor's microcode, which the stub hands to the kernel
+    # before the initrd.  A Mac's processor takes none.
+    microcode = if system == "x86_64-linux" then boot.microcode else "";
     initrd = import ./initrd.nix { inherit system; };
     system_image = import ./system.nix { inherit system signing version; };
     # root=: the root partition by its name, not by its type, as systemd

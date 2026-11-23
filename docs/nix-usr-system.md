@@ -941,11 +941,19 @@ and throws away, so a kernel and its
 modules are of one build, and the kernel image is made of the kernel
 the system's image was built with (`images/image.sh`).
 `tools/vm-checks/modules.sh` loads one on a running machine, and is
-refused one that was changed.  The firmware those drivers load is not
-in the system yet, so a virtual machine is still all this has started
-on.
-Its build needs libelf (`base.elfutils`), zstd and kmod's depmod, which
-a Mac's does not.  Built on the x86_64 builder, it has started the system in an
+refused one that was changed.
+
+What those drivers load into their devices is in `/usr/lib/firmware`
+(`boot.nix`: `firmware`): of linux-firmware's 2 GB, the 240 MB that PCs'
+and laptops' GPUs, Wi-Fi, Bluetooth and wired network chips take,
+compressed, which makes /usr's image for x86-64 about 400 MiB.  The
+processor's microcode (`microcode`: Intel's and AMD's) is in the kernel
+image, which hands it to the kernel before anything else runs.
+`tools/vm-checks/firmware.sh` finds the files drivers name.  No device
+has been started with its firmware yet: a virtual machine, which has
+none of them, is still all this has started on.
+The kernel's build needs libelf (`base.elfutils`), zstd and kmod's
+depmod, which a Mac's does not.  Built on the x86_64 builder, it has started the system in an
 emulated PC (QEMU on the Mac, with no hypervisor): from memory, and from
 a disk of `images/disk.nix` through EFI firmware, systemd-boot and the
 kernel image, with `/usr` checked against its hash and the root
@@ -962,7 +970,7 @@ commit and at its head).  That is to be settled before a system for
 x86, which so far has a kernel from kernel.org's long-term line, is
 published with this one.
 
-Firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
+On a Mac, firmware is the machine's, not a package: Apple's Wi-Fi firmware is in
 each Mac's own macOS, and is added to the image when that Mac is booted
 (`boot/linux/aarch64.config`); the USB-A ports of a Mac mini need
 firmware too, and have none.  The regulatory database is a package.
