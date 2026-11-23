@@ -30,13 +30,13 @@ stagedBuild {
   contents = [
     base.systemd tools.bash tools.coreutils base.util-linux toolchain.gccLibraries
     base.e2fsprogs base.dm-udev-rules tools.sed tools.grep
-    # The wireless regulatory database.  Nothing here uses Wi-Fi: the
-    # kernel's own Wi-Fi code is built in and asks for the file once, as
-    # the kernel starts, when this is the only file system there is.  In
-    # /usr alone it is never found, and the kernel says "failed to load
-    # regulatory.db".
-    base.wireless-regdb
-  ];
+  ]
+  # The wireless regulatory database, where the kernel's own Wi-Fi code
+  # is built in (arm64): it asks for the file once, as the kernel starts,
+  # when this is the only file system there is.  In /usr alone it is
+  # never found, and the kernel says "failed to load regulatory.db".
+  # (On x86 that code is a module, loaded from /usr, where the file is.)
+  ++ (if system == "aarch64-linux" then [ base.wireless-regdb ] else []);
 
   buildDepends = [ boot.linux base.systemd tools.bash tools.coreutils tools.findutils tools.grep tools.sed tools.gzip ];
   # initrd/: the file systemd knows this stage by (etc/initrd-release),

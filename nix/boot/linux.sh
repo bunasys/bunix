@@ -1,5 +1,6 @@
-# The kernel image, without its modules for now (boot/linux/), and the
-# program that packs an initramfs for it.
+# The kernel image, on x86 its modules (boot/linux/ says of each
+# architecture what it has), and the program that packs an initramfs for
+# it.
 #
 # The configuration is the kernel's own default for the architecture
 # (with, on a Mac's, the source's list of what a Mac needs), then bunix's
@@ -24,6 +25,9 @@ case $system in
         # machine: a directory of arch/arm64/boot/dts/
         device_trees=apple
         image=arch/arm64/boot/Image
+        # asahi.config has modules, and none is installed: what a Mac
+        # needs is in the image (boot/linux/aarch64.config)
+        install_modules=no
         ;;
     x86_64-linux)
         kernel_arch=x86
@@ -32,6 +36,7 @@ case $system in
         # a PC's firmware describes the machine itself
         device_trees=
         image=arch/x86/boot/bzImage
+        install_modules=yes
         ;;
     *) echo "linux.sh: there is no kernel configuration for $system yet" >&2; exit 1 ;;
 esac
@@ -68,6 +73,23 @@ kernel_make $(basename $image)
 release=$(kernel_make -s kernelrelease)
 install -D -m 644 $image $out/usr/lib/modules/$release/vmlinuz
 install -m 644 .config $out/usr/lib/modules/$release/config
+
+if [ $install_modules = yes ]; then
+    kernel_make modules
+    # Each is stripped, signed and compressed on the way, in that order.
+    # depmod runs after, by hand: the kernel's own call would look for
+    # the modules under <root>/lib.
+    kernel_make INSTALL_MOD_PATH=$out/usr INSTALL_MOD_STRIP=1 DEPMOD=true modules_install
+    rm -f $out/usr/lib/modules/$release/build
+    depmod -b $out $release
+    # A module left as it was built would be stripped again at the end
+    # of this build (system-package.sh), after it was signed, and the
+    # kernel would refuse it.  What is compressed is left alone there.
+    if find $out/usr/lib/modules/$release -name '*.ko' | grep .; then
+        echo "linux.sh: the modules above are not compressed" >&2
+        exit 1
+    fi
+fi
 
 if [ -n "$device_trees" ]; then
     # Every vendor's device trees are built and one directory kept: asked

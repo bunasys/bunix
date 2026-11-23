@@ -39,3 +39,12 @@ cp $usr/usr.raw $out/$name.$(as_id ${usrhash:0:32}).raw
 cp $usr/usr-verity.raw $out/$name-verity.$(as_id ${usrhash:32:32}).raw
 cp $signature $out/$name-verity-sig.$(as_id $signature_id).raw
 cp $uki/bunix_$version.efi $out/bunix_$version.$partition_architecture.efi
+
+# The kernel image names the one /usr it starts, by its hash, in the
+# words it hands the kernel.  A system built again does not always come
+# out the same (an x86 kernel's modules), and a kernel image kept from
+# before would name a /usr that is not this one, and start nothing.
+if ! grep -a -q "usrhash=$usrhash " $uki/bunix_$version.efi; then
+    echo "update.sh: the kernel image is not of this /usr: it does not name the hash $usrhash" >&2
+    exit 1
+fi

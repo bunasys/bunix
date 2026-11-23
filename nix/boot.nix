@@ -41,9 +41,10 @@ let
     # OpenSSL.
     buildDepends = [ base.llvm base.rust base.bindgen base.flex base.bc base.perl base.openssl ]
       # x86: what checks the kernel's object code reads it with libelf,
-      # found through pkgconf; and the kernel image is compressed with
-      # zstd (CONFIG_KERNEL_ZSTD).
-      ++ (if system == "x86_64-linux" then [ base.elfutils base.pkgconf base.zstd ] else []);
+      # found through pkgconf; the kernel image is compressed with zstd
+      # (CONFIG_KERNEL_ZSTD), and so are its modules; kmod's depmod
+      # lists them for what loads them.
+      ++ (if system == "x86_64-linux" then [ base.elfutils base.pkgconf base.zstd base.kmod ] else []);
     env = {
       options_directory = ./boot/linux;
       # whose signature on an image's hash the kernel takes: public

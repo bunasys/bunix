@@ -138,12 +138,13 @@ kept to port from, and no longer builds:
   and uutils' commands, bind, nftables, WireGuard's tools, neovim, less,
   htop, ripgrep, rsync, the time zones, and tools for a PC's hardware;
 - the live image, Secure Boot (shim, signed boot files and kernel images),
-  processor microcode, and the modules and firmware of real PCs' hardware;
+  processor microcode, and the firmware of real PCs' hardware;
 - the tests of these (`elements/tests/`, and `tools/boot-test.py` with
   its checks).
 
 Five elements stay though Nix builds their part, for what they still
-have beyond it: the kernel's (modules), the initrd's (graphics drivers,
+have beyond it: the kernel's (BTF, its types for BPF tools), the
+initrd's (graphics drivers,
 the boot splash), the kernel image's (its signature, microcode), the
 ESP's (shim) and the root file system's (what the x86-64 system is made
 of).  Three that are gone have no package of the same extent: the full

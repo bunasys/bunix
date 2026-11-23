@@ -776,11 +776,12 @@ What `images/` makes, and of what:
 ```
 system.nix  (image.sh)  ->  initramfs.cpio.gz: the system, for memory
                             usr-partition/: its /usr as a partition's
-                            images, with usrhash, version, os-release
+                            images, with usrhash, version, os-release,
+                            and the kernel it was built with
                             usr-paths: what /usr has, as a list
 initrd.nix  (image.sh)  ->  initramfs.cpio.gz: what starts a system
                             that is on a disk
-uki.nix     (uki.sh)    <-  boot.linux, initrd.nix, system.nix's hash
+uki.nix     (uki.sh)    <-  initrd.nix, system.nix's hash and kernel
                         ->  bunix_<version>.efi
 update.nix  (update.sh) <-  system.nix's usr-partition/, uki.nix, a
                             signature (tools/sign.sh; for a test system,
@@ -904,7 +905,8 @@ user's shell, and root's, is bash.  The two programs are set-user-id, and
 the only ones.  A Nix build may not make a file so; the image says they
 are, where it describes each file: /usr's file system is made of an
 archive, which names a mode for every file, and not of the tree.
-It has no kernel modules, no locales or time zones, no firewall.  A Wi-Fi network is joined once by hand, with `iwctl`, and
+It has no locales or time zones, no firewall, and on arm64 no kernel
+modules (a Mac's drivers are in the kernel image).  A Wi-Fi network is joined once by hand, with `iwctl`, and
 again by itself where there is a disk to remember it on.  In memory the
 machine's id is new at every boot, unless the command line gives it one;
 on a disk it is made at the first boot and kept.  A machine told of a partition that is not there comes up
@@ -920,7 +922,7 @@ was asked for once (`systemctl suspend`), and opening the lid woke it,
 with Wi-Fi and the disk as they were; logind suspends when the lid
 closes.  How long a battery lasts asleep is not measured.
 
-Its kernel has, built in because nothing loads modules, what an M1
+Its kernel has, built in because the arm64 system has no modules, what an M1
 laptop and a Mac mini need to reach the disk, Ethernet, Wi-Fi, a
 keyboard (USB, and the M1 laptops' own), a display on USB-C, and a
 network over a USB cable to another computer; and it installs Apple's
@@ -929,16 +931,21 @@ parts (Ethernet, the display on USB-C) have not.
 
 On x86_64 the kernel is the same source with the architecture's own
 default configuration and `boot/linux/x86_64.config`, which is the
-kernel of bunix on x86 so far (`files/linux/x86_64.fragment`) built
-without modules; the file's first lines list what else differs.  So it
-has what a virtual machine needs, and a PC with a wired network and the
-firmware's own picture on its screen; not the drivers of real GPUs,
-Wi-Fi, Bluetooth or sound, nor the wired network chips that load
-firmware: those need modules and firmware in `/usr`.  The architecture's
-default configuration builds some of them in, and the file turns those
-off by name.
-Its build needs libelf (`base.elfutils`) and zstd, which a Mac's does
-not.  Built on the x86_64 builder, it has started the system in an
+kernel of bunix on x86 so far (`files/linux/x86_64.fragment`); the
+file's first lines list what differs.  What every machine needs to
+boot is built in.  The drivers of what only some machines have (GPUs,
+Wi-Fi, Bluetooth, sound, touch), and every driver that loads firmware,
+are modules in `/usr/lib/modules`, which udev loads for the hardware it
+finds.  Each is signed in the kernel's build by a key that build makes
+and throws away, so a kernel and its
+modules are of one build, and the kernel image is made of the kernel
+the system's image was built with (`images/image.sh`).
+`tools/vm-checks/modules.sh` loads one on a running machine, and is
+refused one that was changed.  The firmware those drivers load is not
+in the system yet, so a virtual machine is still all this has started
+on.
+Its build needs libelf (`base.elfutils`), zstd and kmod's depmod, which
+a Mac's does not.  Built on the x86_64 builder, it has started the system in an
 emulated PC (QEMU on the Mac, with no hypervisor): from memory, and from
 a disk of `images/disk.nix` through EFI firmware, systemd-boot and the
 kernel image, with `/usr` checked against its hash and the root
