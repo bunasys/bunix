@@ -34,7 +34,12 @@ What changed from 0.4.0:
   Arabic's, a proportional face.
 - **Both architectures.**  On a Mac, Mesa's asahi driver draws with the
   GPU, which the kernel's driver (built in: `nix/boot/linux/aarch64.config`)
-  runs.
+  runs.  The Mesa of arm64 is Aurora's (`aurora-silicon/mesa`), whose
+  asahi driver has the GPUs of the M3 and later Macs as well as the M1's
+  and M2's, where upstream's has only those two.  It is the commit
+  Aurora's own distributions ship with the kernel bunix has, since the
+  two must speak the same GPU interface; it moves when the kernel does.
+  x86-64's Mesa is upstream's.
 - **LLVM inside Mesa** (`nix/desktop/mesa.sh`): the extension carries the
   part of LLVM that Mesa uses, and not LLVM's whole library.  radeonsi
   compiles with ACO, Mesa's own compiler for AMD's GPUs, since LLVM is
@@ -285,6 +290,10 @@ installed system.
   `drm.debug=0x1e` (`ukify build --stub=.../addonx64.efi.stub`, installed
   in `$BOOT/EFI/Linux/<uki>.efi.extra.d/`).
 
+- A Mac's GPU drawing the desktop has not been tried: the tests' machines
+  are virtual, and draw with llvmpipe.  The MacBook Pro M1 is the first
+  to try it on, then an M3 or later Mac, which is what Aurora's Mesa is
+  for.
 - Arabic text on the boot splash (Plymouth needs pango for that); phase 1
   shows only the logo.
 - /usr's size: the graphics stack lives in the `desktop` extension, not in
