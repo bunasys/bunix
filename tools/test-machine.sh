@@ -26,7 +26,8 @@
 #   $console            the kernel's name for the machine's serial port
 #   $machine_on_real_processor
 #                       QEMU's arguments for a machine on the processor
-#                       there is
+#                       there is, with a screen and a keyboard (x86_64:
+#                       QEMU's standard VGA and PS/2's; arm64: virtio's)
 #
 #   prepare_machine     what costs something, done once the script has
 #                       found nothing wrong with what it was asked: its
@@ -93,7 +94,9 @@ aarch64)
     # -accel hvf: the Mac's hypervisor.  virtio-gpu-pci: a screen, which
     # the firmware draws on as a Mac's does, and the kernel then takes
     # (boot/linux/aarch64.config); 2D only, as QEMU on a Mac has it.
-    machine_on_real_processor="-M virt -accel hvf -cpu host -device virtio-gpu-pci"
+    # virtio-keyboard-pci: a keyboard, which the machine has none of
+    # otherwise (the x86_64 one's is PS/2's).
+    machine_on_real_processor="-M virt -accel hvf -cpu host -device virtio-gpu-pci -device virtio-keyboard-pci"
 
     prepare_place() {
         source=/bunix

@@ -1,0 +1,28 @@
+The render node of the device, for a renderer that names none
+
+A software renderer names no render node, and niri then took the
+device's primary node for it.  On a GPU that has a render node (virtio's
+on the arm64 test machine) the primary GPU was chosen by that one, and
+the two did not match: niri ran with no renderer.  The device's own
+render node is taken first, as when the primary GPU is chosen.
+
+A GPU's EGL device always names its render node, so this changes
+nothing for one: only a software renderer, which niri takes only when
+software-rendering-when-asked.patch lets it, comes here.
+
+--- a/src/backend/tty.rs
++++ b/src/backend/tty.rs
+@@ -795,10 +795,13 @@
+                 "software EGL renderers are skipped"
+             );
+ 
++            // bunix: a software renderer names no render node.  The device's own, where it has
++            // one, is the node the primary GPU was chosen by; only then does it match.
+             let render_node = egl_device
+                 .try_get_render_node()
+                 .ok()
+                 .flatten()
++                .or_else(|| node.node_with_type(NodeType::Render).and_then(Result::ok))
+                 .unwrap_or(node);
+             self.gpu_manager
+                 .as_mut()

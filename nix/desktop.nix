@@ -48,7 +48,7 @@ let
     name = "wayland";
     source = sources.wayland;
     script = ./meson.sh;
-    depends = [ glibc expat libffi ];
+    depends = [ glibc base.expat base.libffi ];
     buildDepends = [ meson ninja pkgconf ];
     env = { meson_arguments = "-Dtests=false -Ddocumentation=false -Ddtd_validation=false"; };
   };
@@ -126,7 +126,7 @@ let
     name = "mesa";
     source = sources.mesa;
     script = ./desktop/mesa.sh;
-    depends = [ glibc toolchain.gccLibraries base.elfutils libdrm wayland expat base.zlib base.zstd ];
+    depends = [ glibc toolchain.gccLibraries base.elfutils libdrm wayland base.expat base.zlib base.zstd ];
     # python-ctypes: a generator of the Intel compiler's tables imports it
     buildDepends = [ meson ninja pkgconf base.flex python-mako python-pyyaml base.python-packaging base.python-ctypes wayland-protocols base.llvm spirv-headers spirv-tools spirv-llvm-translator ];
     env = {
@@ -240,7 +240,7 @@ let
     name = "fontconfig";
     source = sources.fontconfig;
     script = ./desktop/fontconfig.sh;
-    depends = [ glibc freetype expat ];
+    depends = [ glibc freetype base.expat ];
     buildDepends = [ meson ninja pkgconf base.gperf ];
     env = { files = ../files/fontconfig; };
   };
@@ -314,7 +314,10 @@ let
     depends = [ glibc toolchain.gccLibraries libinput libxkbcommon seatd libdrm mesa base.pixman pango cairo base.glib base.systemd wayland tools.bash ];
     buildDepends = [ base.rust pkgconf meson ninja hwdata ];
     env = {
-      patches = [ ../files/niri/software-rendering-when-asked.patch ];
+      patches = [
+        ../files/niri/software-rendering-when-asked.patch
+        ../files/niri/render-node-of-the-device.patch
+      ];
       libdisplay_info = fetch sources.libdisplay-info;
       # niri's Cargo.lock, as the `cargo2` source of
       # elements/desktop/niri.bst has it
@@ -329,7 +332,6 @@ let
     };
   };
 
-  inherit (base) expat libffi;
 in
 {
   inherit libdrm wayland wayland-protocols python-mako python-pyyaml spirv-headers spirv-tools spirv-llvm-translator mesa;

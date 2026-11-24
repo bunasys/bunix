@@ -5,20 +5,25 @@
 #   tools/desktop-test.sh
 #
 # The machine is a test system's disk, as tools/boot-vm.sh starts one,
-# with a screen.  Then:
+# with a screen and a keyboard.  Then:
 #
 #   1. the extension, signed with the development key, is put where an
 #      update puts it, and systemd-sysext merges it; the unit it brings
-#      (the font cache) starts
+#      (the font cache) runs, and libinput's udev rules reach the
+#      keyboard, which was there before them
 #   2. niri starts on the machine's screen, through seatd, as root at the
-#      console would start it: it finds the screen, and its keyboard
+#      console would start it: it finds the screen, and libinput the
+#      keyboard
 #   3. niri takes a picture of its screen, which it draws with OpenGL
-#      through Mesa: the picture is copied here, to be looked at
+#      through Mesa's llvmpipe: the picture is copied here, to be looked
+#      at
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
-# Mac): Mesa draws with llvmpipe on both, which niri is told to take.  Nor what a person sees: the picture is the
-# screen as niri drew it, which only a look at it says is right.
+# Mac): Mesa draws with llvmpipe on both, which niri is told to take.
+# Nor text: the extension has no fonts yet.  Nor what a person sees: the
+# picture is the screen as niri drew it, which only a look at it says is
+# right.
 #
 #   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
 #                      tools/test-machine.sh
@@ -80,6 +85,8 @@ until in_guest true 2> /dev/null; do
     fi
     sleep 2
 done
+# Only to wait until the machine has started: how it started is
+# boot-vm.sh's to check, and what is tested here is what comes after.
 in_guest systemctl is-system-running --wait > /dev/null 2>&1 || true
 
 echo "1. the desktop extension is merged"
@@ -94,10 +101,19 @@ in_guest "systemd-sysext status" > "$work/sysext.log" 2>&1 || true
 grep -q desktop "$work/sysext.log" || fail "the desktop extension is not merged; see $work/sysext.log"
 in_guest "command -v niri" > /dev/null || fail "merged, but niri is not there"
 # Upheld by multi-user.target, which systemd starts as soon as it knows
-# the unit: after the merge, which has it read its units again.
+# the unit: after the merge, which has it read its units again.  The
+# unit is active even when fc-cache fails (`-`: an upheld unit that
+# fails is started again and again), so fc-cache's own status is asked.
 in_guest "timeout 60 sh -c 'until systemctl is-active -q fontconfig-cache.service; do sleep 1; done'" \
     || fail "the font cache's unit did not start"
-echo "  merged; niri is there, and the font cache's unit ran"
+fc_cache_status=$(in_guest "systemctl show --property=ExecMainStatus --value fontconfig-cache.service")
+[ "$fc_cache_status" = 0 ] || fail "fc-cache failed (status $fc_cache_status); see: journalctl -u fontconfig-cache"
+# The keyboard was there before libinput's rules: what the merge does to
+# udev (systemd-sysext.service.d/bunix.conf) gives it what they set.
+in_guest "udevadm settle && udevadm info --query=property /dev/input/event*" > "$work/input.log" 2>&1 || true
+grep -q "^LIBINPUT_DEVICE_GROUP=" "$work/input.log" \
+    || fail "libinput's udev rules did not reach the input devices; see $work/input.log"
+echo "  merged; niri is there, the font cache was made, and libinput's rules reached the keyboard"
 
 echo "2. niri starts on the screen"
 # As root would start it at the console: seatd-launch runs seatd, which
@@ -106,34 +122,43 @@ echo "2. niri starts on the screen"
 # systemd's.
 # BUNIX_NIRI_SOFTWARE_RENDERING: niri draws with llvmpipe, which it
 # refuses otherwise (files/niri/), since these machines have no GPU that
-# draws.
+# draws.  RUST_LOG: niri's own filter, and the renderer's line, which it
+# leaves out.
 in_guest "systemd-run --unit=desktop-test-niri --setenv=XDG_RUNTIME_DIR=/run/desktop-test \
     --setenv=BUNIX_NIRI_SOFTWARE_RENDERING=1 \
+    --setenv=RUST_LOG=niri=debug,smithay::backend::renderer::gles=info \
     --property=RuntimeDirectory=desktop-test seatd-launch -- niri" > /dev/null \
     || fail "could not start niri"
+# What niri said, and what screens and input devices the kernel has:
+# kept here, after a failure as after a pass
+save_niri_log() {
+    in_guest "journalctl -u desktop-test-niri --no-pager; ls -l /dev/dri /dev/input; cat /sys/class/drm/*/status" \
+        > "$work/niri.log" 2>&1 || true
+}
+fail_with_niri_log() {
+    save_niri_log
+    fail "$* (niri's log, and the kernel's screens: $work/niri.log)"
+}
 # niri says where it listens (NIRI_SOCKET) once it has its screens
 socket=
 deadline=$(($(date +%s) + 60))
 while [ -z "$socket" ]; do
     socket=$(in_guest "ls /run/desktop-test/niri.*.sock 2> /dev/null" || true)
-    if [ "$(date +%s)" -ge "$deadline" ]; then
-        in_guest "journalctl -u desktop-test-niri --no-pager" > "$work/niri.log" 2>&1 || true
-        fail "niri did not start; its log is in $work/niri.log"
+    if [ -z "$socket" ] && [ "$(date +%s)" -ge "$deadline" ]; then
+        fail_with_niri_log "niri did not start"
     fi
     sleep 2
 done
 niri_msg="NIRI_SOCKET=$socket niri msg"
-# What niri said, and what screens the kernel has, for a failure from
-# here on
-fail_with_niri_log() {
-    in_guest "journalctl -u desktop-test-niri --no-pager; ls -l /dev/dri; cat /sys/class/drm/*/status" \
-        > "$work/niri.log" 2>&1 || true
-    fail "$* (niri's log, and the kernel's screens: $work/niri.log)"
-}
 in_guest "$niri_msg outputs" > "$work/outputs.log" 2>&1 \
     || fail_with_niri_log "niri does not answer; see $work/outputs.log"
 grep -q "^Output" "$work/outputs.log" || fail_with_niri_log "niri has no screen"
 sed -n 's/^Output /  screen: /p' "$work/outputs.log"
+# what libinput makes of the machine's input devices, as niri sees them
+in_guest "libinput list-devices" > "$work/libinput.log" 2>&1 || true
+grep -q "^Capabilities: *keyboard" "$work/libinput.log" \
+    || fail_with_niri_log "libinput finds no keyboard; see $work/libinput.log"
+echo "  libinput finds the keyboard"
 
 echo "3. niri draws, and takes a picture of what it drew"
 in_guest "$niri_msg action screenshot-screen --path /run/desktop-test/screen.png" \
@@ -144,10 +169,13 @@ in_guest "timeout 10 sh -c 'until [ -s /run/desktop-test/screen.png ]; do sleep 
 # a PNG file starts with these eight bytes
 [ "$(head -c 8 "$work/screen.png" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a ] \
     || fail "what niri wrote is not a picture"
-in_guest "journalctl -u desktop-test-niri --no-pager" > "$work/niri.log" 2>&1 || true
-# what drew it: the renderer that Mesa gave niri, in niri's log
-renderer=$(grep -o -i "renderer: [^,]*" "$work/niri.log" | head -n 1 || true)
-echo "  $renderer"
+# what drew it: the renderer Mesa gave niri, in its log
+save_niri_log
+renderer=$(grep -o "GL Renderer: .*" "$work/niri.log" | head -n 1 || true)
+case $renderer in
+    *llvmpipe*) echo "  $renderer" ;;
+    *) fail "niri did not draw with llvmpipe (${renderer:-no renderer in its log}); see $work/niri.log" ;;
+esac
 echo "  the picture: $work/screen.png"
 
 in_guest systemctl poweroff || true

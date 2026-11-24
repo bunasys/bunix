@@ -20,4 +20,7 @@ ln -s ../conf.avail/58-bunix-fonts.conf $share/conf.d/58-bunix-fonts.conf
 # the font cache at every start, and what starts it
 units=$out/usr/lib/systemd/system
 install -D -m 644 $files/fontconfig-cache.service $units/fontconfig-cache.service
-install -D -m 644 $files/fontconfig-cache.conf $units/multi-user.target.d/fontconfig-cache.conf
+install -D -m 644 $files/multi-user.target.d/fontconfig-cache.conf $units/multi-user.target.d/fontconfig-cache.conf
+
+# /etc/fonts, for a fontconfig that is not this one
+install -D -m 644 $files/tmpfiles.conf $out/usr/lib/tmpfiles.d/fontconfig.conf

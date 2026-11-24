@@ -19,6 +19,17 @@ extension {
   name = "desktop";
   contents = [ desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.niri ];
   # Programs of what these need to run that are for building software
-  # against them, not for a desktop.
-  without = [ "bin/wayland-scanner" "bin/libpng-config" "bin/libpng16-config" ];
+  # against them, not for a desktop.  And libinput's tools that are
+  # Python, which the system does not have: `libinput measure`,
+  # `analyze`, `replay` and `list-kernel-devices` (its others are C, and
+  # stay).
+  without = [
+    "bin/wayland-scanner" "bin/libpng-config" "bin/libpng16-config"
+    "lib/libinput/libinput-analyze-buttons" "lib/libinput/libinput-analyze-per-slot-delta"
+    "lib/libinput/libinput-analyze-recording" "lib/libinput/libinput-analyze-touch-down-state"
+    "lib/libinput/libinput-list-kernel-devices" "lib/libinput/libinput-measure-fuzz"
+    "lib/libinput/libinput-measure-touch-size" "lib/libinput/libinput-measure-touchpad-pressure"
+    "lib/libinput/libinput-measure-touchpad-size" "lib/libinput/libinput-measure-touchpad-tap"
+    "lib/libinput/libinput-replay"
+  ];
 }

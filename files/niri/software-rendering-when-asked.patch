@@ -4,18 +4,11 @@ niri rejects a software EGL renderer (llvmpipe), for the problems such a
 renderer has beside a GPU's.  A virtual machine on a Mac has no GPU that
 draws, and bunix tests its desktop in one (tools/desktop-test.sh): there
 niri is started with BUNIX_NIRI_SOFTWARE_RENDERING=1, and draws with
-llvmpipe.  Without the variable, niri is as upstream has it.
-
-A software renderer names no render node, and niri then took the
-device's primary node for it.  On a GPU that has a render node (virtio's
-on the arm64 test machine) the primary GPU was chosen by that one, and
-the two did not match: niri ran with no renderer.  The device's own
-render node is taken first.  A GPU's EGL device always names its render
-node, so this changes nothing for one.
+llvmpipe.  Without the variable, niri refuses one as upstream does.
 
 --- a/src/backend/tty.rs
 +++ b/src/backend/tty.rs
-@@ -784,15 +784,24 @@
+@@ -784,8 +784,14 @@
              // Software EGL devices (e.g., llvmpipe/softpipe) are rejected for now. They have some
              // problems (segfault on importing dmabufs from other renderers) and need to be
              // excluded from some places like DRM leasing.
@@ -31,13 +24,3 @@ node, so this changes nothing for one.
                  "software EGL renderers are skipped"
              );
  
-+            // bunix: a software renderer names no render node.  The device's own, where it has
-+            // one, is the node the primary GPU was chosen by; only then does it match.
-             let render_node = egl_device
-                 .try_get_render_node()
-                 .ok()
-                 .flatten()
-+                .or_else(|| node.node_with_type(NodeType::Render).and_then(Result::ok))
-                 .unwrap_or(node);
-             self.gpu_manager
-                 .as_mut()

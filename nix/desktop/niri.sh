@@ -1,6 +1,6 @@
 unpack $src
-# files/niri/: software rendering where it is asked for (the patch says
-# why)
+# files/niri/: software rendering where it is asked for, and what that
+# needs (each patch says why)
 for fix in $patches; do
     patch --fuzz=0 -p1 -i $fix
 done
@@ -18,6 +18,9 @@ ninja -C /build/libdisplay-info/build -j$jobs install
 export PKG_CONFIG_PATH=/build/display-info/lib/pkgconfig
 
 # ../cargo.sh's lines that give cargo its crates.
+#
+# Cargo is given the crates as a directory of their sources, one
+# directory a crate, each with the checksum of the archive it came from.
 mkdir vendor
 for crate in $crates; do
     name=$(basename $crate .crate)
@@ -32,7 +35,10 @@ done
 # source is "git+..."; sources.json has the commit).  Among the others,
 # as `cargo vendor` puts such crates: with no checksum, since a
 # repository has none, and cargo told below that that repository at that
-# commit is in the same directory.
+# commit is in the same directory.  Not fish's way (base/fish.sh, a
+# repository whole and a [patch] of it): these two take nothing from the
+# top of their repository, and a [patch] would change what Cargo.lock
+# says, which --frozen refuses.
 unpack $smithay /build/smithay
 cp -r /build/smithay vendor/smithay
 cp -r /build/smithay/smithay-drm-extras vendor/smithay-drm-extras

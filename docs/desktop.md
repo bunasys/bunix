@@ -33,9 +33,12 @@ What changed from 0.4.0:
   compiles with ACO, Mesa's own compiler for AMD's GPUs, since LLVM is
   built without AMD's target (`files/mesa/`).
 - **niri draws with llvmpipe when told to**, which upstream's never
-  does: `BUNIX_NIRI_SOFTWARE_RENDERING=1` (`files/niri/`).  The test
+  does: `BUNIX_NIRI_SOFTWARE_RENDERING=1` (`files/niri/`, two patches:
+  the switch, and the render node such a renderer needs).  The test
   machines have no GPU that draws, and only the test sets it; a machine
   without a GPU Mesa drives gets no desktop, as upstream has it.
+- **libinput without its Python tools** (`libinput measure`, `analyze`,
+  `replay`): the system has no Python.
 
 Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
 real hardware (an Intel Coffee Lake desktop).
@@ -100,10 +103,10 @@ The desktop extension brings systemd units of its own (ALSA's volumes,
 the font cache, later PipeWire and greetd).  Two things make them start:
 
 - **systemd has to know them.**  It reads its units before
-  `systemd-sysext.service` merges the extensions in early boot.  The
+  `systemd-sysext.service` merges the extensions in early boot.  Every
   extension's `extension-release` file sets `EXTENSION_RELOAD_MANAGER=1`
-  (sysext/desktop-tree.bst), so sysext reloads systemd right after the
-  merge.
+  (`nix/images/extension-parts.sh`), so sysext reloads systemd right
+  after the merge.
 - **Something has to start them.**  The boot's jobs are planned before the
   merge, so a `.wants` link of `multi-user.target` would never be acted
   on.  Each unit is instead named by an `Upholds=` drop-in
@@ -112,8 +115,13 @@ the font cache, later PipeWire and greetd).  Two things make them start:
   unit must not fail at boot (prefix its command with `-`), or systemd
   keeps restarting it.
 
-sysext/desktop-tree.bst refuses an extension with a service that no
-target upholds.
+0.4.0's build refused an extension with a service that no target
+upholds; the Nix build does not check it yet.  `tools/desktop-test.sh`
+checks that the unit the desktop has now (the font cache) runs.
+
+udev's rules are the same: udev reads them before the merge.  After it,
+`systemd-sysext.service.d/bunix.conf` has udev read them again, and go
+over the input devices once more, for libinput's rules.
 
 ## Phases
 
