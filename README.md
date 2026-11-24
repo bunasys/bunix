@@ -100,7 +100,7 @@ tools/update-test.sh                update it, refuse what is not signed, go bac
 tools/release-test.sh <directory> <version before>
                                     update to a release before it is uploaded
 tools/secure-boot-test.sh           x86-64 with Secure Boot on: start, and refuse a changed kernel image
-tools/desktop-test.sh               merge the desktop extension, start niri, and take a picture of its screen
+tools/desktop-test.sh               merge the desktop extension, bring up the login screen, and log in to DMS
 ```
 
 ## Documents
@@ -131,7 +131,7 @@ for x86-64 alone.  An element is removed from `elements/` once Nix builds
 what it built, and BuildStream's tooling is gone; what is left there is
 kept to port from, and no longer builds:
 
-- of the desktop: the DMS shell and its login screen, PipeWire, and a
+- of the desktop: WirePlumber (PipeWire's session manager), and a
   terminal, Alacritty, where 0.4.0 had Ghostty and GTK 4.
   The rest of it is ported (`docs/desktop.md`, "The port to Nix"), and
   its extension is in no release until all is;

@@ -374,10 +374,267 @@ let
     };
   };
 
+  # ---- Qt 6 ---------------------------------------------------------------------
+
+  # The Vulkan API's C headers, and nothing else: Qt declares its Vulkan
+  # parts only when they are there, and Quickshell's DMA-BUF buffers use
+  # Qt's Vulkan types.  For builds only: bunix has no Vulkan loader.
+  vulkan-headers = mkSystemPackage {
+    name = "vulkan-headers";
+    source = sources.vulkan-headers;
+    script = ./cmake.sh;
+    buildDepends = [ base.cmake ninja ];
+  };
+
+  # libjpeg-turbo: JPEG images, which Qt reads (DMS's wallpapers)
+  libjpeg-turbo = mkSystemPackage {
+    name = "libjpeg-turbo";
+    source = sources.libjpeg-turbo;
+    script = ./cmake.sh;
+    depends = [ glibc ];
+    buildDepends = [ base.cmake ninja ];
+    env = { cmake_arguments = "-DENABLE_STATIC=OFF -DWITH_JAVA=OFF"; };
+  };
+
+  # Qt 6's base: Core, Gui, DBus, Network, Widgets, OpenGL and the Wayland
+  # platform (in qtbase since 6.10): what Quickshell, and so DMS, are
+  # built on.  6.12.0 for Quickshell 0.3.2, which uses Qt's private API:
+  # the two move together, to a pair a distribution ships.
+  #
+  # Wayland only: no X11.  No ICU (HarfBuzz shapes text, and Qt's own
+  # locale data has Arabic), no SQL, no printing.  Its own PCRE2: Qt needs
+  # the 16-bit library, which base's does not build.  Laid out as Debian
+  # has it: plugins, QML modules, host tools and mkspecs in
+  # /usr/lib/<triplet>/qt6, headers in /usr/include/qt6; Qt's other
+  # modules follow from its CMake files.
+  qt6-base =
+    let qtDir = "lib/${architecture.triplet}/qt6"; in
+    mkSystemPackage {
+      name = "qt6-base";
+      source = sources.qt6-base;
+      script = ./cmake.sh;
+      depends = [ glibc toolchain.gccLibraries base.zlib base.zstd libpng libjpeg-turbo base.openssl base.glib base.dbus base.systemd freetype fontconfig harfbuzz libdrm mesa wayland libxkbcommon libinput mtdev ];
+      buildDepends = [ base.cmake ninja pkgconf vulkan-headers wayland-protocols ];
+      env = { cmake_arguments = "-DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF -DINSTALL_LIBDIR=lib/${architecture.triplet} -DINSTALL_ARCHDATADIR=${qtDir} -DINSTALL_BINDIR=${qtDir}/bin -DINSTALL_LIBEXECDIR=${qtDir}/libexec -DINSTALL_MKSPECSDIR=${qtDir}/mkspecs -DINSTALL_INCLUDEDIR=include/qt6 -DINSTALL_DATADIR=share/qt6 -DINSTALL_DOCDIR=share/doc/qt6 -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples -DINSTALL_PUBLICBINDIR=bin -DFEATURE_wayland=ON -DFEATURE_xcb=OFF -DFEATURE_xlib=OFF -DFEATURE_icu=OFF -DFEATURE_sql=OFF -DFEATURE_printsupport=OFF -DFEATURE_gtk3=OFF -DFEATURE_openssl_linked=ON -DFEATURE_system_zlib=ON -DFEATURE_system_png=ON -DFEATURE_system_jpeg=ON -DFEATURE_system_pcre2=OFF -DFEATURE_system_freetype=ON -DFEATURE_system_harfbuzz=ON"; };
+    };
+
+  # qsb, which compiles the shaders of Qt Quick and Quickshell while they
+  # are built (with its own glslang and SPIRV-Cross).  For builds only.
+  qt6-shadertools = mkSystemPackage {
+    name = "qt6-shadertools";
+    source = sources.qt6-shadertools;
+    script = ./cmake.sh;
+    depends = [ glibc toolchain.gccLibraries qt6-base ];
+    buildDepends = [ base.cmake ninja pkgconf vulkan-headers ];
+    env = { cmake_arguments = "-DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF"; };
+  };
+
+  # SVG images and icons: most of DMS's icons are SVG
+  qt6-svg = mkSystemPackage {
+    name = "qt6-svg";
+    source = sources.qt6-svg;
+    script = ./cmake.sh;
+    depends = [ glibc toolchain.gccLibraries qt6-base base.zlib ];
+    buildDepends = [ base.cmake ninja pkgconf vulkan-headers ];
+    env = { cmake_arguments = "-DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF"; };
+  };
+
+  # QML and Qt Quick (Layouts, Shapes, Effects, Controls): the language
+  # and scene graph DMS's whole interface is written in.  No precompiled
+  # headers: they take more space than the arm64 builder has
+  # (tools/nix-builder/lima.yaml), and save only a little time.
+  qt6-declarative = mkSystemPackage {
+    name = "qt6-declarative";
+    source = sources.qt6-declarative;
+    script = ./cmake.sh;
+    depends = [ glibc toolchain.gccLibraries qt6-base qt6-svg ];
+    buildDepends = [ base.cmake ninja pkgconf vulkan-headers qt6-shadertools tools.python ];
+    env = { cmake_arguments = "-DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF -DBUILD_WITH_PCH=OFF"; };
+  };
+
+  # ---- The shell ------------------------------------------------------------------
+
+  # CLI11: a C++ command-line parser, of headers only: Quickshell's `qs`
+  # options.  For builds only.
+  cli11 = mkSystemPackage {
+    name = "cli11";
+    source = sources.cli11;
+    script = ./cmake.sh;
+    buildDepends = [ base.cmake ninja ];
+    env = { cmake_arguments = "-DCLI11_BUILD_TESTS=OFF -DCLI11_BUILD_EXAMPLES=OFF -DCLI11_BUILD_DOCS=OFF"; };
+  };
+
+  # jemalloc: the memory allocator Quickshell links, as upstream advises:
+  # QML's many small, short-lived objects fragment glibc's heap, and DMS
+  # runs for the whole session
+  jemalloc = mkSystemPackage {
+    name = "jemalloc";
+    source = sources.jemalloc;
+    script = ./desktop/jemalloc.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    # bzip2: its archive is .tar.bz2
+    buildDepends = [ base.bzip2 ];
+  };
+
+  # Quickshell: a toolkit for desktop shells written in QML (panels,
+  # launchers, lock screens as Wayland layer-shell windows), with services
+  # for notifications, the system tray, PAM, polkit, greetd, MPRIS and
+  # more, PipeWire's among them.  DMS and its login screen are QML that
+  # its `qs` runs.  Built for one Qt (qt6-base).  No X11, and no crash
+  # handler (it needs cpptrace).  Its QML modules go beside Qt's.
+  quickshell = mkSystemPackage {
+    name = "quickshell";
+    source = sources.quickshell;
+    script = ./cmake.sh;
+    depends = [ glibc toolchain.gccLibraries qt6-base qt6-declarative qt6-svg jemalloc wayland libdrm mesa pipewire base.linux-pam base.polkit base.glib ];
+    buildDepends = [ base.cmake ninja pkgconf qt6-shadertools cli11 vulkan-headers wayland-protocols ];
+    env = { cmake_arguments = "-DDISTRIBUTOR=bunix -DGIT_REVISION=v${sources.quickshell.version} -DCRASH_HANDLER=OFF -DX11=OFF -DINSTALL_QML_PREFIX=lib/${architecture.triplet}/qt6/qml"; };
+  };
+
+  # Go, as the Go project publishes it: only for building DMS and its
+  # login screen, which need 1.27, and not in any image.  Offline: it
+  # never fetches modules, nor a newer Go (desktop/go.sh).
+  go = mkSystemPackage {
+    name = "go";
+    source = sources."go-${system}";
+    script = ./desktop/go.sh;
+    builtElsewhere = true;
+  };
+
+  # DMS (Dux Modular Shell): the desktop shell -- bar, launcher,
+  # notifications, control centre, lock screen
+  # (https://duxlabs.dev/docs/dms).  One Go program, its Quickshell
+  # interface (QML) inside it, which it runs with Quickshell's `qs`.  Pure
+  # Go, no cgo.  desktop/dms.sh has how it is built offline, and how it
+  # comes up with niri.
+  dms = mkSystemPackage {
+    name = "dms";
+    source = sources.dms;
+    script = ./desktop/dms.sh;
+    depends = [ quickshell ];
+    buildDepends = [ go ];
+    env = {
+      release = sources.dms.version;
+      patches = [ ../files/dms/store-text-at-run-time.patch ];
+      # a git submodule, so not in the release's archive: the commit the
+      # release names
+      qml_common = fetch sources.dms-qml-common;
+      # the Go modules it is built with, as a module proxy lays them out
+      # (desktop/dms-go-modules.json)
+      go_modules = goModules ./desktop/dms-go-modules.json;
+    };
+  };
+
+  # DMS's login screen, a greeter of greetd: it starts niri as the
+  # greeter user, and its Quickshell interface in it.  Built as DMS is
+  # (desktop/dms-greeter.sh).  accountsservice: its list of users.
+  dms-greeter = mkSystemPackage {
+    name = "dms-greeter";
+    source = sources.dms-greeter;
+    script = ./desktop/dms-greeter.sh;
+    depends = [ quickshell niri greetd accountsservice ];
+    buildDepends = [ go ];
+    env = {
+      release = sources.dms-greeter.version;
+      qml_common = fetch sources.dms-greeter-qml-common;
+      go_modules = goModules ./desktop/dms-greeter-go-modules.json;
+    };
+  };
+
+  # Each of a Go program's modules, as `<where in the proxy>=<file in the
+  # store>`, which its script splits at the first "=" to lay them out as
+  # a module proxy: the files Go's go.sum describes, fetched one by one.
+  goModules = list: map (module:
+    "${module.path}=" + fetch {
+      url = "https://proxy.golang.org/${module.path}";
+      inherit (module) sha256;
+    }) (builtins.fromJSON (builtins.readFile list));
+
+  # ---- Sound ---------------------------------------------------------------------
+
+  # alsa-lib: what programs play and record sound with, straight to the
+  # kernel's drivers or through PipeWire (its ALSA plugin), and its
+  # configuration in /usr/share/alsa (desktop/alsa-lib.sh)
+  alsa-lib = mkSystemPackage {
+    name = "alsa-lib";
+    source = sources.alsa-lib;
+    script = ./desktop/alsa-lib.sh;
+    depends = [ glibc ];
+    buildDepends = [ base.bzip2 ];
+  };
+
+  # PipeWire: the desktop's sound server.  It mixes every program's sound
+  # onto the card, with a PulseAudio server (pipewire-pulse) for programs
+  # written for PulseAudio, and an ALSA plugin that makes it ALSA's
+  # default device.  Video streams too, for sharing a screen.  Each
+  # person's own service, started with their session.  Quickshell links
+  # its library, and DMS's interface will not load without it.  Without
+  # Bluetooth, JACK, cameras and real-time priority (its limits belong in
+  # /etc/security, which an extension cannot carry); without a session
+  # manager, WirePlumber, which routes the sound (step 3 of the port,
+  # docs/desktop.md).  desktop/pipewire.sh has what is built.
+  pipewire = mkSystemPackage {
+    name = "pipewire";
+    source = sources.pipewire;
+    script = ./desktop/pipewire.sh;
+    depends = [ glibc alsa-lib base.dbus base.readline base.systemd ];
+    buildDepends = [ meson ninja pkgconf base.gettext base.bzip2 ];
+  };
+
+  # ---- Logging in -------------------------------------------------------------------
+
+  # greetd: the login manager.  On tty1 it runs the greeter (dms-greeter)
+  # as the "greeter" user, checks the name and password the greeter sends
+  # with PAM, and starts the person's session as them.  Its
+  # configuration is the greeter's, in /usr/share/greetd: an extension
+  # has no /etc.  desktop/greetd.sh has its user, PAM files and unit.
+  greetd = mkSystemPackage {
+    name = "greetd";
+    source = sources.greetd;
+    script = ./desktop/greetd.sh;
+    depends = [ glibc toolchain.gccLibraries base.linux-pam ];
+    buildDepends = [ base.rust ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/greetd-crates.json));
+    };
+  };
+
+  # AccountsService: a D-Bus service that lists who can log in, with each
+  # one's display name, picture and language (org.freedesktop.Accounts).
+  # The login screen takes its list of users from it, DMS the name and
+  # picture in its bar.  Started at boot, so that the list is ready when
+  # the login screen draws (desktop/accountsservice.sh).  Administrators
+  # are the wheel group, as for polkit.
+  accountsservice = mkSystemPackage {
+    name = "accountsservice";
+    source = sources.accountsservice;
+    script = ./desktop/accountsservice.sh;
+    depends = [ glibc base.glib base.polkit base.dbus base.systemd base.libxcrypt ];
+    buildDepends = [ meson ninja pkgconf base.gettext ];
+    env = { release = sources.accountsservice.version; };
+  };
+
+  # The session bus: the D-Bus bus of each logged-in person's own services
+  # and programs.  dbus-daemon is the base's, built without these two
+  # units, which are made here from the same source and started with the
+  # person's session (sockets.target).
+  dbus-user-session = mkSystemPackage {
+    name = "dbus-user-session";
+    source = sources.dbus;
+    script = ./desktop/dbus-user-session.sh;
+    depends = [ base.dbus ];
+  };
+
 in
 {
   inherit libdrm wayland wayland-protocols python-mako python-pyyaml spirv-headers spirv-tools spirv-llvm-translator mesa;
   inherit libevdev mtdev libinput seatd xkeyboard-config libxkbcommon;
   inherit libpng freetype fontconfig fonts harfbuzz fribidi cairo pango;
   inherit hwdata niri;
+  inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
+  inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice dbus-user-session;
+  inherit alsa-lib pipewire;
 }

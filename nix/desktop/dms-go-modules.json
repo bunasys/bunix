@@ -1,0 +1,634 @@
+[
+  {
+    "path": "filippo.io/edwards25519/@v/v1.2.0.mod",
+    "sha256": "7492c767dc361b86e96933ca1790d492c2f7c368c3ec0e00e1050eddad7baa7d"
+  },
+  {
+    "path": "filippo.io/edwards25519/@v/v1.2.0.zip",
+    "sha256": "98f2d3ca9b88daa031b0fb2fb521b7ea386af1fed61b6f445a20bef7fa381c17"
+  },
+  {
+    "path": "github.com/!proton!mail/go-crypto/@v/v1.5.2.mod",
+    "sha256": "ed1f85c71a923884ce7d473567633be6029daa68cc80f277ff15278756943635"
+  },
+  {
+    "path": "github.com/!proton!mail/go-crypto/@v/v1.5.2.zip",
+    "sha256": "6ce5df4da97350b69637df5918fa1431816180ca1ab3a9850b3f69c14575a7e8"
+  },
+  {
+    "path": "github.com/!wifx/gonetworkmanager/v2/@v/v2.2.0.mod",
+    "sha256": "abc3cacae5e9d20bee340ff3f8a52cc3f6e24bf9b5df4aab9b7ff5549a9f6823"
+  },
+  {
+    "path": "github.com/!wifx/gonetworkmanager/v2/@v/v2.2.0.zip",
+    "sha256": "18ade00b4f176832df17d82c4877c7ddd415631f2e5622a83fd82efc98e30693"
+  },
+  {
+    "path": "github.com/alecthomas/chroma/v2/@v/v2.27.0.mod",
+    "sha256": "eeaef52bd74315d588d6799990ba08cc209a70e748473c3a4333349944871a10"
+  },
+  {
+    "path": "github.com/alecthomas/chroma/v2/@v/v2.27.0.zip",
+    "sha256": "8eb074aaf4a7b4cf406e81062cf5d6b54c32797be53f5287d88ef570fa73625f"
+  },
+  {
+    "path": "github.com/atotto/clipboard/@v/v0.1.4.mod",
+    "sha256": "871822cbc7df3792f78a100886b7f499f73555938e336b918682119688ea8ad0"
+  },
+  {
+    "path": "github.com/atotto/clipboard/@v/v0.1.4.zip",
+    "sha256": "d67b2c36c662751309fd2ec351df3651584bea840bd27be9a90702c3a238b43f"
+  },
+  {
+    "path": "github.com/aymanbagabas/go-osc52/v2/@v/v2.0.1.mod",
+    "sha256": "4646f9f19a822aebf4296bce24d5f2b7b2700ea1c44f5cc978300263cb7b5611"
+  },
+  {
+    "path": "github.com/aymanbagabas/go-osc52/v2/@v/v2.0.1.zip",
+    "sha256": "939ebf2a5481f2172e1a5e0c318d05aef5b6d950a960556216c3da7879a927f8"
+  },
+  {
+    "path": "github.com/charmbracelet/bubbles/@v/v1.0.0.mod",
+    "sha256": "a324490b2998811be8fa0a3cbb7fac4d65e3c18e75942ca0ce9a86f07e16b031"
+  },
+  {
+    "path": "github.com/charmbracelet/bubbles/@v/v1.0.0.zip",
+    "sha256": "b245dafe1f179d4f0ce17b950ce12ac884ab0c7f69fd2d2f282be68e373d5468"
+  },
+  {
+    "path": "github.com/charmbracelet/bubbletea/@v/v1.3.10.mod",
+    "sha256": "903f2904b09b37dd74092f437ad306794e7633329ddc5af7b201d469e2d937fb"
+  },
+  {
+    "path": "github.com/charmbracelet/bubbletea/@v/v1.3.10.zip",
+    "sha256": "8afc524c11d18878b0ac3426fd3318fdf05ad576e65883c597996296c1b27117"
+  },
+  {
+    "path": "github.com/charmbracelet/colorprofile/@v/v0.4.3.mod",
+    "sha256": "4da50dc5179ea48dc7c55db78f05b4911047341ef749027b3969130edf1fd43b"
+  },
+  {
+    "path": "github.com/charmbracelet/colorprofile/@v/v0.4.3.zip",
+    "sha256": "656472ff48f01a098418a31667f3253cf34e04d4e1cb6c1a0a80f76ad370b689"
+  },
+  {
+    "path": "github.com/charmbracelet/lipgloss/@v/v1.1.0.mod",
+    "sha256": "97aa7725695c07aa23c191e2b9d2d3931f367b8a6923ce4a60d969c026138672"
+  },
+  {
+    "path": "github.com/charmbracelet/lipgloss/@v/v1.1.0.zip",
+    "sha256": "22512fd8c211302255bb6f57d8018eed9b8d8f6dd51310512901240bde9b061a"
+  },
+  {
+    "path": "github.com/charmbracelet/log/@v/v1.0.0.mod",
+    "sha256": "1514c72ec9685561cae28226d96588c1b88d1c764e3885c5f35e77db4daff7b6"
+  },
+  {
+    "path": "github.com/charmbracelet/log/@v/v1.0.0.zip",
+    "sha256": "564622bb814b4c9fc5e18b677d0f3af6b0f532ef0ae862d4c3f0500564c6160a"
+  },
+  {
+    "path": "github.com/charmbracelet/x/ansi/@v/v0.11.9.mod",
+    "sha256": "37eb859ba45ddd27690bfa8d617e8744c37b090e121c03a3b8c8d72b1a3437f5"
+  },
+  {
+    "path": "github.com/charmbracelet/x/ansi/@v/v0.11.9.zip",
+    "sha256": "9815535699efc21636755cc84dbc92250182246e876e4ea83e87464d871cbf82"
+  },
+  {
+    "path": "github.com/charmbracelet/x/cellbuf/@v/v0.0.15.mod",
+    "sha256": "5867c27bb93af066945f3c7b5487f721c1f6dc05a382a9e83af0de7ee9ac00f2"
+  },
+  {
+    "path": "github.com/charmbracelet/x/cellbuf/@v/v0.0.15.zip",
+    "sha256": "2c5c421edef869c7f4b7b3fa29530a66897134764d95a750eed59ed5886d84f7"
+  },
+  {
+    "path": "github.com/charmbracelet/x/term/@v/v0.2.2.mod",
+    "sha256": "6df18166815b45f523a79580acfa95f12990a1568e6325f9d60b5825df952962"
+  },
+  {
+    "path": "github.com/charmbracelet/x/term/@v/v0.2.2.zip",
+    "sha256": "0452a430f7e6882393f81ba19a70a63709960acb9743e1199a7b04d908e6b506"
+  },
+  {
+    "path": "github.com/clipperhouse/displaywidth/@v/v0.11.0.mod",
+    "sha256": "643bf909351d7bc8ff29a8a7bb44cca11efe181ed66e5efe57d695bb023effb3"
+  },
+  {
+    "path": "github.com/clipperhouse/displaywidth/@v/v0.11.0.zip",
+    "sha256": "27830c91cdfb2a648748db21f7a2734dcb50d21c620edde51d488ba4e7967e3d"
+  },
+  {
+    "path": "github.com/clipperhouse/uax29/v2/@v/v2.7.0.mod",
+    "sha256": "f3c5f4e4f9e7fb16aea5fd9dc5f24c3ff9c157b1a67576c0f2140117589507a0"
+  },
+  {
+    "path": "github.com/clipperhouse/uax29/v2/@v/v2.7.0.zip",
+    "sha256": "67b1278f1ffb4e4d783a390e48fe7396864650138e785d4b4bfca5914333f761"
+  },
+  {
+    "path": "github.com/cloudflare/circl/@v/v1.6.5.mod",
+    "sha256": "79b9daccc7f033377bcbc70524418d999a1677849924d7b5e488e646c4cf00d7"
+  },
+  {
+    "path": "github.com/cloudflare/circl/@v/v1.6.5.zip",
+    "sha256": "aa6391f45b543ee70c2d57e137c426e318fb98be81f61aa07ab5663fcf667708"
+  },
+  {
+    "path": "github.com/coder/websocket/@v/v1.8.15.mod",
+    "sha256": "0cab443e389cef98e63828bd7ce82224bf192732a18795581314766eb14ea275"
+  },
+  {
+    "path": "github.com/coder/websocket/@v/v1.8.15.zip",
+    "sha256": "4f1d890bc5131f335737bbb6241e3958758c8774b3e6d1c905f713f604af6209"
+  },
+  {
+    "path": "github.com/danielgtaylor/huma/v2/@v/v2.39.1.mod",
+    "sha256": "e1f1e8cc76532f71155a749473e9b2089bc4d82e566137952750c45f5ea82755"
+  },
+  {
+    "path": "github.com/danielgtaylor/huma/v2/@v/v2.39.1.zip",
+    "sha256": "1a1d36528096e0660312ae467f803ac623087e9a9236a23b957f904b6f9fb301"
+  },
+  {
+    "path": "github.com/dlclark/regexp2/v2/@v/v2.9.1.mod",
+    "sha256": "369b6fa60dfc57254cc1baee2becffe594ec1b4ec4f63f46a3c714fb1e2eb107"
+  },
+  {
+    "path": "github.com/dlclark/regexp2/v2/@v/v2.9.1.zip",
+    "sha256": "a2d0cc692915eb3a0558fe4afae2596d8d86497ad95d59f589f4d57306dbb76d"
+  },
+  {
+    "path": "github.com/duxlabs-dev/dux-go/@v/v1.6.3-0.20261104145443-699311effba8.mod",
+    "sha256": "9b3d0a550be7d0a1320e716b3308fc6afab708b0956a1c8f2933c1c1900ccfc5"
+  },
+  {
+    "path": "github.com/duxlabs-dev/dux-go/@v/v1.6.3-0.20261104145443-699311effba8.zip",
+    "sha256": "6086ae08cd5bf5da301d8964663c3c9f6405a45e7ade681ccbfb3cd0bb00f873"
+  },
+  {
+    "path": "github.com/duxlabs-dev/dux-gop/@v/v1.6.3-0.20261104203851-b2331e7fc9b7.mod",
+    "sha256": "c16f8fbb1313131d8969faa9335e68217d8780884b1b9ad39c7e5295c0a1dace"
+  },
+  {
+    "path": "github.com/duxlabs-dev/dux-gop/@v/v1.6.3-0.20261104203851-b2331e7fc9b7.zip",
+    "sha256": "71f0b6807e8dc03fab965920c4ef493c89b70f4697f0e626bf807606dc205d0f"
+  },
+  {
+    "path": "github.com/emirpasic/gods/@v/v1.18.1.mod",
+    "sha256": "0e157c7ef1975139b752696ba9058a5e96f51fc828e1e72a0942b1900652ce8e"
+  },
+  {
+    "path": "github.com/emirpasic/gods/@v/v1.18.1.zip",
+    "sha256": "1d75e291ac15cf9ca2fcd8bd24e2f7203abad319cd3622cd1b19db5c4fb9daa5"
+  },
+  {
+    "path": "github.com/fogleman/gg/@v/v1.3.0.mod",
+    "sha256": "4bad40c896fc9d7d557ba4f711d8c3b7312a6c9ad57ff5bf1116a70d427b68dd"
+  },
+  {
+    "path": "github.com/fogleman/gg/@v/v1.3.0.zip",
+    "sha256": "792f7a3ea9eea31b7947dabaf9d5a307389245069078e4bf435d76cb0505439c"
+  },
+  {
+    "path": "github.com/fsnotify/fsnotify/@v/v1.10.1.mod",
+    "sha256": "7f66141649a948423ba88d648bf44b111bdf72f556cd55d01dea8a50fcbe287f"
+  },
+  {
+    "path": "github.com/fsnotify/fsnotify/@v/v1.10.1.zip",
+    "sha256": "b2c6a334e0d518da2e046066bdd9da34cb26bad6df9f17701802d3de522ab016"
+  },
+  {
+    "path": "github.com/fxamacker/cbor/v2/@v/v2.9.6.mod",
+    "sha256": "20fec9531f1696f504d546afb81608ec39648d1e9de31d4921f26f9839449b79"
+  },
+  {
+    "path": "github.com/fxamacker/cbor/v2/@v/v2.9.6.zip",
+    "sha256": "f336ba6592c33671f7c331f3182ed60dbcc5e946c9cc9aef7818344634486652"
+  },
+  {
+    "path": "github.com/go-git/gcfg/v2/@v/v2.0.2.mod",
+    "sha256": "692df35c1e03884842b3e2e78a979f7a2ac77c515c1bba85c098051a6fcbe58f"
+  },
+  {
+    "path": "github.com/go-git/gcfg/v2/@v/v2.0.2.zip",
+    "sha256": "ef81d26f3e5d3d35c1c01c72fab206406234d66e0ce71d026d05c1e3187d22f9"
+  },
+  {
+    "path": "github.com/go-git/go-billy/v6/@v/v6.0.0-beta.1.mod",
+    "sha256": "720cca6c187e5d869281cb84a6ec0ec2b2bb2529dd5a82d2f12b172e56285217"
+  },
+  {
+    "path": "github.com/go-git/go-billy/v6/@v/v6.0.0-beta.1.zip",
+    "sha256": "446581bd14403cc302d4cbc2362a4b19dc0a6f5d12c8347e274c7fc00e6f9fd5"
+  },
+  {
+    "path": "github.com/go-git/go-git/v6/@v/v6.0.0-beta.1.mod",
+    "sha256": "184a0ec2349e2f976e712600fedab736718266c1299afddc30a8f7bc4ae5a3b7"
+  },
+  {
+    "path": "github.com/go-git/go-git/v6/@v/v6.0.0-beta.1.zip",
+    "sha256": "2d5ea038d470765ff92ab32ee964e42dc103d31b22ad73ae1daa903d2b83505c"
+  },
+  {
+    "path": "github.com/go-json-experiment/json/@v/v0.0.0-20260820222146-c27c302e5fc3.mod",
+    "sha256": "64ddb6e13b6f1d3d6fb44c9a938b485b2c2d5c6fe6d897370a3900dff5a4b1f1"
+  },
+  {
+    "path": "github.com/go-json-experiment/json/@v/v0.0.0-20260820222146-c27c302e5fc3.zip",
+    "sha256": "7cde0df93446eb825784b1af82c0af1fe0306008abf343342b9857df4250698e"
+  },
+  {
+    "path": "github.com/go-logfmt/logfmt/@v/v0.6.1.mod",
+    "sha256": "0b2156771924d6013115a2e80b391afc2ff9d6a22f1bd83a03acf621be39ee4c"
+  },
+  {
+    "path": "github.com/go-logfmt/logfmt/@v/v0.6.1.zip",
+    "sha256": "20f61151ffe33e64602b3a0db4eaed9ef60a84398a4a495a7434ffb90635751b"
+  },
+  {
+    "path": "github.com/godbus/dbus/v5/@v/v5.2.4.mod",
+    "sha256": "d008ac84f404c6fbc7a1f378099dd21794843d10d6cdc129cfc403d39656f5a6"
+  },
+  {
+    "path": "github.com/godbus/dbus/v5/@v/v5.2.4.zip",
+    "sha256": "2a3a2996c274cbb735aa7f634dbcc0b292c0dff154447896d3a95955d078fb83"
+  },
+  {
+    "path": "github.com/golang/freetype/@v/v0.0.0-20170609003504-e2365dfdc4a0.mod",
+    "sha256": "26d471ad5950334d990718ffb46734113226ef134f19fbb87354e3d87dd34853"
+  },
+  {
+    "path": "github.com/golang/freetype/@v/v0.0.0-20170609003504-e2365dfdc4a0.zip",
+    "sha256": "cdcb9e6a14933dcbf167b44dcd5083fc6a2e52c4fae8fb79747c691efeb7d84e"
+  },
+  {
+    "path": "github.com/hdevalence/ed25519consensus/@v/v0.2.0.mod",
+    "sha256": "be371084b2cd094b627c56090e34606cfe27d37ed694953e1496fe93d33095e1"
+  },
+  {
+    "path": "github.com/hdevalence/ed25519consensus/@v/v0.2.0.zip",
+    "sha256": "111cafade3ba9c7c3adf66b6a424386e30829c46c60b80dabe288e1837d30e33"
+  },
+  {
+    "path": "github.com/holoplot/go-evdev/@v/v0.0.0-20260909133534-d873ed210bda.mod",
+    "sha256": "5480e9def29d77e7408648ce0667f46398c88a382244ac5713b96ac2169dd7fe"
+  },
+  {
+    "path": "github.com/holoplot/go-evdev/@v/v0.0.0-20260909133534-d873ed210bda.zip",
+    "sha256": "c72823a2bd07ad479ecf2dd9b7754cb7e962a7c5fcc818620991eb7dcc2ea8a8"
+  },
+  {
+    "path": "github.com/jsimonetti/rtnetlink/@v/v1.4.2.mod",
+    "sha256": "0aa4bc0b8d1d10b3224d1cf4733e579d3d231d59d8089cb52c0908e0079d499b"
+  },
+  {
+    "path": "github.com/jsimonetti/rtnetlink/@v/v1.4.2.zip",
+    "sha256": "08662e20c1a178734d79053305748f108c49f07fb8eae1a60b034165d21bd709"
+  },
+  {
+    "path": "github.com/kevinburke/ssh_config/@v/v1.6.0.mod",
+    "sha256": "2a786cf387e46473d733cc5f3036ec692b1e882edd2709d9589c32808ea09275"
+  },
+  {
+    "path": "github.com/kevinburke/ssh_config/@v/v1.6.0.zip",
+    "sha256": "cb3e2a23c10382dac238ea51ed1162c75cb7e986532d1ce92a2051469ca24e44"
+  },
+  {
+    "path": "github.com/klauspost/compress/@v/v1.20.3.mod",
+    "sha256": "0d4e90d99acbc19eea5706e7390f8c925b26b1f5861385bb4f1321d454a1d48c"
+  },
+  {
+    "path": "github.com/klauspost/compress/@v/v1.20.3.zip",
+    "sha256": "1eb710a814c44bf21332a512a19f496fb5c489ca8eb72244bb9c49f80900848f"
+  },
+  {
+    "path": "github.com/lucasb-eyer/go-colorful/@v/v1.4.1.mod",
+    "sha256": "84f9c38e9884ab013c837cb16aee139500d3d5c6ccab02439881db2ecf28f660"
+  },
+  {
+    "path": "github.com/lucasb-eyer/go-colorful/@v/v1.4.1.zip",
+    "sha256": "399a71ecf3e3aaa0af96a779f1c106688b095dbfd0a85455a7c706d3d7ff9ebd"
+  },
+  {
+    "path": "github.com/mattn/go-isatty/@v/v0.0.24.mod",
+    "sha256": "41b885f68c2fa4dfb26a8ffa30d095a931b27699b6b2b1974af3949400dc060f"
+  },
+  {
+    "path": "github.com/mattn/go-isatty/@v/v0.0.24.zip",
+    "sha256": "4fcffec0bae0ad4af7bf96e2497a817d85de64af19ffe31d82bda362148234b8"
+  },
+  {
+    "path": "github.com/mattn/go-runewidth/@v/v0.0.31.mod",
+    "sha256": "9091c793e255036ba8ced617fa3225972a745eaee5cad4cf264c1576e5c1347e"
+  },
+  {
+    "path": "github.com/mattn/go-runewidth/@v/v0.0.31.zip",
+    "sha256": "96e004d61b6755f0190ae250c3ce8aa2d2e73968d0b31236f4dc54477d65bc00"
+  },
+  {
+    "path": "github.com/mdlayher/netlink/@v/v1.11.2.mod",
+    "sha256": "03043d103416a189dedb5a884419baa70de9af754238056f1d8fab7e58da7064"
+  },
+  {
+    "path": "github.com/mdlayher/netlink/@v/v1.11.2.zip",
+    "sha256": "2fbb8a5962c22dfdeaecd18bc2a1215e863bfcfa2ba1a28a3703ce0ae014ba4a"
+  },
+  {
+    "path": "github.com/mdlayher/socket/@v/v0.8.0.mod",
+    "sha256": "1d4ccd713def09e3bd5470a0f04ac74a2d08c122d1b7567253fc055c83215a6b"
+  },
+  {
+    "path": "github.com/mdlayher/socket/@v/v0.8.0.zip",
+    "sha256": "6e13014a2a6704f8b216b55071ce565415b90d44234b4b2c63be3ed057242efb"
+  },
+  {
+    "path": "github.com/mitchellh/go-ps/@v/v1.0.0.mod",
+    "sha256": "4c9cf17f3fdf28ca0f95c15e1bf976e3b5065bebec1e76a8052373f32a9846c4"
+  },
+  {
+    "path": "github.com/mitchellh/go-ps/@v/v1.0.0.zip",
+    "sha256": "f2f0400b1d5e136419daed275c27a930b0f5447ac12bb8acd3ddbe39547b2834"
+  },
+  {
+    "path": "github.com/muesli/ansi/@v/v0.0.0-20230316100256-276c6243b2f6.mod",
+    "sha256": "2b1bf9e02f09e84b49a2a5e350911428530150f4c4fabf74da62114df33dbbc1"
+  },
+  {
+    "path": "github.com/muesli/ansi/@v/v0.0.0-20230316100256-276c6243b2f6.zip",
+    "sha256": "59c0d420908d51df3c701510337fbe42bfb4d48fcc5f490b5eb2f36fc25f91b9"
+  },
+  {
+    "path": "github.com/muesli/cancelreader/@v/v0.2.2.mod",
+    "sha256": "4343f36dcc06d4ce4e170190062b5d224ff5be831f742531ec27a3d709378fe1"
+  },
+  {
+    "path": "github.com/muesli/cancelreader/@v/v0.2.2.zip",
+    "sha256": "f0654e7f8f8a49b02ff10a75ccaa0eb08a65aaacbc45f5ba93305276e2ac7f61"
+  },
+  {
+    "path": "github.com/muesli/termenv/@v/v0.16.0.mod",
+    "sha256": "07581751f5b61fdae253960c3992898b64b6ad5573a69ba22ad249d7f0a889c1"
+  },
+  {
+    "path": "github.com/muesli/termenv/@v/v0.16.0.zip",
+    "sha256": "ba02d3ebd9c1d87e2c2133b1f2bb61a7001b3765196e8016029ce9fe54c5c0fc"
+  },
+  {
+    "path": "github.com/pilebones/go-udev/@v/v0.10.0.mod",
+    "sha256": "0f44b064bec60da7043355f0c33ba0ae53f2b3700aa3abf92438725a23cc43dc"
+  },
+  {
+    "path": "github.com/pilebones/go-udev/@v/v0.10.0.zip",
+    "sha256": "54fc7dff4cd838d6dd19936ebb2c2bd653a15a40b3586983a308544d04930aa3"
+  },
+  {
+    "path": "github.com/pjbgf/sha1cd/@v/v0.7.0.mod",
+    "sha256": "3eeda8551e3e293424ee4cc529d10432d06d7a68b77d90aa534f64ba54cc5454"
+  },
+  {
+    "path": "github.com/pjbgf/sha1cd/@v/v0.7.0.zip",
+    "sha256": "5d641862b1f2ba4f19d99089a973663378dc446b1b42d6d381c5be8300fe5bd6"
+  },
+  {
+    "path": "github.com/pkg/errors/@v/v0.9.1.mod",
+    "sha256": "df28c6a823f181d76179697177c0c5943c6ffb38f3c10b2dc53be360ee7d4589"
+  },
+  {
+    "path": "github.com/pkg/errors/@v/v0.9.1.zip",
+    "sha256": "d4c36b8bcd0616290a3913215e0f53b931bd6e00670596f2960df1b44af2bd07"
+  },
+  {
+    "path": "github.com/rivo/uniseg/@v/v0.4.7.mod",
+    "sha256": "a1e174890fc9f252450211fadeb53756f9cf5ab7b19697765f9fb255f81ea898"
+  },
+  {
+    "path": "github.com/rivo/uniseg/@v/v0.4.7.zip",
+    "sha256": "b995e4aa0cc1e5779cc61138ac925cb8c1e963e40c80e4b93ee8553812ebb792"
+  },
+  {
+    "path": "github.com/sblinch/kdl-go/@v/v0.0.0-20260121213736-8b7053306ca6.mod",
+    "sha256": "2890c7a09e2a16f2d7e6501130f0f9fb70a307f1a16e92a8db02eed186639ee9"
+  },
+  {
+    "path": "github.com/sblinch/kdl-go/@v/v0.0.0-20260121213736-8b7053306ca6.zip",
+    "sha256": "c2093f820c504766aa58d3f2fa56c716f91ad5ab5e2717482f90820efa3e80ff"
+  },
+  {
+    "path": "github.com/sergi/go-diff/@v/v1.4.0.mod",
+    "sha256": "1eb393c3f9006362fe3044798890e578af6ae6d69270aaf3eb9bfe819ce654db"
+  },
+  {
+    "path": "github.com/sergi/go-diff/@v/v1.4.0.zip",
+    "sha256": "63aef1860b251af1421ba0a014a6bb08a60833f13f948f3d88d66754bb484f53"
+  },
+  {
+    "path": "github.com/shirou/gopsutil/v4/@v/v4.26.9.mod",
+    "sha256": "8006a6ff0ea18693af58dc5a5993a52f4ae0f1e63840038a1b5c7a2bed2eb1c6"
+  },
+  {
+    "path": "github.com/shirou/gopsutil/v4/@v/v4.26.9.zip",
+    "sha256": "2206a841e6e5ca18b4b88d10f90a05c0714528cdec5bdd0801b9c02ed76e0ab6"
+  },
+  {
+    "path": "github.com/spf13/afero/@v/v1.15.0.mod",
+    "sha256": "b9ecbcbeeccb9da252f2b75a7f05a10c21f874a448a5e1294f115e47ba893e22"
+  },
+  {
+    "path": "github.com/spf13/afero/@v/v1.15.0.zip",
+    "sha256": "d03a0bbce87eeaa1c23f0c0276707bb2d59f46efee875d7d7f1d570201be6e1f"
+  },
+  {
+    "path": "github.com/spf13/cobra/@v/v1.10.2.mod",
+    "sha256": "cc6098fd1118fb3bb349c72bcd6e9c665d3a1b2a516ea9807ee24521ad2ddf8c"
+  },
+  {
+    "path": "github.com/spf13/cobra/@v/v1.10.2.zip",
+    "sha256": "a00aae6fcd631e0fde52c98604452ff70e1b73c3b8a560d68db15aff5e26872d"
+  },
+  {
+    "path": "github.com/spf13/pflag/@v/v1.0.10.mod",
+    "sha256": "16c6dfc0eb58eb3c9113ce197d460c6725c647e4688ac26d31c8ed69f1ebbc68"
+  },
+  {
+    "path": "github.com/spf13/pflag/@v/v1.0.10.zip",
+    "sha256": "a246b8c9d3daa87d6c634cdfee1bdf7fa53d5817eeef4fa0c6da43edd12de4ca"
+  },
+  {
+    "path": "github.com/srwiley/oksvg/@v/v0.0.0-20221011165216-be6e8873101c.mod",
+    "sha256": "96a29c57ae5fe2d5526e16cd8ed51f339e2183830d30b5d1fe22da00f4806866"
+  },
+  {
+    "path": "github.com/srwiley/oksvg/@v/v0.0.0-20221011165216-be6e8873101c.zip",
+    "sha256": "d8e517dd8a48583bc32892a7c430dda165f79907b1fc9e3d49fe59a2894f587b"
+  },
+  {
+    "path": "github.com/srwiley/rasterx/@v/v0.0.0-20220730225603-2ab79fcdd4ef.mod",
+    "sha256": "cbe6e21779a22eb4ac36cd26a00e5c40f72dca84bcd2b98333c72e4f3b68f679"
+  },
+  {
+    "path": "github.com/srwiley/rasterx/@v/v0.0.0-20220730225603-2ab79fcdd4ef.zip",
+    "sha256": "4e76d6b2bd959c0ab7be2fbe1d9c454817e17d3d64ee49a7d78b1bddb7790a75"
+  },
+  {
+    "path": "github.com/tklauser/go-sysconf/@v/v0.4.0.mod",
+    "sha256": "29bd839dcc5736ea8ebc4c2f4013db82c57cacd15a010d389579cde04f3336ae"
+  },
+  {
+    "path": "github.com/tklauser/go-sysconf/@v/v0.4.0.zip",
+    "sha256": "61e89253bc4d7091170601be12633dc02e94a3bc30470b081a2449944fa18784"
+  },
+  {
+    "path": "github.com/tklauser/numcpus/@v/v0.12.0.mod",
+    "sha256": "03fbc174711500112a8ab1675893ecdbea2e155f3dcd5e357fb4a5619ed6b0d4"
+  },
+  {
+    "path": "github.com/tklauser/numcpus/@v/v0.12.0.zip",
+    "sha256": "56c22a112976df3a4d8db776b41288658070650ae6382ec86d0a32fc07af0276"
+  },
+  {
+    "path": "github.com/x448/float16/@v/v0.8.4.mod",
+    "sha256": "f8a8238aa734c1d2463d48f8808e35124546bd5222b13e4c097746ded5a57e1e"
+  },
+  {
+    "path": "github.com/x448/float16/@v/v0.8.4.zip",
+    "sha256": "73b24a41037ea999ab66851e3798a0973dbb1f214925915b01f0820f7b2f1500"
+  },
+  {
+    "path": "github.com/xo/terminfo/@v/v1.2.0.mod",
+    "sha256": "12b94fc7704c723ed862da212257099bacb248ad07eeeb03da5d7cba9f8871e4"
+  },
+  {
+    "path": "github.com/xo/terminfo/@v/v1.2.0.zip",
+    "sha256": "90294795cef18ff941af0d4bf314a685c864818308212d7594716b4d682bb07b"
+  },
+  {
+    "path": "github.com/yeqown/go-qrcode/v2/@v/v2.3.0.mod",
+    "sha256": "1e8f692da0a3d3d2caf99c79417f71b92a0f65b82194ff2e14c8810292b1b4eb"
+  },
+  {
+    "path": "github.com/yeqown/go-qrcode/v2/@v/v2.3.0.zip",
+    "sha256": "44ee91217ea9fc65a2c53f90d0bc9738c95695e53164bd643a2f71b898ed19cf"
+  },
+  {
+    "path": "github.com/yeqown/go-qrcode/writer/standard/@v/v1.4.0.mod",
+    "sha256": "b5ee76aee48b6688f28efb5d76f5bd2de8b9fc081da3bcca91d79d48be09e343"
+  },
+  {
+    "path": "github.com/yeqown/go-qrcode/writer/standard/@v/v1.4.0.zip",
+    "sha256": "ad55ec182757627c19590f9d8310376bf45d544675be9a21e4db157be670708c"
+  },
+  {
+    "path": "github.com/yeqown/reedsolomon/@v/v1.0.0.mod",
+    "sha256": "23974aad79e4df8a121d9801933d992863e00af4f52080e656611a46cd5ebc07"
+  },
+  {
+    "path": "github.com/yeqown/reedsolomon/@v/v1.0.0.zip",
+    "sha256": "a834afc29e46619d86583af9115a16bb16b6e4617211a2d02d01a5d39b5bb2f7"
+  },
+  {
+    "path": "github.com/yuin/goldmark/@v/v1.8.6.mod",
+    "sha256": "b78e60b0c300e7d48dcc234a7e0103eeb8d6cf40ca9cde9d01e6a3a7f1086045"
+  },
+  {
+    "path": "github.com/yuin/goldmark/@v/v1.8.6.zip",
+    "sha256": "6cb11723302ba0dd45f8d7a26f7fa3c48be23523622c18293783ce82a3c5de46"
+  },
+  {
+    "path": "go.etcd.io/bbolt/@v/v1.5.0.mod",
+    "sha256": "3acf3f97a95e4028c1bbe27e58a1a6ba4ec8fc510e17d3166c47c50f601b4a2e"
+  },
+  {
+    "path": "go.etcd.io/bbolt/@v/v1.5.0.zip",
+    "sha256": "2c350ca36afba707b917529a8049b001c71915c99c152d5e2600ed4bac6fbc37"
+  },
+  {
+    "path": "go4.org/mem/@v/v0.0.0-20240501181205-ae6ca9944745.mod",
+    "sha256": "4caf98eb924c6539689fe4851b2acdff647b72ed38f95faad5442ea0c6efd105"
+  },
+  {
+    "path": "go4.org/mem/@v/v0.0.0-20240501181205-ae6ca9944745.zip",
+    "sha256": "9b5037a57122457fdc5c2c0a31e3996b44cf9dfcdee5c53ed72adfd88d077795"
+  },
+  {
+    "path": "go4.org/netipx/@v/v0.0.0-20260823151212-3075585bcbeb.mod",
+    "sha256": "567ffe55c30a5346e382d4e54ef8a82a80704c9a3979e30bb66309a9a244a70b"
+  },
+  {
+    "path": "go4.org/netipx/@v/v0.0.0-20260823151212-3075585bcbeb.zip",
+    "sha256": "6d0c289f57693a2a5b7a64b4a7f79f0954ce8f7d451528fe602ea594fbcdffff"
+  },
+  {
+    "path": "golang.org/x/crypto/@v/v0.58.0.mod",
+    "sha256": "938883ec4a74e7fc05c46269e924dda334c2b7ca7ca219e4d27ca56d1891ccd3"
+  },
+  {
+    "path": "golang.org/x/crypto/@v/v0.58.0.zip",
+    "sha256": "b0a45594cda20ddb4264d84aeff9b588b8570bf6a2833c51a0b821734a298d95"
+  },
+  {
+    "path": "golang.org/x/exp/@v/v0.0.0-20261014143641-f0251eb4aa3e.mod",
+    "sha256": "8f61285796e27bf67ad94362a2e8c5391a714e08fdbc6c4c961edcb07b5c764b"
+  },
+  {
+    "path": "golang.org/x/exp/@v/v0.0.0-20261014143641-f0251eb4aa3e.zip",
+    "sha256": "59f56c3ee46a87131794a9ccd90d9f6430702377e76bdeed0b5a726ab0dce59e"
+  },
+  {
+    "path": "golang.org/x/image/@v/v0.47.0.mod",
+    "sha256": "4283357bab40f12031f2b0c9605b1bdf5afb077319b090a572ee50a843f477dd"
+  },
+  {
+    "path": "golang.org/x/image/@v/v0.47.0.zip",
+    "sha256": "3666e9fe5b8d6110471d649641e680bb117c86495d0aa2c4d8673e87d9ac6c3c"
+  },
+  {
+    "path": "golang.org/x/net/@v/v0.61.0.mod",
+    "sha256": "7bbcec6b6af859939ec01bbe5234e556c867bf80e171abc23ad16c2c8e3951fe"
+  },
+  {
+    "path": "golang.org/x/net/@v/v0.61.0.zip",
+    "sha256": "f6843a98d608298e48a6ca287292c9a6fae066284050ce174d5ffb781c9b3dcf"
+  },
+  {
+    "path": "golang.org/x/sync/@v/v0.24.0.mod",
+    "sha256": "febf4fed5dc12c0de24528f7065bf071cc74a2424070194aaf24617b91066cda"
+  },
+  {
+    "path": "golang.org/x/sync/@v/v0.24.0.zip",
+    "sha256": "ca3fcf3ea8259e75891f7947e1a816a5b89402c542d45d8bbbd9e061b0c58019"
+  },
+  {
+    "path": "golang.org/x/sys/@v/v0.49.0.mod",
+    "sha256": "9522f4c9806d1c26586ea80fa56292929bd295865e71981927f52996c6b1c831"
+  },
+  {
+    "path": "golang.org/x/sys/@v/v0.49.0.zip",
+    "sha256": "e73a06591ca0d7016ce3ccb45c36a8ed7128468aecc1a357f94d815c760c6b31"
+  },
+  {
+    "path": "golang.org/x/text/@v/v0.43.0.mod",
+    "sha256": "63270b8ca6290a720212e1d6e58b8d12a8aa315a1cb960411d7ec2998c0aab59"
+  },
+  {
+    "path": "golang.org/x/text/@v/v0.43.0.zip",
+    "sha256": "b75131f628f6e2e4892fd638d33127e952a5027775e0162b94ba069cb4e13863"
+  },
+  {
+    "path": "gopkg.in/yaml.v3/@v/v3.0.1.mod",
+    "sha256": "21579860a20306fcf43b1bd234d1fba319499c77611b71c05f9bf3ba90dab939"
+  },
+  {
+    "path": "gopkg.in/yaml.v3/@v/v3.0.1.zip",
+    "sha256": "aab8fbc4e6300ea08e6afe1caea18a21c90c79f489f52c53e2f20431f1a9a015"
+  },
+  {
+    "path": "tailscale.com/@v/v1.104.1.mod",
+    "sha256": "2b33219e6719b71387e0829efbb2e71605ffb4b0aadf5ef66dceb354751c5f33"
+  },
+  {
+    "path": "tailscale.com/@v/v1.104.1.zip",
+    "sha256": "648ad9fb1ecb2e4075fa46be7a0e01568d666cc1161d02c76ace48d8e41da6c4"
+  }
+]

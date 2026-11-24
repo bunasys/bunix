@@ -82,6 +82,30 @@ for link in $links; do
     [ -e "$name" ] || { echo "extension-parts.sh: usr/$name would be a name for $program, which is not there" >&2; exit 1; }
 done
 
+# Every system service the extension brings is started by something: a
+# target that upholds it (one Upholds= line a service), or a socket of
+# its own.  The .wants links an extension could carry are read before it
+# is merged, so a service without either would never start
+# (docs/desktop.md, "Units in an extension").  A template (name@.service)
+# is started by name, by what needs it.  User services are not checked:
+# a person's systemd starts after the merge, and reads their .wants links.
+units=$tree/usr/lib/systemd/system
+for unit in "$units"/*.service; do
+    [ -e "$unit" ] || continue
+    service=${unit##*/}
+    case $service in *@.service) continue ;; esac
+    upheld_by_a_target=no
+    if grep -q -x -h "Upholds=$service" "$units"/*.target.d/*.conf 2> /dev/null; then
+        upheld_by_a_target=yes
+    fi
+    started_by_its_socket=no
+    [ -e "$units/${service%.service}.socket" ] && started_by_its_socket=yes
+    if [ $upheld_by_a_target = no ] && [ $started_by_its_socket = no ]; then
+        echo "extension-parts.sh: nothing starts the system service $service: no target upholds it, and it has no socket" >&2
+        exit 1
+    fi
+done
+
 # sysext merges this only into the version it was built for (SYSEXT_LEVEL
 # in the system's os-release, images/image.sh), on the architecture it is
 # of.

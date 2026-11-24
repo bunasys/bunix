@@ -733,5 +733,100 @@
     "version": "26.3.0-aurora-d4ad4a4",
     "url": "https://codeload.github.com/aurora-silicon/mesa/tar.gz/d4ad4a4dce6d1d23ecd897d6d73fadf9ab618614",
     "sha256": "6f8d930b3d846af6416dab55c82a9ccf8ec0d4cbbbe739016262268d7dc9ec4b"
+  },
+  "vulkan-headers": {
+    "version": "1.4.368",
+    "url": "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v1.4.368.tar.gz",
+    "sha256": "5c5c6f64fcce28a24cc934143a048707af036a858e4ed11d7f71fe016006ecda"
+  },
+  "libjpeg-turbo": {
+    "version": "3.2.1",
+    "url": "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.1/libjpeg-turbo-3.2.1.tar.gz",
+    "sha256": "c27ad72a68da151177929aa969ae773a2da5ac2af9ce946079314fdac8cece7f"
+  },
+  "qt6-base": {
+    "version": "6.12.0",
+    "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz",
+    "sha256": "a951bd163c7b80fc6b8c88d7668fb56abf91c152373e13c10666763238131307"
+  },
+  "qt6-shadertools": {
+    "version": "6.12.0",
+    "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtshadertools-everywhere-src-6.12.0.tar.xz",
+    "sha256": "c7d84f436e1aaef39fdcadebf2bd71bdf24dc69497e13f2e0198873cbbfea2ab"
+  },
+  "qt6-svg": {
+    "version": "6.12.0",
+    "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtsvg-everywhere-src-6.12.0.tar.xz",
+    "sha256": "e4ab39534ec97987b1b9b60ef7f4d3253d5912a69f8c713a01753174a4029331"
+  },
+  "qt6-declarative": {
+    "version": "6.12.0",
+    "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtdeclarative-everywhere-src-6.12.0.tar.xz",
+    "sha256": "311f3a2603e1973bb59baef9dfa740a376de713157d4782ee043681e889c9260"
+  },
+  "cli11": {
+    "version": "2.7.2",
+    "url": "https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.7.2.tar.gz",
+    "sha256": "46eef3101da70852ec7af026e09d485ccee81813331c8c6052d39344443b83da"
+  },
+  "jemalloc": {
+    "version": "5.4.0",
+    "url": "https://github.com/jemalloc/jemalloc/releases/download/5.4.0/jemalloc-5.4.0.tar.bz2",
+    "sha256": "200776fac271093e7c2f21edd6d62657ecd2be578d9328633f2a86bfa6ef4f1d"
+  },
+  "quickshell": {
+    "version": "0.3.2",
+    "url": "https://github.com/quickshell-mirror/quickshell/archive/refs/tags/v0.3.2.tar.gz",
+    "sha256": "946a27e2a276917a03c1079e5c60971af84ece73088c3661dee455d92eb420f7"
+  },
+  "accountsservice": {
+    "version": "23.13.9",
+    "url": "https://www.freedesktop.org/software/accountsservice/accountsservice-23.13.9.tar.xz",
+    "sha256": "adda4cdeae24fa0992e7df3ffff9effa7090be3ac233a3edfdf69d5a9c9b924f"
+  },
+  "greetd": {
+    "version": "0.10.3",
+    "url": "https://git.sr.ht/~kennylevinsen/greetd/archive/0.10.3.tar.gz",
+    "sha256": "ee5cb70e0add4ca9c9fe57e47581ab0002d44c07743fb5492469f3b570db640b"
+  },
+  "dms": {
+    "version": "2.1.2",
+    "url": "https://github.com/duxlabs-dev/dux-shell/archive/refs/tags/v2.1.2.tar.gz",
+    "sha256": "4990fcd6c359b63b8ce32d97c8b09e3dddb0f71096abec6f1a535445b0039a7f"
+  },
+  "dms-qml-common": {
+    "version": "0877466a25b8e191a865bf75d0e500de6351ae04",
+    "url": "https://github.com/duxlabs-dev/dux-qml-common/archive/0877466a25b8e191a865bf75d0e500de6351ae04.tar.gz",
+    "sha256": "fb33a74d647978e40846475205e5b1fec89ab4cdfa6a4c6da662f98e5c5c9f7b"
+  },
+  "dms-greeter": {
+    "version": "2.1.2",
+    "url": "https://github.com/duxlabs-dev/dux-greeter/archive/refs/tags/v2.1.2.tar.gz",
+    "sha256": "29bf015285a63d41df32995d5e4661c3fbb46796a3954dd8427bcf1e1675d5f4"
+  },
+  "dms-greeter-qml-common": {
+    "version": "b78c6fc861bcf1955d3db0c016779886add1f207",
+    "url": "https://github.com/duxlabs-dev/dux-qml-common/archive/b78c6fc861bcf1955d3db0c016779886add1f207.tar.gz",
+    "sha256": "01ae26e1ab6329df239395909b5a21066ee74f740cf37a7b5337d121be7873bf"
+  },
+  "go-x86_64-linux": {
+    "version": "1.27.4",
+    "url": "https://go.dev/dl/go1.27.4.linux-amd64.tar.gz",
+    "sha256": "7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840"
+  },
+  "go-aarch64-linux": {
+    "version": "1.27.4",
+    "url": "https://go.dev/dl/go1.27.4.linux-arm64.tar.gz",
+    "sha256": "3392582988a273a87ab5043ee1b2c9c17a2c3c00580bf9326c47a2e0aaaeac92"
+  },
+  "alsa-lib": {
+    "version": "1.2.16.1",
+    "url": "https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.16.1.tar.bz2",
+    "sha256": "f740db7f488255944ffd4428416ee3390a96742856916433df468c281436480e"
+  },
+  "pipewire": {
+    "version": "1.6.11",
+    "url": "https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.6.11/pipewire-1.6.11.tar.bz2",
+    "sha256": "0b32fbbece4591376b45dde5a818bfa5b3517e70913a2f7414e33c47c20b07ee"
   }
 }
