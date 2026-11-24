@@ -1084,6 +1084,19 @@ let
     };
   };
 
+  # The C.UTF-8 locale: C's rules, with UTF-8 for its text.  systemd gives
+  # every service and user session LANG=C.UTF-8 when /etc/locale.conf does
+  # not say otherwise, and glibc has the locale only compiled: without
+  # this, programs fall back to plain C, which is ASCII (Qt warns, and a
+  # file name in Arabic is bytes to it).  Made with glibc's localedef, from
+  # the sources glibc installs.
+  c-utf8-locale = mkSystemPackage {
+    name = "c-utf8-locale";
+    version = sources.glibc.version;
+    script = ./base/c-utf8-locale.sh;
+    buildDepends = [ glibc ];
+  };
+
   # fish: a shell a user may choose in place of bash (chsh).  Written in
   # Rust; it brings its own PCRE2, which its build compiles.
   # ncurses: fish reads the terminfo database when it runs.
@@ -1141,5 +1154,5 @@ in
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
-  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture osslsigncode;
+  inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture c-utf8-locale osslsigncode;
 }

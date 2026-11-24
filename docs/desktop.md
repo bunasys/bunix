@@ -56,6 +56,16 @@ What changed from 0.4.0:
   without a GPU Mesa drives gets no desktop, as upstream has it.
 - **libinput without its Python tools** (`libinput measure`, `analyze`,
   `replay`): the system has no Python.
+- **Qt without its build tools** (moc, qmlcachegen, qmake, the QML
+  tools, and the files a build of Qt software reads): 35 MB unpacked,
+  12 MB of the extension's file, which is 265 MB on arm64.
+- **Not turned on from tty1**: the login screen takes tty1 as it starts,
+  and with it the shell there, so `bunix ext enable desktop` typed on tty1
+  stops before it changes anything, and points to tty2 or SSH.
+- **C.UTF-8 in the base system** (`nix/base.nix`, `c-utf8-locale`): the
+  locale systemd gives every service and session, and logins over SSH
+  too, which 0.4.0 did not have compiled, so programs fell back to ASCII
+  (Qt warned of it).
 
 Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
 real hardware (an Intel Coffee Lake desktop).

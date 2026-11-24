@@ -5,7 +5,8 @@
 #                        brings, and of all they need to run (stage.nix)
 #   $system_image        the result of images/system.nix, for the list of
 #                        what /usr has already (usr-paths)
-#   $without             paths under usr/ to leave out
+#   $without             paths under usr/ to leave out: files, or
+#                        directories with all they hold
 #   $keep                paths under usr/ to keep of what is stripped
 #   $links               names to add, each name=program, the name a path
 #                        under usr/
@@ -65,7 +66,7 @@ find lib -maxdepth 2 -name '*.a' -delete
 cp -a /build/kept/. .
 # and what the extension's own list says
 for path in $without; do
-    rm -f "./$path"
+    rm -rf "./$path"
 done
 find . -type d -empty -delete
 # Names it adds, each for a program that is there: a name the extension

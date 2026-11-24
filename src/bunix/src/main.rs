@@ -46,6 +46,7 @@ fn run(arguments: &[String]) -> Result<(), String> {
         }
         ["ext"] | ["ext", "list"] => ext::list(),
         ["ext", "enable", name] => {
+            ext::check_this_terminal_stays(name)?;
             become_root(arguments)?;
             ext::enable(name)
         }

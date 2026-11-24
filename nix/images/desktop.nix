@@ -15,6 +15,7 @@
 let
   desktop = import ../desktop.nix { inherit system; };
   extension = import ./extension.nix { inherit system signature version; };
+  qt = "lib/${(import ../architecture.nix system).triplet}/qt6";
 in
 extension {
   name = "desktop";
@@ -35,5 +36,11 @@ extension {
     "lib/libinput/libinput-measure-touch-size" "lib/libinput/libinput-measure-touchpad-pressure"
     "lib/libinput/libinput-measure-touchpad-size" "lib/libinput/libinput-measure-touchpad-tap"
     "lib/libinput/libinput-replay"
+    # Qt's: its compilers and code generators (moc, qmlcachegen), qmake
+    # and the QML tools, and what tells a build of Qt software about Qt
+    # -- 35 MB unpacked.  The libraries, plugins and QML modules stay.
+    "${qt}/bin" "${qt}/libexec" "${qt}/mkspecs" "${qt}/metatypes" "${qt}/modules" "${qt}/sbom"
+    "bin/qmake6" "bin/androiddeployqt6" "bin/harmonydeployqt6" "bin/wasmdeployqt6"
+    "bin/qml6" "bin/qmleasing6" "bin/qmlpreview6" "bin/qmlscene6"
   ];
 }

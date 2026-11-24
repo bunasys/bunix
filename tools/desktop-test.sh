@@ -277,6 +277,15 @@ echo "  sara is logged in, with DMS and a session bus"
 sleep $qs_draws_its_first_frame
 take_picture sara "$sara_socket" "$work/desktop.png"
 echo "  the desktop: $work/desktop.png"
+# Qt says so when the locale it is given (systemd's C.UTF-8) is not on
+# the system, and falls back to ASCII
+save_login_log
+if grep -q "Detected locale" "$work/login.log"; then
+    in_guest "tr '\0' '\n' < /proc/\$(pgrep -u sara -x 'qs|quickshell' | head -n 1)/environ | grep -E '^(LANG|LC_)'; locale charmap" \
+        > "$work/locale.log" 2>&1 || true
+    fail "Qt found no UTF-8 locale; see $work/login.log, and its locale: $work/locale.log"
+fi
+echo "  Qt has the C.UTF-8 locale"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

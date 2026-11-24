@@ -5,3 +5,7 @@
 # this machine (`bunix install`, or make install) is what they mean by
 # its name.  /usr/local is on the root partition (usr/local, a link).
 PATH DEFAULT=/usr/local/bin:/usr/bin
+# The locale systemd gives services when /etc/locale.conf says none, and
+# the one locale the system has (base.nix, c-utf8-locale): a login over
+# SSH has only what PAM gives it.
+LANG DEFAULT=C.UTF-8

@@ -28,6 +28,9 @@ const CHOICES: &str = "/etc/sysupdate.d";
 const DOWNLOADED_TO: &str = "/var/lib/bunix/extensions";
 /// What an extension that is laid over /usr has there, by systemd's rule
 const MARK_OF_ONE_THAT_IS_ON: &str = "/usr/lib/extension-release.d/extension-release.";
+/// Extensions with a login screen, which takes tty1 as it starts
+/// (nix/desktop/greetd.sh): the shell there ends, with what runs in it.
+const TAKE_TTY1: &[&str] = &["desktop"];
 
 struct Extension {
     name: String,
@@ -62,6 +65,24 @@ pub fn list() -> Result<(), String> {
     }
     screen::aside("bunix ext enable <name> turns one on.");
     Ok(())
+}
+
+/// An extension that takes tty1 is not enabled from tty1: its login
+/// screen would end this command, and the shell it was typed in, before
+/// either says how it went.  Asked before run0, which gives this program
+/// a terminal of its own.
+pub fn check_this_terminal_stays(name: &str) -> Result<(), String> {
+    let takes_tty1 = TAKE_TTY1.contains(&name);
+    let typed_on_tty1 = std::fs::read_link("/proc/self/fd/0").is_ok_and(|terminal| terminal == Path::new("/dev/tty1"));
+    if !takes_tty1 || !typed_on_tty1 {
+        return Ok(());
+    }
+    Err(format!(
+        "{name} brings a login screen, which takes tty1 from this shell as it starts.\n\
+         Enable it from tty2 (Ctrl+Alt+F2) or over SSH.\n\
+         The login screen is for a person with a password; if there is none yet:\n\
+         \x20 useradd -m -G wheel <name> && passwd <name>"
+    ))
 }
 
 pub fn enable(name: &str) -> Result<(), String> {
