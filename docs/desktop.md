@@ -41,6 +41,13 @@ the next release waits for the last:
    `tools/desktop-test.sh` opens Alacritty in the person's session, and
    has them mount a FUSE file system and read it.
 
+`bunix-install` asks *desktop or console* when the version's files
+have the extension (`desktop_<release>.<architecture>.raw`, as a release
+has it): a desktop install puts it where an update would, and enables
+it, so that the first boot shows the login screen.
+`tools/install-test.sh` installs one of its two disks with the desktop
+and starts it.
+
 What changed from 0.4.0:
 
 - **No GTK 4**, libadwaita, gtk4-layer-shell, graphene or gdk-pixbuf, and

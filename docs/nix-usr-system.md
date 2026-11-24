@@ -425,15 +425,17 @@ What is there of it (`tools/boot-vm.sh disk`, a virtual machine):
   first lines list changed: the kernel images on the ESP, no firmware
   boot entry, nothing of Apple's deleted and never a Mac's whole disk,
   what an Apple Silicon Mac's boot loader loads from the ESP ("A Mac
-  starts from its disk"), and the person's choice of bash or fish.  It asks for the machine's
+  starts from its disk"), the person's choice of bash or fish, and of
+  the desktop or the console where the directory has the desktop
+  extension (`docs/desktop.md`).  It asks for the machine's
   name and one account, an administrator; root's is locked.  The root
   partition it makes ends where the next partition begins: free space
   right after the chosen place becomes bunix's, since systemd-repart
   grows the root partition into such space at every boot (seen in the
   test: a megabyte at a disk's end).
   `tools/install-test.sh` installs twice in a virtual machine, on an
-  empty disk and on one laid out as a Mac's with 4096-byte sectors, and
-  starts both.
+  empty disk, with the desktop, and on one laid out as a Mac's with
+  4096-byte sectors, and starts both.
 - **The hash signed.**  A third partition beside `/usr` and its hashes:
   the root hash, signed.  The kernel has bunix's certificate built in
   (`keys/verity.crt`) and checks such signatures against it; the system

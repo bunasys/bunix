@@ -38,7 +38,10 @@
 #   - The machine's own firmware, where the system in memory was handed
 #     some (a Mac's, for its Wi-Fi), is kept on the new root, in
 #     /var/lib/vendorfw: it is in no package.
-#   - The person chooses their shell, bash or fish.  No desktop yet.
+#   - The person chooses their shell, bash or fish.
+#   - The desktop is an extension in the version's files
+#     (desktop_<release>.<architecture>.raw, as published), not on the
+#     medium; where they have none, the question is not asked.
 #
 # Nothing outside the chosen space, and free space right after it, is
 # written, except on the disk's ESP: EFI/BOOT/, EFI/Linux/bunix_* and
@@ -64,10 +67,16 @@
 # logs in as root, and the console asks for a login instead of opening
 # root's shell.
 #
+# A desktop install also puts the desktop extension on the root file
+# system, as an update would have put it there, and enables it: the first
+# boot shows the login screen, and updates bring the extension's next
+# versions.
+#
 # Questions are read from standard input, so a test can answer them (disk,
-# place, the ESP if the disk has several, host name, name, user name,
-# shell, password twice, confirmation; tools/install-test.sh):
-#   printf '1\n2\nsara-laptop\nSara\nsara\n2\nsecret\nsecret\nyes\n' | bunix-install files/
+# place, the ESP if the disk has several, desktop or console if the files
+# have the desktop, host name, name, user name, shell, password twice,
+# confirmation; tools/install-test.sh):
+#   printf '1\n2\n1\nsara-laptop\nSara\nsara\n2\nsecret\nsecret\nyes\n' | bunix-install files/
 set -euo pipefail
 # so that a failed $(ask ...) inside a function stops the script too
 shopt -s inherit_errexit
@@ -207,6 +216,9 @@ release=${release#bunix_}
 usr_image=$(the_file "bunix_$release.usr-$ARCHITECTURE.*.raw")
 verity_image=$(the_file "bunix_$release.usr-$ARCHITECTURE-verity.*.raw")
 signature_image=$(the_file "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw")
+# The desktop extension of this version, if the files have it: a choice,
+# not one of the files a version needs
+desktop_image=$files/desktop_$release.$ARCHITECTURE.raw
 # The kernel image's usrhash= finds slot A's partitions by these UUIDs
 # (images/update.sh).  The file names carry them, as x86's do without
 # dashes.
@@ -602,6 +614,18 @@ fi
 
 # Asked, and checked, before anything on the disk changes: a failure
 # later would leave the disk half installed
+look=console
+if [ -f "$desktop_image" ]; then
+  echo
+  echo "A desktop (niri with DMS), or the console alone."
+  echo "\"bunix ext enable desktop\" adds the desktop later, from tty2 or over SSH."
+  echo "  1) desktop"
+  echo "  2) console"
+  looks=(desktop console)
+  index=$(ask_number "Which?" ${#looks[@]})
+  look=${looks[$index]}
+fi
+
 echo
 host_name=$(ask "This computer's name, on the network (like \"sara-laptop\"):")
 host_name=${host_name,,}
@@ -849,6 +873,7 @@ if [ "$was_handed_firmware" = yes ]; then
   cp -a "$firmware_of_this_boot"/. "$WORK"/root/var/lib/vendorfw/
 fi
 
+
 # --- the system and its user, on the new root ---------------------------
 
 # Before the first boot, whose tmpfiles copy the factory name ("bunix")
@@ -875,13 +900,32 @@ printf '%s:%s\n' "$user_name" "$password" | chpasswd --prefix "$WORK"/root
 # root for a machine nobody has set up yet and open its shell.
 printf 'root:%s\n' "$(head -c 32 /dev/urandom | base64)" | chpasswd --prefix "$WORK"/root
 usermod --prefix "$WORK"/root --lock root
+
+# After the accounts: a copy this large that fails would otherwise leave
+# a disk that starts with no accounts, and opens root's shell on tty1
+if [ "$look" = desktop ]; then
+  echo "Adding the desktop..."
+  # Where an update keeps a version's extensions, read-only as it leaves
+  # them, under the version it names them by, which is the release
+  # (usr/lib/sysupdate.d/54-desktop.transfer): the first boot lays it
+  # over /usr from there
+  install -D -m 0444 "$desktop_image" "$WORK/root/var/lib/bunix/extensions/desktop_$release.raw"
+  # and the machine's choice to have it, which updates go by, written as
+  # `bunix ext enable` writes it (src/bunix/src/ext.rs)
+  mkdir -p "$WORK"/root/etc/sysupdate.d/desktop.feature.d
+  printf '[Feature]\nEnabled=true\n' > "$WORK"/root/etc/sysupdate.d/desktop.feature.d/enable.conf
+fi
 sync
 
 # --- done ---------------------------------------------------------------
 
 echo
 echo "bunix $release is installed on $disk."
-echo "Log in as \"$user_name\"."
+if [ "$look" = desktop ]; then
+  echo "Log in as \"$user_name\" at the login screen."
+else
+  echo "Log in as \"$user_name\"."
+fi
 if [ "$starts_through_aura" = yes ]; then
   echo "A Mac starts it once the Mac is told, in its recovery system, to start"
   echo "aura's first stage made for this ESP, which this installer does not do."
