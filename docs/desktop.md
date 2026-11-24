@@ -21,8 +21,17 @@ the next release waits for the last:
    `tools/desktop-test.sh` brings up the login screen, types a name and
    password on the machine's keyboard, and checks that the person's
    session comes up with DMS.
-3. **Sound**: WirePlumber, which routes PipeWire's sound, and the arm64
-   kernel's sound drivers, built in.
+3. **Sound** (done): WirePlumber, which routes PipeWire's sound, with
+   Lua 5.5 for its policy; alsa-utils, whose alsactl keeps the cards'
+   volumes; and the arm64 kernel's sound drivers, built in: a Mac's
+   (macaudio, its codecs and amplifiers, the AOP's microphones),
+   virtio's and USB's.  `tools/desktop-test.sh` gives the machine a sound
+   card and plays a sound through the person's PipeWire.  PipeWire now
+   starts with each session, not when a program first asks for sound:
+   `nix/desktop/wireplumber.sh` says so, since a change to
+   `pipewire.sh` would rebuild Quickshell; that script's comment, which
+   still speaks of the sockets alone, is corrected with PipeWire's next
+   version.
 4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
    fusermount, libfuse 2 and 3) so that an AppImage runs; then the
    extension in releases.
@@ -323,3 +332,13 @@ installed system.
 - Headers for building against the desktop libraries (GTK apps) belong
   with `gcc` or in a `desktop-devel` extension: not decided.
 - An on-screen keyboard that handles Arabic.
+- A Mac's speakers at full volume: macaudio keeps them at a safe level
+  until a speaker safety daemon (speakersafetyd, or Aurora's
+  speakerguardd) takes them, and Asahi's DSP for them (asahi-audio, its
+  LV2 plugins) is not there either.  Nor UCM profiles (alsa-ucm-conf),
+  which some cards need to route their outputs.  None of a Mac's sound
+  has been tried: only the virtual machines' cards.
+- The cards' volumes are restored once, as the extension is merged
+  (`alsa-restore.service`): a card that appears later, a USB headset,
+  starts at its driver's levels, until PipeWire sets its own.  A restore
+  per card, from a udev rule, would cover it.

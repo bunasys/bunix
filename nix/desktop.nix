@@ -581,6 +581,43 @@ let
     buildDepends = [ meson ninja pkgconf base.gettext base.bzip2 ];
   };
 
+  # Lua 5.5: WirePlumber's policy is written in it.  A shared library and
+  # its pkg-config file, which upstream's build does not make; without the
+  # lua and luac programs (desktop/lua.sh).
+  lua = mkSystemPackage {
+    name = "lua";
+    source = sources.lua;
+    script = ./desktop/lua.sh;
+    depends = [ glibc ];
+    env = { lua_version = sources.lua.version; };
+  };
+
+  # WirePlumber: PipeWire's session manager.  It finds the sound cards,
+  # picks the output (the speakers, the headphones once plugged in),
+  # remembers volumes, and lets programs in; wpctl sets volumes from the
+  # command line.  Started with PipeWire, in each person's session
+  # (desktop/wireplumber.sh).
+  wireplumber = mkSystemPackage {
+    name = "wireplumber";
+    source = sources.wireplumber;
+    script = ./desktop/wireplumber.sh;
+    depends = [ glibc base.glib lua pipewire base.systemd ];
+    buildDepends = [ meson ninja pkgconf base.gettext base.bzip2 ];
+  };
+
+  # alsa-utils: alsactl, which sets the sound cards' volumes at boot
+  # (unmuted, at ALSA's defaults the first time, then as they were left),
+  # and amixer, aplay and speaker-test.  Without alsamixer's interface,
+  # the BAT tester and the manuals (desktop/alsa-utils.sh).  bash:
+  # alsa-info.sh, which gathers what a bug report about sound needs.
+  alsa-utils = mkSystemPackage {
+    name = "alsa-utils";
+    source = sources.alsa-utils;
+    script = ./desktop/alsa-utils.sh;
+    depends = [ glibc alsa-lib tools.bash ];
+    buildDepends = [ pkgconf base.bzip2 ];
+  };
+
   # ---- Logging in -------------------------------------------------------------------
 
   # greetd: the login manager.  On tty1 it runs the greeter (dms-greeter)
@@ -636,5 +673,5 @@ in
   inherit hwdata niri;
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
   inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice dbus-user-session;
-  inherit alsa-lib pipewire;
+  inherit alsa-lib pipewire lua wireplumber alsa-utils;
 }

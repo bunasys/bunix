@@ -3,8 +3,9 @@
 # elements/sysext/desktop*.bst).  So far the drivers -- Mesa, libinput,
 # seatd -- the text stack and its fonts, niri, the compositor, and the
 # shell: DMS on Quickshell and Qt 6, with its login screen under greetd,
-# the list of people (accountsservice) and each one's session bus.  Sound
-# and the terminal come next.  It needs no other extension.
+# the list of people (accountsservice) and each one's session bus; and
+# sound: PipeWire, WirePlumber and alsa-utils.  The terminal comes next.
+# It needs no other extension.
 #
 #   nix-build /bunix/nix/images/desktop.nix -A image
 #
@@ -15,13 +16,15 @@
 let
   desktop = import ../desktop.nix { inherit system; };
   extension = import ./extension.nix { inherit system signature version; };
-  qt = "lib/${(import ../architecture.nix system).triplet}/qt6";
+  architecture = import ../architecture.nix system;
+  qt6Directory = "lib/${architecture.triplet}/qt6";
 in
 extension {
   name = "desktop";
   contents = [
     desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.fonts desktop.niri
     desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.dbus-user-session
+    desktop.wireplumber desktop.alsa-utils
   ];
   # Programs of what these need to run that are for building software
   # against them, not for a desktop.  And libinput's tools that are
@@ -38,8 +41,10 @@ extension {
     "lib/libinput/libinput-replay"
     # Qt's: its compilers and code generators (moc, qmlcachegen), qmake
     # and the QML tools, and what tells a build of Qt software about Qt
-    # -- 35 MB unpacked.  The libraries, plugins and QML modules stay.
-    "${qt}/bin" "${qt}/libexec" "${qt}/mkspecs" "${qt}/metatypes" "${qt}/modules" "${qt}/sbom"
+    # -- 35 MB unpacked.  The libraries, plugins and QML modules stay.  The
+    # names in bin/ are Qt 6.12's: one a new Qt adds is not left out.
+    "${qt6Directory}/bin" "${qt6Directory}/libexec" "${qt6Directory}/mkspecs"
+    "${qt6Directory}/metatypes" "${qt6Directory}/modules" "${qt6Directory}/sbom"
     "bin/qmake6" "bin/androiddeployqt6" "bin/harmonydeployqt6" "bin/wasmdeployqt6"
     "bin/qml6" "bin/qmleasing6" "bin/qmlpreview6" "bin/qmlscene6"
   ];

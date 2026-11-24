@@ -64,8 +64,11 @@ rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
 find lib -maxdepth 2 -name '*.a' -delete
 # and back, now that the rest is gone
 cp -a /build/kept/. .
-# and what the extension's own list says
+# and what the extension's own list says.  A path that is not there is a
+# mistake in the list, or a package that moved what the list names: what
+# it meant to leave out would be back without a word.
 for path in $without; do
+    [ -e "./$path" ] || [ -L "./$path" ] || { echo "extension-parts.sh: usr/$path is not there to leave out" >&2; exit 1; }
     rm -rf "./$path"
 done
 find . -type d -empty -delete
