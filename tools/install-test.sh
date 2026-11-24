@@ -12,17 +12,19 @@
 #
 # bunix is started in memory, as on a machine it is to be installed on,
 # with two disks, is handed firmware of the machine's own as a Mac is,
-# and is given the files of its own version (nix/images/update.nix).  It
+# and is given the files of its own version (nix/images/update.nix), with
+# its desktop extension (nix/images/desktop.nix) as a release has it.  It
 # installs twice:
 #
-#   1. onto a whole, empty disk; the machine's flash chip is not to be
-#      offered as one
+#   1. onto a whole, empty disk, with the desktop; the machine's flash
+#      chip is not to be offered as one
 #   2. onto a disk laid out as a Mac's is, with sectors of 4096 bytes as
 #      a Mac's has: Apple's partitions before and after, and between them
 #      another system's ESP, an ESP for bunix, a root partition of an
 #      earlier Linux, and free space (what mbp20's disk has, and an ESP
 #      more).  The installer replaces the Linux partition, and is told
-#      which ESP is bunix's; the whole disk is not to be offered.
+#      which ESP is bunix's; the whole disk is not to be offered.  The
+#      console alone, no desktop.
 #      tools/mac-stage1.sh then puts on that ESP what a Mac's recovery
 #      system is to find there (aarch64).
 #   3. the first disk is started by EFI firmware, as a machine would
@@ -31,10 +33,11 @@
 #      its hash, the account is as asked, the machine's firmware is
 #      there and the kernel told of it, the kernel found the wireless
 #      regulatory database, and the first boot left the partitions where
-#      they were
-#   4. the same of the second disk; and Apple's partitions and the other
-#      system's ESP are then what they were before the installer ran,
-#      byte for byte
+#      they were; and the desktop extension is laid over /usr, and its
+#      login screen started
+#   4. the same of the second disk, which has no desktop; and Apple's
+#      partitions and the other system's ESP are then what they were
+#      before the installer ran, byte for byte
 #   5. the second disk again, started by U-Boot: the EFI firmware a Mac
 #      is given (nix/boot.nix), here as built for this virtual machine;
 #      and Apple's partitions are still what they were (aarch64)
@@ -104,11 +107,15 @@ update=$(build "$source/nix/images/update.nix")
 copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
 copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
 copy_built_directory "$update" "$work/files"
+version=$(release_version)
+# named as a release names it (tools/publish.sh), which the installer
+# looks for
+desktop=$(build "$source/nix/images/desktop.nix" -A image)
+copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
 if [ $like_an_apple_silicon_mac = yes ]; then
     u_boot=$(build "$source/nix/boot.nix" -A u-boot-qemu)
     copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
 fi
-version=$(release_version)
 
 # Empty, and as large as they are only in name: what is written of them
 # is all that is kept.
@@ -245,8 +252,10 @@ partitions_of() {
     as "$1" "lsblk -b -nro TYPE,START,SIZE $2 | grep '^part '"
 }
 
-echo "1. onto a whole, empty disk"
+echo "1. onto a whole, empty disk, with the desktop"
+# The whole disk (1), then the desktop (1)
 run_installer whole "$(number_of "$whole")
+1
 1
 Whole-Disk
 Sara of the Whole Disk
@@ -315,8 +324,9 @@ bunix_esp_id=$(as root "lsblk -ndo PARTUUID ${mac}5")
 
 # Its places: the root partition (1), the Linux system (2), the free
 # space after it (3).  Not the whole disk.  Then which of the two ESPs:
-# the second.
+# the second.  Then the console (2).
 run_installer mac "$(number_of "$mac")
+2
 2
 2
 mac-laptop
@@ -400,7 +410,10 @@ expect_installed() {
     [ "$state" = running ] || fail "not all of the installed system started: $state"
     running=$(as "$user" "sed -n 's/^IMAGE_VERSION=//p' /usr/lib/os-release")
     [ "$running" = "$version" ] || fail "bunix $running started, not $version"
-    [ "$(as "$user" findmnt -no SOURCE /usr)" = /dev/mapper/usr ] || fail "/usr is not checked against its hash"
+    # The first mount on /usr: an extension laid over it (the desktop) is
+    # a mount on top of that one
+    usr_device=$(as "$user" "awk '\$2 == \"/usr\" { print \$1; exit }' /proc/self/mounts")
+    [ "$usr_device" = /dev/mapper/usr ] || fail "/usr is not checked against its hash: $usr_device"
     # (udev's link, not lsblk: only root is told a partition's name by it)
     [ "$(as "$user" findmnt -no SOURCE /)" = "$(as "$user" readlink -f /dev/disk/by-partlabel/bunix-root)" ] \
         || fail "/ is not the partition the installer made"
@@ -434,12 +447,24 @@ echo "3. the whole disk starts, and Sara logs in to fish"
 # shellcheck disable=SC2086
 start_qemu $machine_on_real_processor $efi_firmware $whole_disk
 expect_installed sara "Sara of the Whole Disk" /usr/bin/fish whole-disk "$work/whole-partitions"
+# Merged before the system counts as started; greetd, upheld once it is,
+# may still be on its way
+as sara "test -e /usr/lib/extension-release.d/extension-release.desktop" \
+    || fail "the desktop extension is not laid over /usr"
+as sara "timeout 60 sh -c 'until systemctl is-active -q greetd.service; do sleep 1; done'" \
+    || fail "the desktop's login screen did not start"
+as sara "test -e /etc/sysupdate.d/desktop.feature.d/enable.conf" \
+    || fail "the desktop is not enabled for updates"
+echo "  the desktop is laid over /usr, enabled, and its login screen started"
 pull_the_plug
 
 echo "4. the Mac's disk starts, and Adam logs in to bash"
 # shellcheck disable=SC2086
 start_qemu $machine_on_real_processor $efi_firmware $mac_disk
 expect_installed adam "Adam of the Mac" /usr/bin/bash mac-laptop "$work/mac-partitions"
+# (said, not an exit status: an SSH that fails would pass for "no")
+has_the_desktop=$(as adam "test -e /usr/lib/extension-release.d/extension-release.desktop && echo yes || echo no")
+[ "$has_the_desktop" = no ] || fail "the console install has the desktop: $has_the_desktop"
 # The disk is started once more (5), and this was its first start, which
 # filled /etc: without the sync, the plug pulled now leaves some of those
 # files empty, and the next start without a message bus.  (A machine

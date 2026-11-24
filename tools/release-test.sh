@@ -3,8 +3,8 @@
 # together, before it is uploaded, in a virtual machine, from an Apple
 # Silicon Mac:
 #
-#   tools/release-test.sh out/updates/0.4.2 0.4.1
-#   BUNIX_ARCHITECTURE=x86_64 tools/release-test.sh out/updates/0.4.2 0.4.1
+#   tools/release-test.sh out/updates/0.5.0 0.4.2
+#   BUNIX_ARCHITECTURE=x86_64 tools/release-test.sh out/updates/0.5.0 0.4.2
 #
 # once for each architecture the release is of: the machine is the Mac's
 # own, or one on the x86_64 builder (tools/test-machine.sh).
