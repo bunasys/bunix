@@ -12,6 +12,7 @@ Installed systems fetch it with systemd-sysupdate from
 | `bunix_<version>.<arch>.efi` | the kernel image that starts it |
 | `devtools_<version>.<arch>.raw` | the devtools extension (`nix/images/devtools.nix`) |
 | `llvm_<version>.<arch>.raw` | the llvm extension (`nix/images/llvm.nix`) |
+| `desktop_<version>.<arch>.raw` | the desktop extension (`nix/images/desktop.nix`) |
 
 and once, for all of them, `SHA256SUMS` and `SHA256SUMS.gpg`: the list of
 the files and its OpenPGP signature by the release key.
@@ -67,8 +68,9 @@ architecture's system and extensions signed with the image key
 (`tools/sign.sh`), and the x86-64 kernel image with the Secure Boot key
 (`tools/sign-kernel-image.sh`), then writes `SHA256SUMS` (good for 30
 days, `BUNIX_MANIFEST_DAYS`) and has it signed with the release key
-(`tools/sign-list.sh`).  1Password asks eight times: six for the
-image key (a system and two extensions, for each architecture), once
+(`tools/sign-list.sh`).  1Password asks for the image key once an image
+(the system and each extension of `extensions` in `tools/publish.sh`,
+for each architecture), once
 for the Secure Boot key, and once for the release key.  It says what in
 the working tree is not in the commit, and so not in the release, and
 ends with the line that tags the commit it built.

@@ -47,7 +47,14 @@
 #           files (extension-parts.sh)
 # links     names it adds for programs it has, each "name=program", the
 #           name a path under usr/ (bin/cc=clang)
-{ name, contents, without ? [], keep ? [], links ? [] }:
+# set_user_id
+#           programs of usr/bin it has that run as root whoever starts
+#           them, each with usr/ in its path, unlike the lists above, as
+#           images/system.nix's list has them (usr/bin/fusermount3): a build
+#           cannot make them so, the file system's tar file says it
+#           (extension-parts.sh).  sysext mounts an extension nosuid only
+#           when told to, and bunix does not tell it.
+{ name, contents, without ? [], keep ? [], links ? [], set_user_id ? [] }:
 
 assert builtins.match "[a-z0-9]+" name != null;
 
@@ -77,7 +84,7 @@ let
       # that is made of them.
       system_image = import ./system.nix { inherit system version; };
       partition_architecture = architecture.partitionArchitecture;
-      inherit version without keep links;
+      inherit version without keep links set_user_id;
     };
   };
 

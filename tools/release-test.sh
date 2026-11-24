@@ -12,16 +12,18 @@
 # The first is the release's directory; the second the version machines
 # run now.  A disk of that version is built and started, the Mac serves
 # the directory, and the machine is told to look there, and to ask for
-# the devtools extension.  Nothing else is changed on it: the list of
-# files is taken by the certificate the system comes with, and each image
-# by the signature in it, as from where releases are.  Then:
+# the devtools and desktop extensions.  Nothing else is changed on it:
+# the list of files is taken by the certificate the system comes with,
+# and each image by the signature in it, as from where releases are.
+# Then:
 #
 #   1. the installed version starts
 #   2. it updates to the release, its person having asked for the
-#      devtools extension: of all the directory's files it takes its own
-#      architecture's
+#      devtools and desktop extensions: of all the directory's files it
+#      takes its own architecture's
 #   3. the machine restarts into the release, and marks it good; the
-#      extension is laid over /usr, and its programs run
+#      extensions are laid over /usr, devtools' programs run, and the
+#      desktop's login screen is started
 #
 # The installed system is this working tree's, under the older version's
 # number: NOT the files that version was published with.  What
@@ -183,14 +185,16 @@ if [ -n "${BUNIX_LIST_CERTIFICATE:-}" ]; then
     in_guest "mkdir -p /etc/systemd && cat > /etc/systemd/import-pubring.pgp" < "$BUNIX_LIST_CERTIFICATE" \
         || fail "could not tell the machine whose lists to take"
 fi
-in_guest "mkdir -p /etc/sysupdate.d/devtools.feature.d &&
-    printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf" \
-    || fail "could not ask for the devtools extension"
+in_guest "for feature in devtools desktop; do
+        mkdir -p /etc/sysupdate.d/\$feature.feature.d &&
+        printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/\$feature.feature.d/enable.conf || exit 1
+    done" \
+    || fail "could not ask for the devtools and desktop extensions"
 in_guest /usr/lib/systemd/systemd-sysupdate update > "$work/update.log" 2>&1 \
     || fail "the update did not go through; see $work/update.log"
 on_disk=$(in_guest "ls /boot/EFI/Linux /var/lib/bunix/extensions; lsblk -n -o PARTLABEL") \
     || fail "could not look at the machine's disk"
-for written in "bunix_$version+3-0.efi" "devtools_$version.raw" "bunix_$version"; do
+for written in "bunix_$version+3-0.efi" "devtools_$version.raw" "desktop_$version.raw" "bunix_$version"; do
     echo "$on_disk" | grep -q -x -F "$written" \
         || fail "the update wrote no $written; see $work/update.log"
 done
@@ -206,6 +210,10 @@ in_guest "git --version && gdb --version && strace -V && file --version && bsdta
     > "$work/devtools.log" 2>&1 \
     || fail "the devtools extension's programs do not all run; see $work/devtools.log"
 echo "  marked good; the devtools extension of $version is merged, and its programs run"
+in_guest "test -e /usr/lib/extension-release.d/extension-release.desktop &&
+    timeout 60 sh -c 'until systemctl is-active -q greetd.service; do sleep 1; done'" \
+    || fail "the desktop extension of $version is not merged, or its login screen did not start"
+echo "  the desktop extension of $version is merged, and its login screen started"
 
 stop_machine poweroff
 echo "release-test.sh: passed"

@@ -1,0 +1,18 @@
+# The desktop extension (desktop.feature), built with each release, and
+# kept on the machine as the devtools extension is: 53-devtools.transfer
+# says why, and how.  (After files/rootfs's 54-desktop.transfer.)
+[Transfer]
+Features=desktop
+ProtectVersion=%A
+
+[Source]
+Type=url-file
+Path=https://github.com/bunasys/bunix/releases/latest/download/
+MatchPattern=desktop_@v.%a.raw
+
+[Target]
+Type=regular-file
+Path=/var/lib/bunix/extensions
+MatchPattern=desktop_@v.raw
+Mode=0444
+InstancesMax=2

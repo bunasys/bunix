@@ -131,11 +131,9 @@ for x86-64 alone.  An element is removed from `elements/` once Nix builds
 what it built, and BuildStream's tooling is gone; what is left there is
 kept to port from, and no longer builds:
 
-- of the desktop: a terminal, Alacritty, where 0.4.0 had Ghostty and
-  GTK 4, and FUSE, for AppImages.
-  The rest of it is ported (`docs/desktop.md`, "The port to Nix"), and
-  its extension is in no release until all is;
 - the gcc, rust and swift extensions; Rust built from source, Go and Zig;
+- of 0.4.0's desktop, what the Nix one does without: GTK 4 and Ghostty
+  (Alacritty is its terminal), grim, and Plymouth's boot splash;
 - Hudhud, the browser (`docs/browser.md`; its Mac build,
   `tools/build-macos.sh`, reads the pinned versions from these elements);
 - programs of the x86-64 system that the Nix one does not have: BusyBox
