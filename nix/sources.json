@@ -843,5 +843,20 @@
     "version": "1.2.16",
     "url": "https://www.alsa-project.org/files/pub/utils/alsa-utils-1.2.16.tar.bz2",
     "sha256": "092399d5e8749a1d5e188e393157521cec4b75693b60ebb79bbce728cff2232c"
+  },
+  "libfuse3": {
+    "version": "3.18.3",
+    "url": "https://github.com/libfuse/libfuse/releases/download/fuse-3.18.3/fuse-3.18.3.tar.gz",
+    "sha256": "bcd19582c5e30f7fe45dd86a5540e998590aa01903afc7ebcbeea6c8ac5421ee"
+  },
+  "libfuse2": {
+    "version": "2.9.9",
+    "url": "https://github.com/libfuse/libfuse/releases/download/fuse-2.9.9/fuse-2.9.9.tar.gz",
+    "sha256": "d0e69d5d608cc22ff4843791ad097f554dd32540ddc9bed7638cc6fea7c1b4b5"
+  },
+  "alacritty": {
+    "version": "0.17.0",
+    "url": "https://codeload.github.com/alacritty/alacritty/tar.gz/refs/tags/v0.17.0",
+    "sha256": "38d6527d346cda5c6049332a1f3338a89ea66cd7981b54d4c3ce801b392496f8"
   }
 }

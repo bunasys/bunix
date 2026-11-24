@@ -19,6 +19,8 @@
 #                                         (nix/images/devtools.nix)
 #   llvm_<release>.<arch>.raw             the llvm extension
 #                                         (nix/images/llvm.nix)
+#   desktop_<release>.<arch>.raw          the desktop extension
+#                                         (nix/images/desktop.nix)
 #
 # and, once, for all of them:
 #
@@ -28,9 +30,9 @@
 #   SHA256SUMS.gpg  the list's signature, by the release key
 #
 # Three keys sign, and none is in a file: 1Password asks for the image
-# key six times (a system and two extensions for each architecture,
-# tools/sign.sh), for the Secure Boot key once (the x86_64 kernel
-# image, tools/sign-kernel-image.sh), and for the release key once
+# key once an image (the system and each of $extensions below, for each
+# architecture; tools/sign.sh), for the Secure Boot key once (the x86_64
+# kernel image, tools/sign-kernel-image.sh), and for the release key once
 # (tools/sign-list.sh).
 #
 # What a signature here vouches for is what the builders made of the
@@ -173,7 +175,7 @@ leave_signature() {
 images=bunix-release/source/nix/images
 system_signature=bunix-release/system.signature
 # each has nix/images/<name>.nix, and a feature of its name in the system
-extensions="devtools llvm"
+extensions="devtools llvm desktop"
 for architecture in $architectures; do
     echo "$architecture: sending the source, as of commit $commit"
     git archive "$commit" | in_builder "$architecture" \

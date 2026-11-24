@@ -10,6 +10,8 @@
 #   $keep                paths under usr/ to keep of what is stripped
 #   $links               names to add, each name=program, the name a path
 #                        under usr/
+#   $set_user_id         programs of usr/bin that run as root whoever
+#                        starts them
 #   $extension, $version, $partition_architecture
 set -euo pipefail
 cd /build
@@ -131,8 +133,46 @@ du -sh $tree/usr
 # read at every start, as /usr's are, and the image is a few megabytes
 # larger for it.  The signature is made of the root hash alone,
 # afterwards (images/extension.sh).
+# Set-user-id programs, as images/image.sh has /usr's (its "/usr as a
+# partition"): a build cannot chmod them so, and they go into the tar
+# file after the rest, with their mode.  Each is a program of usr/bin.
+set_user_id_mode=4755
+for program in $set_user_id; do
+    case $program in
+        usr/bin/*) is_in_usr_bin=yes ;;
+        *) is_in_usr_bin=no ;;
+    esac
+    is_a_file=no
+    if [ -f $tree/$program ] && [ ! -L $tree/$program ]; then
+        is_a_file=yes
+    fi
+    if [ $is_in_usr_bin = no ] || [ $is_a_file = no ]; then
+        echo "extension-parts.sh: set_user_id names $program, which is not a program in usr/bin" >&2
+        exit 1
+    fi
+done
 mkdir -p root.d tmp images $out
-tar -C $tree --sort=name --owner=0 --group=0 --numeric-owner --mtime=@1 -cf root.tar .
+to_root_tar() {
+    tar -C $tree --sort=name --owner=0 --group=0 --numeric-owner --mtime=@1 "$@"
+}
+programs=
+without_programs=
+for program in $set_user_id; do
+    programs="$programs ./$program"
+    without_programs="$without_programs --exclude=./$program"
+done
+to_root_tar --anchored $without_programs -cf root.tar .
+if [ -n "$programs" ]; then
+    to_root_tar --mode=$set_user_id_mode -rf root.tar $programs
+fi
+# one line a program, and the s in it: a list that tar did not take as
+# meant would otherwise be found out on a running system, or not
+for program in $programs; do
+    if ! tar -tvf root.tar $program | grep -q '^-rwsr-xr-x '; then
+        echo "extension-parts.sh: $program is not set-user-id in root.tar" >&2
+        exit 1
+    fi
+done
 digits=$(printf 'bunix %s file system %s' $extension $version | sha256sum | head -c 32)
 file_system_id=${digits:0:8}-${digits:8:4}-${digits:12:4}-${digits:16:4}-${digits:20:12}
 mkfs.erofs --quiet -zlz4hc -U $file_system_id --tar=f root.erofs root.tar

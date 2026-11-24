@@ -17,6 +17,10 @@ acl:
   cpe: ['a:acl_project:acl', 'a:acl:acl']
   debian: acl
   alpine: acl
+alacritty:
+  anitya: 141678
+  debian: alacritty
+  alpine: alacritty
 alsa-lib:
   anitya: 38
   cpe: 'a:alsa-project:alsa-lib'
@@ -350,6 +354,16 @@ libffi:
   cpe: 'a:libffi_project:libffi'
   debian: libffi
   alpine: libffi
+libfuse2:
+  cpe: 'a:fuse_project:fuse'
+  untracked: libfuse 2 is no longer developed, and 2.9.9 is its last release
+  debian: fuse
+  alpine: fuse
+libfuse3:
+  anitya: 861
+  cpe: 'a:fuse_project:fuse'
+  debian: fuse3
+  alpine: fuse3
 libinput:
   anitya: 5781
   cpe: 'a:freedesktop:libinput'

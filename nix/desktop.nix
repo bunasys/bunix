@@ -1,8 +1,8 @@
-# Packages of the graphical system, after elements/base/ and
-# elements/desktop/: what the desktop extension is made of
+# Packages of the graphical system: what the desktop extension is made of
 # (images/desktop.nix), and what only their builds need.  None of them is
-# in the system itself.  Built as base.nix's are, and ported from the
-# elements the way it says.
+# in the system itself.  Built as base.nix's are, and ported from 0.4.0's
+# elements the way it says (`git show v0.4.0:elements/desktop/niri.bst`,
+# and elements/base/ for the rest).
 #
 #   nix-build /bunix/nix/desktop.nix -A niri
 #
@@ -361,8 +361,7 @@ let
         ../files/niri/render-node-of-the-device.patch
       ];
       libdisplay_info = fetch sources.libdisplay-info;
-      # niri's Cargo.lock, as the `cargo2` source of
-      # elements/desktop/niri.bst has it
+      # niri's Cargo.lock
       crates = map (crate: fetch {
         url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
         inherit (crate) sha256;
@@ -665,6 +664,60 @@ let
     depends = [ base.dbus ];
   };
 
+  # ---- The terminal and AppImages ------------------------------------------------
+
+  # Alacritty: the terminal, drawn with OpenGL ES (Mesa's EGL), on Wayland
+  # alone.  Where 0.4.0 had Ghostty, which is a GTK 4 program.  Wayland's
+  # libraries, libxkbcommon and EGL it loads when it runs, by name
+  # (desktop/alacritty.sh).
+  alacritty = mkSystemPackage {
+    name = "alacritty";
+    source = sources.alacritty;
+    script = ./desktop/alacritty.sh;
+    depends = [ glibc toolchain.gccLibraries fontconfig freetype wayland libxkbcommon mesa ];
+    buildDepends = [ base.rust pkgconf ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/alacritty-crates.json));
+    };
+  };
+
+  # libfuse 3: what a program uses to be a file system (FUSE), and
+  # fusermount3, which mounts one for a person who is not root -- an
+  # AppImage mounts itself with it.  Set-user-id in the extension
+  # (images/desktop.nix).
+  libfuse3 = mkSystemPackage {
+    name = "libfuse3";
+    source = sources.libfuse3;
+    script = ./desktop/libfuse3.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+  };
+
+  # libfuse 2, the library alone, for the AppImages made with it
+  # (desktop/libfuse2.sh)
+  libfuse2 = mkSystemPackage {
+    name = "libfuse2";
+    source = sources.libfuse2;
+    script = ./desktop/libfuse2.sh;
+    depends = [ glibc ];
+  };
+
+  # FUSE file systems to mount: libfuse's example, built against libfuse 3
+  # and libfuse 2, which tools/desktop-test.sh mounts as a person who is
+  # not root, through fusermount3 (and its old name, for 2).  Not in any
+  # image.
+  fuse-hello = mkSystemPackage {
+    name = "fuse-hello";
+    source = sources.libfuse3;
+    script = ./desktop/fuse-hello.sh;
+    depends = [ glibc libfuse3 libfuse2 ];
+    buildDepends = [ pkgconf ];
+    env = { libfuse2_source = fetch sources.libfuse2; };
+  };
+
 in
 {
   inherit libdrm wayland wayland-protocols python-mako python-pyyaml spirv-headers spirv-tools spirv-llvm-translator mesa;
@@ -674,4 +727,5 @@ in
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
   inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice dbus-user-session;
   inherit alsa-lib pipewire lua wireplumber alsa-utils;
+  inherit alacritty libfuse3 libfuse2 fuse-hello;
 }

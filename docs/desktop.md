@@ -32,9 +32,14 @@ the next release waits for the last:
    `pipewire.sh` would rebuild Quickshell; that script's comment, which
    still speaks of the sockets alone, is corrected with PipeWire's next
    version.
-4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
-   fusermount, libfuse 2 and 3) so that an AppImage runs; then the
-   extension in releases.
+4. **The terminal and AppImages** (done): Alacritty, and FUSE -- the
+   arm64 kernel's, built in; libfuse 3 with fusermount3, set-user-id in
+   the extension; and libfuse 2, for the AppImages made with it -- so
+   that an AppImage runs.  The extension is in releases
+   (`sysupdate.d/54-desktop.transfer`, `desktop.feature`,
+   `tools/publish.sh`), and the elements it was ported from are gone.
+   `tools/desktop-test.sh` opens Alacritty in the person's session, and
+   has them mount a FUSE file system and read it.
 
 What changed from 0.4.0:
 
@@ -68,6 +73,11 @@ What changed from 0.4.0:
 - **Qt without its build tools** (moc, qmlcachegen, qmake, the QML
   tools, and the files a build of Qt software reads): 35 MB unpacked,
   12 MB of the extension's file, which is 265 MB on arm64.
+- **Set-user-id in an extension**: sysext mounts an extension without
+  `nosuid`, so `fusermount3` can be set-user-id root from it, as
+  `passwd` is from `/usr`.  `images/extension.nix` takes the list
+  (`set_user_id`), and `extension-parts.sh` writes the mode into the
+  file system's tar file.
 - **Not turned on from tty1**: the login screen takes tty1 as it starts,
   and with it the shell there, so `bunix ext enable desktop` typed on tty1
   stops before it changes anything, and points to tty2 or SSH.
@@ -120,7 +130,7 @@ buna ext enable|disable <name>
 | Boot splash | Plymouth, a bunix theme with the Buna logo |
 | Kernel drivers | loadable modules (kmod), signed |
 | Admin access | run0 + polkit |
-| Compositor and shell | niri with DMS, a Quickshell (Qt/QML) shell; its login screen is dms-greeter, under greetd (`elements/desktop/`) |
+| Compositor and shell | niri with DMS, a Quickshell (Qt/QML) shell; its login screen is dms-greeter, under greetd (`nix/desktop.nix`) |
 | Graphics on the system | the `desktop` system extension, chosen at install: *Desktop or console?* (docs/schematics.md) |
 | `buna` and its screens | Rust + GTK4/libadwaita (gtk4-rs) |
 | Languages | Arabic and English from day 0: right-to-left layouts, Arabic fonts and keyboard |

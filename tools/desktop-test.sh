@@ -22,6 +22,10 @@
 #      locale (base.nix, c-utf8-locale)
 #   4. sound: the card's volumes are set, WirePlumber gives the person's
 #      PipeWire the card for its output, and a sound plays through it
+#   5. the terminal and FUSE: Alacritty opens a window in the person's
+#      session, pictured too; and the person mounts a FUSE file system
+#      (libfuse's example) through fusermount3, and reads a file in it,
+#      once with libfuse 3 and once with libfuse 2, as AppImages do
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
@@ -68,9 +72,13 @@ echo "building a test system's disk, and its desktop extension"
 disk=$(build "$source/nix/images/disk.nix" --argstr espSize 512M \
     --argstr usrSlotSize 512M --argstr usrVeritySize 8M)
 desktop=$(build "$source/nix/images/desktop.nix" -A image)
+# the FUSE file systems step 5 mounts, which no image has
+fuse_hello=$(build "$source/nix/desktop.nix" -A fuse-hello)
 copy_built_file_to_machine "$disk/disk.raw" disk.raw
 in_machine_directory "truncate -s +2G disk.raw"
 copy_built_file "$desktop/desktop_*.raw" "$work/desktop.raw"
+copy_built_file "$fuse_hello/usr/bin/fuse-hello" "$work/fuse-hello"
+copy_built_file "$fuse_hello/usr/bin/fuse2-hello" "$work/fuse2-hello"
 
 # The key that may log in, as boot-vm.sh gives it: a credential on the
 # kernel's command line, which the firmware hands over (SMBIOS).
@@ -319,6 +327,57 @@ echo "  PipeWire has the card for its output"
 in_guest "$as_sara aplay /usr/share/sounds/alsa/Front_Center.wav" >> "$work/sound.log" 2>&1 \
     || fail_with_login_log "no sound played through PipeWire; see $work/sound.log"
 echo "  a sound played through PipeWire"
+
+echo "5. the terminal, and FUSE"
+# Alacritty in sara's session, on niri's Wayland socket, left open for a
+# picture: started apart from this ssh (setsid), which would otherwise
+# wait for it.  The file it makes says it ran its command.
+sara_runtime=/run/user/$(in_guest "id -u sara")
+wayland_display=$(in_guest "ls $sara_runtime | grep -x 'wayland-[0-9]*' | head -n 1")
+[ -n "$wayland_display" ] || fail_with_login_log "sara's niri has no Wayland socket in $sara_runtime"
+in_guest "setsid -f $as_sara WAYLAND_DISPLAY=$wayland_display \
+    alacritty -e sh -c 'touch $sara_runtime/alacritty-ran; exec sleep 120' > /run/desktop-test/alacritty.log 2>&1" \
+    || fail "could not start Alacritty as sara"
+in_guest "timeout 30 sh -c 'until [ -e $sara_runtime/alacritty-ran ]; do sleep 1; done'" \
+    || { in_guest "cat /run/desktop-test/alacritty.log" > "$work/alacritty.log" 2>&1 || true
+         fail "Alacritty did not run its command; see $work/alacritty.log"; }
+# its window, which niri lists once Alacritty has drawn into it
+alacritty_window_shown() {
+    in_guest "NIRI_SOCKET=$sara_socket niri msg windows" > "$work/windows.log" 2>&1 || true
+    grep -q 'App ID: "Alacritty"' "$work/windows.log"
+}
+deadline=$(($(date +%s) + 30))
+until alacritty_window_shown; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        in_guest "cat /run/desktop-test/alacritty.log" > "$work/alacritty.log" 2>&1 || true
+        fail "niri shows no window of Alacritty's; see $work/windows.log and $work/alacritty.log"
+    fi
+    sleep 2
+done
+echo "  Alacritty opened a window"
+sleep $qs_draws_its_first_frame
+take_picture sara "$sara_socket" "$work/terminal.png"
+echo "  the terminal: $work/terminal.png"
+in_guest "pkill -u sara -x alacritty" || true
+
+# fusermount3 set-user-id, as the extension's file system says, and
+# libfuse 2 with fusermount by its old name
+in_guest "stat -c %A /usr/bin/fusermount3; readlink /usr/bin/fusermount; ls /usr/lib/*/libfuse.so.2" \
+    > "$work/fuse.log" 2>&1 || true
+grep -q '^-rwsr-xr-x$' "$work/fuse.log" || fail "fusermount3 is not set-user-id; see $work/fuse.log"
+grep -q '^fusermount3$' "$work/fuse.log" || fail "fusermount is not fusermount3; see $work/fuse.log"
+grep -q 'libfuse\.so\.2$' "$work/fuse.log" || fail "libfuse 2 is not there; see $work/fuse.log"
+# libfuse's example, mounted and read by sara, who is not root: with
+# libfuse 3, and with libfuse 2, which runs fusermount3 by its old name
+for program in fuse-hello fuse2-hello; do
+    in_guest "cat > /run/desktop-test/$program && chmod 755 /run/desktop-test/$program" < "$work/$program"
+    in_guest "$as_sara sh -c 'mkdir -p /tmp/$program && /run/desktop-test/$program /tmp/$program &&
+        cat /tmp/$program/hello; fusermount3 -u /tmp/$program'" > "$work/$program.log" 2>&1 \
+        || fail "sara could not mount a FUSE file system with $program; see $work/$program.log"
+    grep -q '^Hello World!$' "$work/$program.log" \
+        || fail "$program's file system said not what it has; see $work/$program.log"
+done
+echo "  sara mounted FUSE file systems with libfuse 3 and 2, and read them"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

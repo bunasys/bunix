@@ -2,7 +2,7 @@
 
 Written for bunix on x86-64 as BuildStream built it, up to 0.4.0.  The
 mechanism is the same in what Nix builds (`docs/nix-usr-system.md`), which
-has the devtools and llvm extensions so far; the elements and tools named
+has the devtools, llvm and desktop extensions so far; the elements and tools named
 here that are gone are in git's history (the elements as of `v0.4.0`).
 
 Status: steps 1 and 2 built and tested (2026-11-03); step 3 is design.
