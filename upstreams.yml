@@ -367,6 +367,10 @@ openssl:
   cpe: 'a:openssl:openssl'
   debian: openssl
   alpine: openssl
+osslsigncode:
+  anitya: 2577
+  debian: osslsigncode
+  alpine: osslsigncode
 patch:
   anitya: 2597
   cpe: 'a:gnu:patch'

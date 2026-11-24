@@ -99,6 +99,7 @@ tools/install-test.sh               install it on two disks, and start them
 tools/update-test.sh                update it, refuse what is not signed, go back from a bad update
 tools/release-test.sh <directory> <version before>
                                     update to a release before it is uploaded
+tools/secure-boot-test.sh           x86-64 with Secure Boot on: start, and refuse a changed kernel image
 ```
 
 ## Documents
@@ -120,7 +121,7 @@ signed outside the build, which is given the signature
 | --- | --- | --- |
 | image key (`keys/verity.crt`) | the hash of `/usr`, and of each extension (`tools/sign.sh`) | the kernel, which has the certificate built in |
 | release key (OpenPGP) | the list of a release's files (`tools/sign-list.sh`) | sysupdate: `import-pubring.pgp` in the system |
-| Secure Boot key | nothing yet in what Nix builds | PCs that enrolled it, for 0.4.0 and before |
+| Secure Boot key (`keys/secureboot.crt`) | the x86-64 kernel image (`tools/sign-kernel-image.sh`) | PCs that enrolled it with shim, for 0.4.0 and before; none that takes a Nix-built release yet |
 
 ## Not ported from BuildStream yet
 
@@ -137,17 +138,15 @@ kept to port from, and no longer builds:
 - programs of the x86-64 system that the Nix one does not have: BusyBox
   and uutils' commands, bind, nftables, WireGuard's tools, neovim, less,
   htop, ripgrep, rsync, the time zones, and tools for a PC's hardware;
-- the live image, and Secure Boot (shim, signed boot files and kernel
-  images);
+- the live image, and of Secure Boot what a new install needs (shim,
+  and systemd-boot signed);
 - the tests of these (`elements/tests/`, and `tools/boot-test.py` with
   its checks).
 
-Five elements stay though Nix builds their part, for what they still
+Four elements stay though Nix builds their part, for what they still
 have beyond it: the kernel's (BTF, its types for BPF tools), the
-initrd's (graphics drivers,
-Plymouth's boot splash), the kernel image's (its signature), the
-ESP's (shim) and the root file system's (what the x86-64 system is made
-of).  Three that are gone have no package of the same extent: the full
+initrd's (graphics drivers, Plymouth's boot splash), the ESP's (shim)
+and the root file system's (what the x86-64 system is made of).  Three that are gone have no package of the same extent: the full
 Python of a running system, and the tool that signed a release's list
 with the SQLite it needed.  Like every removed element they are in git:
 `git show v0.4.0:elements/base/python.bst`.

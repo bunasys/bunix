@@ -491,8 +491,8 @@ shell); anything that runs an update by itself, which has to clear away
 a download that was cut off first (`systemd-sysupdate vacuum`: sysupdate
 refuses to go on over one) and should not update from a version not yet
 marked good; a test system's update files told from a release's by
-more than the name of the build's result; the kernel image signed (what would check it is Secure Boot,
-which a Mac's EFI does not have, so whoever can write the boot
+more than the name of the build's result; anything that checks a Mac's
+kernel image (it has no Secure Boot, so whoever can write the boot
 partition chooses what runs); a medium the installer finds
 its files on by itself; and any of it
 on a Mac.  U-Boot, as built for a virtual machine, has done both things
@@ -641,6 +641,27 @@ key's signatures as well as bunix's, and says so of itself
 (`VARIANT_ID=development` in `/usr/lib/os-release`).  A system for
 release takes bunix's only, and does not take a test build's image as
 bunix's.  The kernel has bunix's certificate only, in both.
+
+The kernel image of x86-64 has a signature of its own, for Secure Boot,
+by a third key: a PC with Secure Boot on starts only what is signed by
+a key it knows, which for bunix is the one its owner enrolled with shim
+(`docs/install.md`).  It is made by one script, `tools/sign-kernel-image.sh`
+(osslsigncode), for a release as for a test, as `tools/sign.sh` is for
+the hash: a release's outside the build, the key from the password
+manager through a pipe, when `tools/publish.sh` has the image back from
+the builder; a test system's in its build (`images/uki.nix`), with the
+development key.  `tools/secure-boot-test.sh` gives a virtual PC's
+firmware that key (`images/disk.nix`: `secureBootEnrolment`;
+systemd-boot enrols it at the first start), starts bunix with Secure
+Boot on, and changes a few bytes of the kernel image on its disk, which
+the firmware then refuses.  A Mac has no Secure Boot, and its kernel
+image no signature.
+
+No machine checks this signature yet.  Those that would, PCs installed
+from 0.4.0 or before with shim and bunix's key, take no Nix-built
+release (`docs/release.md`); and a disk this builds has no shim, and a
+systemd-boot that is not signed, so a PC starts it only with Secure
+Boot off.  Both are to come.
 
 What is enforced, and what is not: nothing yet refuses a `/usr` that has
 no signature.  `/usr` is opened by the hash on the kernel's command

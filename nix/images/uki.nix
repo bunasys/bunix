@@ -13,10 +13,15 @@
 #            as images/system.nix takes them: the /usr named is that
 #            system's
 #
-# Not signed: what would check it is Secure Boot, which a Mac's EFI
-# (U-Boot) does not have.  So whoever can write the partition it is on,
-# or hand words to the machine's firmware, chooses what runs; nothing
-# here stands against that yet.
+# Signed for Secure Boot on x86, which a PC's firmware has and a Mac's
+# EFI (U-Boot) has not: there, whoever can write the partition the image
+# is on, or hand words to the machine's firmware, chooses what runs.  A
+# test system's image is signed here, by tools/sign-kernel-image.sh with
+# the development key, which is not secret (nix/development-key/README):
+# the script a release's is signed with, so that a test that starts
+# this with Secure Boot on (tools/secure-boot-test.sh) starts what a
+# release's signature is.  A release's is not signed by any build: its
+# key is in no file, and tools/publish.sh signs what this makes.
 #
 # No device tree in it: a machine that needs one gets it from what
 # started its EFI.
@@ -27,17 +32,24 @@ let
   base = import ../base.nix { inherit system; };
   boot = import ../boot.nix { inherit system; };
   stagedBuild = import ../stage.nix { inherit system; };
+  isSignedHere = system == "x86_64-linux" && signing == "development";
 in
 stagedBuild {
   name = "bunix-uki";
   run = ./uki.sh;
   # systemd: ukify, and the stub the image starts with.  python and
   # pefile: ukify is Python, and puts the file together with pefile.
-  buildDepends = [ base.systemd tools.python base.python-pefile tools.bash tools.coreutils tools.grep ];
+  buildDepends = [ base.systemd tools.python base.python-pefile tools.bash tools.coreutils tools.grep ]
+    # osslsigncode: what the signing script signs with
+    ++ (if isSignedHere then [ base.osslsigncode ] else []);
   env = {
     # x86: the processor's microcode, which the stub hands to the kernel
     # before the initrd.  A Mac's processor takes none.
     microcode = if system == "x86_64-linux" then boot.microcode else "";
+    # what a test system's image is signed with, and by
+    sign_kernel_image = if isSignedHere then ../../tools/sign-kernel-image.sh else "";
+    secure_boot_key = if isSignedHere then ../development-key/development.key else "";
+    secure_boot_certificate = if isSignedHere then ../development-key/development.crt else "";
     initrd = import ./initrd.nix { inherit system; };
     system_image = import ./system.nix { inherit system signing version; };
     # root=: the root partition by its name, not by its type, as systemd

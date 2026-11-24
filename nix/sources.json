@@ -588,5 +588,10 @@
     "version": "20260925",
     "url": "https://github.com/intel/Intel-Linux-Processor-Microcode-Data-Files/archive/refs/tags/microcode-20260925.tar.gz",
     "sha256": "0ec19023dad1e6dd0c5909174b8dff2555b91cf01671e36271a1ef36655c0cfc"
+  },
+  "osslsigncode": {
+    "version": "2.16",
+    "url": "https://github.com/mtrojnar/osslsigncode/archive/refs/tags/2.16.tar.gz",
+    "sha256": "c8fce7cdb0f1643d98a6689cb3106fda8265f17014fd7912856c9473f9b141a7"
   }
 }

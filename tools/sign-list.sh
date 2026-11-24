@@ -1,8 +1,9 @@
 #!/bin/bash
 # Signs the list of a release's files with bunix's release key, which is
 # in a password manager: it is asked for here, used, and gone.  As
-# tools/sign.sh does for the hash of an image; this is the other of a
-# release's two kinds of signature (docs/updates.md).
+# tools/sign.sh does for the hash of an image; one of a release's three
+# kinds of signature (docs/updates.md; tools/sign-kernel-image.sh is the
+# third).
 #
 #   tools/sign-list.sh <release directory>/SHA256SUMS > <release directory>/SHA256SUMS.gpg
 #

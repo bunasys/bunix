@@ -5,6 +5,9 @@
 # slot's three partitions, each a file with its partition's id in its
 # name, and the kernel image that starts that /usr.
 # $version, $partition_architecture: what those files are named by.
+# $secure_boot_enrolment: for a test machine with Secure Boot, the files
+# that give its firmware a key; with $sign_kernel_image, $secure_boot_key
+# and $secure_boot_certificate, which systemd-boot is then signed by.
 # $esp_size: the partition a machine boots from.
 # $usr_slot_size, $usr_verity_size: a /usr slot's two larger partitions.
 set -euo pipefail
@@ -44,6 +47,21 @@ cp $systemd_boot tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
 # The menu stays hidden, and lists only bunix: no entries for other
 # systems' loaders (as elements/system/esp.bst).
 printf '%s\n' 'timeout 0' 'console-mode keep' 'auto-entries no' > tree/esp/loader/loader.conf
+
+# A test machine with Secure Boot (disk.nix: secureBootEnrolment).  Its
+# firmware has no keys yet and starts anything; systemd-boot gives it the
+# ones in loader/keys/auto and restarts the machine (force: with no
+# person to ask).  From then on the firmware starts only what the key
+# signed: systemd-boot too, so it is signed here, as the kernel image is
+# (tools/sign-kernel-image.sh).
+if [ -n "$secure_boot_enrolment" ]; then
+    rm tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
+    BUNIX_SECURE_BOOT_KEY_FILE=$secure_boot_key BUNIX_SECURE_BOOT_CERTIFICATE=$secure_boot_certificate \
+        bash $sign_kernel_image $systemd_boot tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
+    mkdir -p tree/esp/loader/keys/auto
+    cp $secure_boot_enrolment/*.auth tree/esp/loader/keys/auto/
+    echo 'secure-boot-enroll force' >> tree/esp/loader/loader.conf
+fi
 # under the name systemd-boot and sysupdate know an installed one by
 cp $uki tree/esp/EFI/Linux/bunix_$version.efi
 # the time of each file, which the partition keeps: the build's own would
