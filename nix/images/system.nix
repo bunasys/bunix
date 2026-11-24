@@ -81,6 +81,8 @@ stagedBuild {
     # the picture of a boot, drawn again when a GPU's driver takes the
     # screen
     base.boot-picture
+    # the locale systemd gives every service and session
+    base.c-utf8-locale
   ]
   # and what a Mac's own boot loader loads from the ESP, for the
   # installer to put there (x86 has no such Mac to start)

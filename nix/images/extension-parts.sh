@@ -5,7 +5,8 @@
 #                        brings, and of all they need to run (stage.nix)
 #   $system_image        the result of images/system.nix, for the list of
 #                        what /usr has already (usr-paths)
-#   $without             paths under usr/ to leave out
+#   $without             paths under usr/ to leave out: files, or
+#                        directories with all they hold
 #   $keep                paths under usr/ to keep of what is stripped
 #   $links               names to add, each name=program, the name a path
 #                        under usr/
@@ -63,9 +64,12 @@ rm -rf include lib/*/pkgconfig lib/*/cmake share/pkgconfig share/aclocal \
 find lib -maxdepth 2 -name '*.a' -delete
 # and back, now that the rest is gone
 cp -a /build/kept/. .
-# and what the extension's own list says
+# and what the extension's own list says.  A path that is not there is a
+# mistake in the list, or a package that moved what the list names: what
+# it meant to leave out would be back without a word.
 for path in $without; do
-    rm -f "./$path"
+    [ -e "./$path" ] || [ -L "./$path" ] || { echo "extension-parts.sh: usr/$path is not there to leave out" >&2; exit 1; }
+    rm -rf "./$path"
 done
 find . -type d -empty -delete
 # Names it adds, each for a program that is there: a name the extension

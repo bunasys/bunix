@@ -18,13 +18,11 @@ extension {
   name = "devtools";
   contents = [ base.git base.gdb base.strace base.file base.libarchive base.nodejs base.nix ]
     ++ (if system == "x86_64-linux" then [ base.firecracker ] else []);
-  # Programs of what these need to run (ncurses, curl, expat, openssl,
-  # bzip2), where the system does not have them already: not tools this
-  # extension is for.  The element's list.
-  without = [
-    "bin/tic" "bin/infocmp" "bin/toe" "bin/tabs" "bin/captoinfo" "bin/infotocap" "bin/ncurses6-config"
-    "bin/curl-config" "bin/xmlwf" "bin/c_rehash"
-    "bin/bzip2" "bin/bunzip2" "bin/bzcat" "bin/bzip2recover" "bin/bzdiff" "bin/bzgrep" "bin/bzmore"
-    "bin/bzless" "bin/bzcmp" "bin/bzegrep" "bin/bzfgrep"
-  ];
+  # Programs of what these need to run, where the system does not have
+  # them already: bzip2's, which libarchive links, are not tools this
+  # extension is for.  (The element's list had ncurses', curl's, expat's
+  # and OpenSSL's too, which none of the Nix builds leaves here: the
+  # system has them, or they are not installed.  extension-parts.sh fails
+  # on a name that is not there.)
+  without = [ "bin/bzip2" "bin/bunzip2" "bin/bzcat" "bin/bzip2recover" ];
 }

@@ -22,6 +22,10 @@ alsa-lib:
   cpe: 'a:alsa-project:alsa-lib'
   debian: alsa-lib
   alpine: alsa-lib
+alsa-utils:
+  anitya: 37
+  debian: alsa-utils
+  alpine: alsa-utils
 attr:
   anitya: 137
   cpe: 'a:attr_project:attr'
@@ -403,6 +407,10 @@ llvm:
   cpe: 'a:llvm:llvm'
   debian: llvm-toolchain-23
   alpine: llvm23
+lua:
+  anitya: 1847
+  cpe: 'a:lua:lua'
+  alpine: lua5.5
 lz4:
   anitya: 1865
   cpe: 'a:lz4_project:lz4'
@@ -663,6 +671,10 @@ wireless-regdb:
   anitya: 15257
   debian: wireless-regdb
   alpine: wireless-regdb
+wireplumber:
+  anitya: 235056
+  debian: wireplumber
+  alpine: wireplumber
 xkeyboard-config:
   anitya: 5191
   debian: xkeyboard-config

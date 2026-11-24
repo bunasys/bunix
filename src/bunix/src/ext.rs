@@ -28,6 +28,10 @@ const CHOICES: &str = "/etc/sysupdate.d";
 const DOWNLOADED_TO: &str = "/var/lib/bunix/extensions";
 /// What an extension that is laid over /usr has there, by systemd's rule
 const MARK_OF_ONE_THAT_IS_ON: &str = "/usr/lib/extension-release.d/extension-release.";
+/// Extensions with a login screen, which takes tty1 as it starts
+/// (Conflicts=console-shell@tty1.service, nix/desktop/greetd.sh): the
+/// shell there ends, with what runs in it.
+const EXTENSIONS_WITH_A_LOGIN_SCREEN: &[&str] = &["desktop"];
 
 struct Extension {
     name: String,
@@ -62,6 +66,33 @@ pub fn list() -> Result<(), String> {
     }
     screen::aside("bunix ext enable <name> turns one on.");
     Ok(())
+}
+
+/// An extension with a login screen is not enabled from tty1: the login
+/// screen would end this command, and the shell it was typed in, before
+/// either says how it went.  Asked before run0, which gives this program
+/// a terminal of its own; `run0 bunix ...` typed on tty1 is not seen.
+pub fn refuse_on_tty1(name: &str) -> Result<(), String> {
+    let brings_a_login_screen = EXTENSIONS_WITH_A_LOGIN_SCREEN.contains(&name);
+    let would_end_this_shell = brings_a_login_screen && runs_on_tty1();
+    if !would_end_this_shell {
+        return Ok(());
+    }
+    Err(format!(
+        "{name} brings a login screen, which takes tty1 from this shell as it starts.\n\
+         Enable it from tty2 (Ctrl+Alt+F2) or over SSH.\n\
+         The login screen is for a person with a password; if there is none yet:\n\
+         \x20 useradd -m -G wheel <name> && passwd <name>"
+    ))
+}
+
+/// Its input, output or errors on tty1: any one is enough for the end of
+/// the shell there to end this command too.
+fn runs_on_tty1() -> bool {
+    let tty1 = Path::new("/dev/tty1");
+    ["/proc/self/fd/0", "/proc/self/fd/1", "/proc/self/fd/2"]
+        .iter()
+        .any(|stream| std::fs::read_link(stream).is_ok_and(|terminal| terminal == tty1))
 }
 
 pub fn enable(name: &str) -> Result<(), String> {

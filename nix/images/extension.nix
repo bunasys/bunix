@@ -39,8 +39,9 @@
 #           since sysext takes a file's name up to the first "_" for it
 # contents  the packages it brings.  What they need to run comes with
 #           them, but for what the system has already.
-# without   paths under usr/ that it is not to have: programs of the
-#           packages its own need, which are not what it is for
+# without   paths under usr/ that it is not to have, files or
+#           directories: programs of the packages its own need, which are
+#           not what it is for
 # keep      paths under usr/ that it keeps of what every extension is
 #           stripped of: headers, static libraries, pkg-config and cmake
 #           files (extension-parts.sh)

@@ -5,7 +5,7 @@
 #   tools/desktop-test.sh
 #
 # The machine is a test system's disk, as tools/boot-vm.sh starts one,
-# with a screen and a keyboard.  Then:
+# with a screen, a keyboard and a sound card.  Then:
 #
 #   1. the extension, signed with the development key, is put where an
 #      update puts it, and systemd-sysext merges it; the unit it brings
@@ -18,11 +18,16 @@
 #      screen, copied here to be looked at
 #   3. a person logs in, typing their name and password on the machine's
 #      keyboard: their session is niri with DMS, and a session bus; a
-#      picture of the desktop is copied here too
+#      picture of the desktop is copied here too; and Qt has a UTF-8
+#      locale (base.nix, c-utf8-locale)
+#   4. sound: the card's volumes are set, WirePlumber gives the person's
+#      PipeWire the card for its output, and a sound plays through it
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
 # Mac): Mesa draws with llvmpipe on both, which niri is told to take.
+# Nor a Mac's sound card: the arm64 machine's is virtio's, the x86_64
+# one's QEMU's Intel HD Audio, and what they play goes nowhere.
 # Nor what a person sees: the pictures are the screen as niri drew it,
 # which only a look at them says is right.  Nor the greeter's picker of
 # people, which only a click opens: the test has it ask for a name.
@@ -73,8 +78,16 @@ key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$publi
 smbios_words=$(printf 'console=%s %s' "$console" "$key_word" | sed 's/,/,,/g')
 # BUNIX_MONITOR: the keyboard of step 3 is typed on through QEMU's monitor
 export BUNIX_MONITOR=1
+# A sound card whose sound goes nowhere (an audio backend of "none"): on
+# arm64 virtio's, which the kernel has built in, on x86_64 Intel HD
+# Audio, whose modules the kernel has (boot/linux/)
+case $architecture in
+aarch64) sound_card="-device virtio-sound-pci,audiodev=silence" ;;
+x86_64) sound_card="-device intel-hda -device hda-duplex,audiodev=silence" ;;
+*) fail "no sound card for a machine of $architecture" ;;
+esac
 # shellcheck disable=SC2086
-start_qemu $machine_on_real_processor $efi_firmware \
+start_qemu $machine_on_real_processor $efi_firmware -audiodev none,id=silence $sound_card \
     -drive "file=$machine_directory/disk.raw,format=raw,if=virtio" \
     -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
 trap 'kill $qemu 2> /dev/null || true' EXIT
@@ -277,6 +290,35 @@ echo "  sara is logged in, with DMS and a session bus"
 sleep $qs_draws_its_first_frame
 take_picture sara "$sara_socket" "$work/desktop.png"
 echo "  the desktop: $work/desktop.png"
+# Qt says so when the locale it is given (systemd's C.UTF-8) is not on
+# the system, and falls back to ASCII
+save_login_log
+if grep -q "Detected locale" "$work/login.log"; then
+    # what DMS's Quickshell was given, and what glibc makes of it
+    locale_of_dms="tr '\0' '\n' < /proc/\$(pgrep -u sara -x 'qs|quickshell' | head -n 1)/environ | grep -E '^(LANG|LC_)'"
+    in_guest "$locale_of_dms; locale charmap" > "$work/locale.log" 2>&1 || true
+    fail "Qt found no UTF-8 locale; see $work/login.log, and its locale: $work/locale.log"
+fi
+echo "  Qt has the C.UTF-8 locale"
+
+echo "4. sound"
+in_guest "systemctl is-active -q alsa-restore.service && amixer -c 0 scontrols" > "$work/sound.log" 2>&1 \
+    || fail "the sound card's volumes were not set (alsa-restore.service); see $work/sound.log"
+echo "  the card's volumes are set"
+# As sara, in their session: their PipeWire, which WirePlumber gives the card
+# a moment after both start; and a sound, through ALSA's default device,
+# which is PipeWire
+as_sara="runuser -u sara -- env XDG_RUNTIME_DIR=/run/user/\$(id -u sara)"
+in_guest "timeout 30 sh -c 'until $as_sara wpctl inspect @DEFAULT_AUDIO_SINK@; do sleep 1; done'" \
+    >> "$work/sound.log" 2>&1 \
+    || fail_with_login_log "WirePlumber gave PipeWire no output; see $work/sound.log"
+# the card's, and not one PipeWire would make of nothing
+grep -q 'node.name = "alsa_output\.' "$work/sound.log" \
+    || fail "PipeWire's output is not the sound card; see $work/sound.log"
+echo "  PipeWire has the card for its output"
+in_guest "$as_sara aplay /usr/share/sounds/alsa/Front_Center.wav" >> "$work/sound.log" 2>&1 \
+    || fail_with_login_log "no sound played through PipeWire; see $work/sound.log"
+echo "  a sound played through PipeWire"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

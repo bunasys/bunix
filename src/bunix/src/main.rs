@@ -46,6 +46,7 @@ fn run(arguments: &[String]) -> Result<(), String> {
         }
         ["ext"] | ["ext", "list"] => ext::list(),
         ["ext", "enable", name] => {
+            ext::refuse_on_tty1(name)?;
             become_root(arguments)?;
             ext::enable(name)
         }
