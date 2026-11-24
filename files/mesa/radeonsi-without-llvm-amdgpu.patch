@@ -1,0 +1,23 @@
+radeonsi without LLVM's AMDGPU target
+
+radeonsi compiles its shaders with ACO, Mesa's own compiler for AMD GPUs,
+when it is built with -Damd-use-llvm=false.  Mesa's build still asks
+LLVM for its AMDGPU target whenever radeonsi is built, and fails when
+LLVM has none (bunix's LLVM is built for AArch64 and X86 only: base.nix).
+Asked only when LLVM is what radeonsi compiles with, as the line after
+it already has it for the version of LLVM.
+
+Mesa built with -Dllvm=disabled builds radeonsi with ACO alone; this is
+that, with LLVM there for the other drivers.
+
+--- a/meson.build
++++ b/meson.build
+@@ -1961,7 +1961,7 @@
+ 
+ llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'core', 'executionengine', 'scalaropts', 'transformutils', 'instcombine']
+ llvm_optional_modules = ['coroutines']
+-if with_amd_vk or with_gallium_radeonsi
++if (with_amd_vk or with_gallium_radeonsi) and amd_with_llvm
+   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
+ endif
+ if with_clc

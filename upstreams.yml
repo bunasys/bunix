@@ -64,6 +64,11 @@ ca-certificates:
   anitya: 332224
   debian: ca-certificates
   alpine: ca-certificates
+cairo:
+  anitya: 247
+  cpe: 'a:cairographics:cairo'
+  debian: cairo
+  alpine: cairo
 cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
 cargo-x86_64-linux:
@@ -165,6 +170,21 @@ flex:
   cpe: ['a:flex_project:flex', 'a:westes:flex']
   debian: flex
   alpine: flex
+fontconfig:
+  anitya: 827
+  cpe: 'a:fontconfig_project:fontconfig'
+  debian: fontconfig
+  alpine: fontconfig
+freetype:
+  anitya: 854
+  cpe: 'a:freetype:freetype'
+  debian: freetype
+  alpine: freetype
+fribidi:
+  anitya: 857
+  cpe: 'a:gnu:fribidi'
+  debian: fribidi
+  alpine: fribidi
 gawk:
   anitya: 868
   debian: gawk
@@ -217,10 +237,19 @@ gzip:
   cpe: 'a:gnu:gzip'
   debian: gzip
   alpine: gzip
+harfbuzz:
+  anitya: 1299
+  cpe: 'a:harfbuzz_project:harfbuzz'
+  debian: harfbuzz
+  alpine: harfbuzz
 htop:
   anitya: 1332
   debian: htop
   alpine: htop
+hwdata:
+  anitya: 5387
+  debian: hwdata
+  alpine: hwdata
 intel-microcode:
   anitya: 20614
   cpe: 'a:intel:microcode'
@@ -245,6 +274,8 @@ json-c:
   cpe: ['a:json-c:json-c', 'a:json-c_project:json-c']
   debian: json-c
   alpine: json-c
+kawkab-mono:
+  untracked: 'its last release, 0.500, is from 2015; the repository (aiaf/kawkab-mono) has only its Glyphs source since'
 kmod:
   anitya: 1517
   cpe: 'a:kernel:kmod'
@@ -265,16 +296,36 @@ libcap:
   cpe: 'a:libcap_project:libcap'
   debian: libcap2
   alpine: libcap
+libdisplay-info:
+  untracked: 'held at 0.3: niri''s Rust binding of it takes no version from 0.4 on (nix/desktop/niri.sh)'
+libdrm:
+  anitya: 1596
+  debian: libdrm
+  alpine: libdrm
+libevdev:
+  anitya: 20540
+  debian: libevdev
+  alpine: libevdev
 libffi:
   anitya: 1611
   cpe: 'a:libffi_project:libffi'
   debian: libffi
   alpine: libffi
+libinput:
+  anitya: 5781
+  cpe: 'a:freedesktop:libinput'
+  debian: libinput
+  alpine: libinput
 libmnl:
   anitya: 1663
   cpe: 'a:netfilter:libmnl'
   debian: libmnl
   alpine: libmnl
+libpng:
+  anitya: 1705
+  cpe: 'a:libpng:libpng'
+  debian: libpng1.6
+  alpine: libpng
 libslirp:
   anitya: 96796
   cpe: 'a:libslirp_project:libslirp'
@@ -290,6 +341,11 @@ libxcrypt:
   cpe: 'a:elektrobit:libxcrypt'
   debian: libxcrypt
   alpine: libxcrypt
+libxkbcommon:
+  anitya: 1780
+  cpe: 'a:xkbcommon:libxkbcommon'
+  debian: libxkbcommon
+  alpine: libxkbcommon
 linux:
   follows: aurora-silicon/linux@integration/aurora
   version-regex: '([\d.]+)-aurora'
@@ -321,6 +377,11 @@ make:
   cpe: 'a:gnu:make'
   debian: make-dfsg
   alpine: make
+mesa:
+  anitya: 1970
+  cpe: 'a:mesa3d:mesa'
+  debian: mesa
+  alpine: mesa
 meson:
   anitya: 6472
   debian: meson
@@ -333,6 +394,10 @@ mpfr:
   anitya: 2019
   debian: mpfr4
   alpine: mpfr4
+mtdev:
+  anitya: 8868
+  debian: mtdev
+  alpine: mtdev
 mtools:
   anitya: 2028
   debian: mtools
@@ -346,6 +411,11 @@ ninja:
   anitya: 132832
   debian: ninja-build
   alpine: ninja-build
+niri:
+  anitya: 372826
+  alpine: niri
+niri-smithay:
+  pinned-by: niri
 nix-aarch64-linux:
   part-of: nix-x86_64-linux
 nix-x86_64-linux:
@@ -371,6 +441,11 @@ osslsigncode:
   anitya: 2577
   debian: osslsigncode
   alpine: osslsigncode
+pango:
+  anitya: 11783
+  cpe: 'a:pango:pango'
+  debian: pango1.0
+  alpine: pango
 patch:
   anitya: 2597
   cpe: 'a:gnu:patch'
@@ -419,6 +494,9 @@ python:
 python-jinja2:
   anitya: 3894
   cpe: 'a:pocoo:jinja2'
+python-mako:
+  anitya: 3915
+  cpe: 'a:sqlalchemy:mako'
 python-markupsafe:
   anitya: 3918
 python-packaging:
@@ -427,6 +505,9 @@ python-pefile:
   anitya: 11315
 python-pyelftools:
   anitya: 16219
+python-pyyaml:
+  anitya: 4123
+  cpe: 'a:pyyaml:pyyaml'
 qemu:
   anitya: 13607
   cpe: 'a:qemu:qemu'
@@ -456,6 +537,10 @@ rustfmt-aarch64-linux:
   part-of: rustc-x86_64-linux
 rustfmt-x86_64-linux:
   part-of: rustc-x86_64-linux
+seatd:
+  anitya: 234932
+  debian: seatd
+  alpine: seatd
 sed:
   anitya: 4789
   cpe: 'a:gnu:sed'
@@ -466,6 +551,14 @@ shadow:
   cpe: 'a:shadow_project:shadow'
   debian: shadow
   alpine: shadow
+spirv-headers:
+  pinned-by: spirv-llvm-translator
+spirv-llvm-translator:
+  anitya: 227273
+  debian: spirv-llvm-translator-23
+  alpine: spirv-llvm-translator
+spirv-tools:
+  untracked: 'a Vulkan SDK''s tag (vulkan-sdk-<version>), where the project''s releases are numbered by year; moved by hand, with Mesa'
 sqv:
   anitya: 191618
   debian: rust-sequoia-sqv
@@ -493,10 +586,23 @@ util-linux:
   cpe: ['a:kernel:util-linux', 'a:util-linux_project:util-linux']
   debian: util-linux
   alpine: util-linux
+wayland:
+  anitya: 10061
+  cpe: 'a:wayland:wayland'
+  debian: wayland
+  alpine: wayland
+wayland-protocols:
+  anitya: 13997
+  debian: wayland-protocols
+  alpine: wayland-protocols
 wireless-regdb:
   anitya: 15257
   debian: wireless-regdb
   alpine: wireless-regdb
+xkeyboard-config:
+  anitya: 5191
+  debian: xkeyboard-config
+  alpine: xkeyboard-config
 xz:
   anitya: 5277
   cpe: 'a:tukaani:xz'

@@ -1,8 +1,51 @@
 # A graphical bunix: from boot to install
 
-The desktop is not in what Nix builds yet (`docs/nix-usr-system.md`): this
-is the plan and the state of 0.4.0, which BuildStream built.  Its elements
-are kept, to port from, and no longer build.
+This is the plan and the state of 0.4.0, which BuildStream built.  Its
+elements are kept, to port from, and no longer build.
+
+## The port to Nix
+
+The desktop extension (`nix/images/desktop.nix`, its packages in
+`nix/desktop.nix`) comes back in four steps, for both architectures;
+the next release waits for the last:
+
+1. **First pixels** (done): Mesa, libinput and seatd, the text stack
+   (FreeType, Fontconfig, HarfBuzz, FriBidi, cairo, pango), the fonts
+   (Noto, and the Arabic fonts) and niri.  `tools/desktop-test.sh`
+   merges the extension, checks which fonts the generic names are, in
+   English and Arabic, starts niri, and has it take a picture of its
+   screen.
+2. **The shell**: Qt 6, Quickshell, DMS, greetd and dms-greeter,
+   accountsservice, and the session bus of a user.
+3. **Sound**: PipeWire and WirePlumber.
+4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
+   fusermount, libfuse 2 and 3) so that an AppImage runs; then the
+   extension in releases.
+
+What changed from 0.4.0:
+
+- **No GTK 4**, libadwaita, gtk4-layer-shell, graphene or gdk-pixbuf, and
+  Alacritty for a terminal where 0.4.0 had Ghostty, which is a GTK
+  program.  Nothing of the rest needs GTK.
+- **Noto Serif for serif**, where 0.4.0 had Noto Naskh Arabic first,
+  which carries Latin letters too, and drew English serif text in them
+  (`files/fontconfig/58-bunix-fonts.conf`).  Arabic serif text is still
+  Naskh's.  And Kawkab Mono for Arabic in monospace, which was Noto Sans
+  Arabic's, a proportional face.
+- **Both architectures.**  On a Mac, Mesa's asahi driver draws with the
+  GPU, which the kernel's driver (built in: `nix/boot/linux/aarch64.config`)
+  runs.
+- **LLVM inside Mesa** (`nix/desktop/mesa.sh`): the extension carries the
+  part of LLVM that Mesa uses, and not LLVM's whole library.  radeonsi
+  compiles with ACO, Mesa's own compiler for AMD's GPUs, since LLVM is
+  built without AMD's target (`files/mesa/`).
+- **niri draws with llvmpipe when told to**, which upstream's never
+  does: `BUNIX_NIRI_SOFTWARE_RENDERING=1` (`files/niri/`, two patches:
+  the switch, and the render node such a renderer needs).  The test
+  machines have no GPU that draws, and only the test sets it; a machine
+  without a GPU Mesa drives gets no desktop, as upstream has it.
+- **libinput without its Python tools** (`libinput measure`, `analyze`,
+  `replay`): the system has no Python.
 
 Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
 real hardware (an Intel Coffee Lake desktop).
@@ -67,10 +110,10 @@ The desktop extension brings systemd units of its own (ALSA's volumes,
 the font cache, later PipeWire and greetd).  Two things make them start:
 
 - **systemd has to know them.**  It reads its units before
-  `systemd-sysext.service` merges the extensions in early boot.  The
+  `systemd-sysext.service` merges the extensions in early boot.  Every
   extension's `extension-release` file sets `EXTENSION_RELOAD_MANAGER=1`
-  (sysext/desktop-tree.bst), so sysext reloads systemd right after the
-  merge.
+  (`nix/images/extension-parts.sh`), so sysext reloads systemd right
+  after the merge.
 - **Something has to start them.**  The boot's jobs are planned before the
   merge, so a `.wants` link of `multi-user.target` would never be acted
   on.  Each unit is instead named by an `Upholds=` drop-in
@@ -79,8 +122,13 @@ the font cache, later PipeWire and greetd).  Two things make them start:
   unit must not fail at boot (prefix its command with `-`), or systemd
   keeps restarting it.
 
-sysext/desktop-tree.bst refuses an extension with a service that no
-target upholds.
+0.4.0's build refused an extension with a service that no target
+upholds; the Nix build does not check it yet.  `tools/desktop-test.sh`
+checks that the unit the desktop has now (the font cache) runs.
+
+udev's rules are the same: udev reads them before the merge.  After it,
+`systemd-sysext.service.d/bunix.conf` has udev read them again, and go
+over the input devices once more, for libinput's rules.
 
 ## Phases
 

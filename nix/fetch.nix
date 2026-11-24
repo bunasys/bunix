@@ -1,10 +1,11 @@
 # fetch: a source, downloaded and pinned.  The build fails unless the file
 # has this sha256, which is why it may use the network when no other build
 # can.  Nix does the download itself; it needs no tools from the store.
-{ url, sha256, ... }:
+# name: for a file whose own name the store does not take ([ ] , ...).
+{ url, sha256, name ? baseNameOf url, ... }:
 
 derivation {
-  name = baseNameOf url;
+  inherit name;
   system = "builtin";
   builder = "builtin:fetchurl";
   inherit url;

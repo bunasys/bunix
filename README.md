@@ -100,6 +100,7 @@ tools/update-test.sh                update it, refuse what is not signed, go bac
 tools/release-test.sh <directory> <version before>
                                     update to a release before it is uploaded
 tools/secure-boot-test.sh           x86-64 with Secure Boot on: start, and refuse a changed kernel image
+tools/desktop-test.sh               merge the desktop extension, start niri, and take a picture of its screen
 ```
 
 ## Documents
@@ -130,8 +131,10 @@ for x86-64 alone.  An element is removed from `elements/` once Nix builds
 what it built, and BuildStream's tooling is gone; what is left there is
 kept to port from, and no longer builds:
 
-- the desktop (niri, the DMS shell and its login screen, GTK 4, Ghostty,
-  PipeWire, Mesa, fonts) and its extension;
+- of the desktop: the DMS shell and its login screen, PipeWire, and a
+  terminal, Alacritty, where 0.4.0 had Ghostty and GTK 4.
+  The rest of it is ported (`docs/desktop.md`, "The port to Nix"), and
+  its extension is in no release until all is;
 - the gcc, rust and swift extensions; Rust built from source, Go and Zig;
 - Hudhud, the browser (`docs/browser.md`; its Mac build,
   `tools/build-macos.sh`, reads the pinned versions from these elements);

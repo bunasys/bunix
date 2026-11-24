@@ -37,8 +37,8 @@
 #                     monitor is then the socket machine/monitor in this
 #                     script's directory where QEMU runs, and
 #                     `screendump <file>` sent to it writes the screen
-#                     (tools/test-machine.sh).  The x86_64 test machine
-#                     has a screen; the arm64 one has none.
+#                     (tools/test-machine.sh).  Both test machines have
+#                     a screen.
 #
 # Needs: limactl with the bunix-builder VM, and qemu-system-aarch64 with
 # the EFI firmware that comes with it (share/qemu/edk2-aarch64-code.fd);
