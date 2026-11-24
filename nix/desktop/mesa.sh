@@ -7,8 +7,8 @@ done
 # any: virgl, a virtual machine's GPU that hands OpenGL to its host, and
 # llvmpipe, which draws with the processor.
 #   x86_64   iris and crocus (Intel, 2006 on), radeonsi (AMD, GCN on)
-#   aarch64  asahi (Apple's GPUs: Mesa's driver is for those of the M1
-#            and M2 so far; the kernel's has more, boot/linux/aarch64.config)
+#   aarch64  asahi (Apple's GPUs, from the M1 on: Aurora's Mesa, which
+#            desktop.nix says why)
 case $system in
     x86_64-linux) drivers=iris,crocus,radeonsi,virgl,llvmpipe ;;
     aarch64-linux) drivers=asahi,virgl,llvmpipe ;;

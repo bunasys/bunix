@@ -728,5 +728,10 @@
     "version": "0.500",
     "url": "https://makkuk.com/kawkab-mono/downloads/kawkab-mono-0.500.zip",
     "sha256": "2c96c5ddfe952b46baf8894112c4e675e7aa34542380d6223021a8d4b378e3a0"
+  },
+  "mesa-aurora": {
+    "version": "26.3.0-aurora-d4ad4a4",
+    "url": "https://codeload.github.com/aurora-silicon/mesa/tar.gz/d4ad4a4dce6d1d23ecd897d6d73fadf9ab618614",
+    "sha256": "6f8d930b3d846af6416dab55c82a9ccf8ec0d4cbbbe739016262268d7dc9ec4b"
   }
 }

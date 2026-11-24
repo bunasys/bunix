@@ -122,15 +122,23 @@ let
   # server), no Vulkan yet, no video.  desktop/mesa.sh has the drivers of
   # each architecture, and why LLVM is inside it.
   # gccLibraries: it is C++.  zlib, zstd: LLVM, inside it, needs them.
+  #
+  # On arm64, Aurora's Mesa: its asahi driver draws with the GPUs of the
+  # M3 and later Macs too, where upstream's has only the M1's and M2's.
+  # It speaks the GPU interface of Aurora's kernel (boot.nix), so it is
+  # the commit Aurora's own distributions ship with that kernel's
+  # (nixos-aurora's sources.json, alarm-aurora's mesa-aurora), and moves
+  # with it.  x86-64 has upstream's.
   mesa = mkSystemPackage {
     name = "mesa";
-    source = sources.mesa;
+    source = if system == "aarch64-linux" then sources.mesa-aurora else sources.mesa;
     script = ./desktop/mesa.sh;
     depends = [ glibc toolchain.gccLibraries base.elfutils libdrm wayland base.expat base.zlib base.zstd ];
     # python-ctypes: a generator of the Intel compiler's tables imports it
     buildDepends = [ meson ninja pkgconf base.flex python-mako python-pyyaml base.python-packaging base.python-ctypes wayland-protocols base.llvm spirv-headers spirv-tools spirv-llvm-translator ];
     env = {
-      patches = [ ../files/mesa/radeonsi-without-llvm-amdgpu.patch ];
+      # radeonsi's, which is built for x86-64 alone
+      patches = if system == "x86_64-linux" then [ ../files/mesa/radeonsi-without-llvm-amdgpu.patch ] else [];
     };
   };
 

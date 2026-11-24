@@ -382,6 +382,9 @@ mesa:
   cpe: 'a:mesa3d:mesa'
   debian: mesa
   alpine: mesa
+mesa-aurora:
+  pinned-by: linux
+  cpe: 'a:mesa3d:mesa'
 meson:
   anitya: 6472
   debian: meson
