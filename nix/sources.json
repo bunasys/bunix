@@ -723,5 +723,10 @@
     "version": "ff5fa7df392cecfba049ffed55cdaa4e98a8e7ef",
     "url": "https://github.com/Smithay/smithay/archive/ff5fa7df392cecfba049ffed55cdaa4e98a8e7ef.tar.gz",
     "sha256": "2df0f01fd83ee01dc2fcd5976ac0004334b03ef567f467b6c511f11fc1c8a7b9"
+  },
+  "kawkab-mono": {
+    "version": "0.500",
+    "url": "https://makkuk.com/kawkab-mono/downloads/kawkab-mono-0.500.zip",
+    "sha256": "2c96c5ddfe952b46baf8894112c4e675e7aa34542380d6223021a8d4b378e3a0"
   }
 }

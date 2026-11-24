@@ -274,6 +274,8 @@ json-c:
   cpe: ['a:json-c:json-c', 'a:json-c_project:json-c']
   debian: json-c
   alpine: json-c
+kawkab-mono:
+  untracked: 'its last release, 0.500, is from 2015; the repository (aiaf/kawkab-mono) has only its Glyphs source since'
 kmod:
   anitya: 1517
   cpe: 'a:kernel:kmod'

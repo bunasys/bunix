@@ -9,7 +9,8 @@
 #
 #   1. the extension, signed with the development key, is put where an
 #      update puts it, and systemd-sysext merges it; the unit it brings
-#      (the font cache) runs, and libinput's udev rules reach the
+#      (the font cache) runs, the generic font names are the fonts bunix
+#      means, in English and Arabic, and libinput's udev rules reach the
 #      keyboard, which was there before them
 #   2. niri starts on the machine's screen, through seatd, as root at the
 #      console would start it: it finds the screen, and libinput the
@@ -21,7 +22,7 @@
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
 # Mac): Mesa draws with llvmpipe on both, which niri is told to take.
-# Nor text: the extension has no fonts yet.  Nor what a person sees: the
+# Nor how text is drawn: niri's screen shows little.  Nor what a person sees: the
 # picture is the screen as niri drew it, which only a look at it says is
 # right.
 #
@@ -108,12 +109,30 @@ in_guest "timeout 60 sh -c 'until systemctl is-active -q fontconfig-cache.servic
     || fail "the font cache's unit did not start"
 fc_cache_status=$(in_guest "systemctl show --property=ExecMainStatus --value fontconfig-cache.service")
 [ "$fc_cache_status" = 0 ] || fail "fc-cache failed (status $fc_cache_status); see: journalctl -u fontconfig-cache"
+# The fonts the generic names are (files/fontconfig/58-bunix-fonts.conf),
+# as every program's Fontconfig finds them: for text in no language, in
+# Arabic (lang=ar), and for an Arabic letter (alef, U+0627) in a page
+# whose font has none.
+expect_font() {
+    found=$(in_guest "fc-match -f '%{family[0]}' '$1'") || fail "fc-match could not match $1"
+    [ "$found" = "$2" ] || fail "$1 is $found, and was to be $2"
+}
+expect_font sans-serif "Noto Sans"
+expect_font serif "Noto Serif"
+expect_font monospace "Noto Sans Mono"
+expect_font emoji "Noto Color Emoji"
+expect_font sans-serif:lang=ar "Noto Sans Arabic"
+expect_font serif:lang=ar "Noto Naskh Arabic"
+expect_font sans-serif:charset=627 "Noto Sans Arabic"
+expect_font serif:charset=627 "Noto Naskh Arabic"
+expect_font monospace:lang=ar "Kawkab Mono"
+expect_font monospace:charset=627 "Kawkab Mono"
 # The keyboard was there before libinput's rules: what the merge does to
 # udev (systemd-sysext.service.d/bunix.conf) gives it what they set.
 in_guest "udevadm settle && udevadm info --query=property /dev/input/event*" > "$work/input.log" 2>&1 || true
 grep -q "^LIBINPUT_DEVICE_GROUP=" "$work/input.log" \
     || fail "libinput's udev rules did not reach the input devices; see $work/input.log"
-echo "  merged; niri is there, the font cache was made, and libinput's rules reached the keyboard"
+echo "  merged; niri is there, the font cache was made with the Noto and Arabic fonts, and libinput's rules reached the keyboard"
 
 echo "2. niri starts on the screen"
 # As root would start it at the console: seatd-launch runs seatd, which

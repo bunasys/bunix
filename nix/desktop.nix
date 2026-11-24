@@ -245,6 +245,40 @@ let
     env = { files = ../files/fontconfig; };
   };
 
+  # The fonts, Arabic and Latin from day 0, and which of them the generic
+  # names are is files/fontconfig/58-bunix-fonts.conf:
+  #   Noto Sans, Noto Serif, Noto Sans Mono   Latin, Greek, Cyrillic
+  #   Noto Sans Arabic, Noto Naskh Arabic     Arabic, for sans-serif and serif
+  #   Kawkab Mono                             Arabic, for monospace
+  #   Noto Kufi Arabic, IBM Plex Sans Arabic, Tajawal
+  #                                           Arabic, only by name
+  #   Noto Color Emoji
+  # The files of the Google Fonts repository, at one commit, each pinned
+  # (desktop/fonts.json); Kawkab Mono, which is not in it, from its
+  # release's zip (libarchive's bsdtar unpacks it).  All under the SIL
+  # Open Font License.
+  fonts =
+    let
+      commit = "2fe1e8c6b137fb13041a7cfca6fdcd8a910ea4dc";
+      fetchFont = font: fetch {
+        url = "https://raw.githubusercontent.com/google/fonts/${commit}/ofl/${font.family}/"
+          + builtins.replaceStrings [ "[" "]" "," ] [ "%5B" "%5D" "%2C" ] font.file;
+        # <family>--<file>, which desktop/fonts.sh takes apart
+        name = "${font.family}--" + builtins.replaceStrings [ "[" "]" "," ] [ "-" "" "-" ] font.file;
+        inherit (font) sha256;
+      };
+    in
+    mkSystemPackage {
+      name = "fonts";
+      version = builtins.substring 0 7 commit;
+      script = ./desktop/fonts.sh;
+      buildDepends = [ base.libarchive ];
+      env = {
+        fonts = map fetchFont (builtins.fromJSON (builtins.readFile ./desktop/fonts.json));
+        kawkab_mono = fetch sources.kawkab-mono;
+      };
+    };
+
   # HarfBuzz: text shaping, which turns letters into placed glyphs and
   # joins Arabic letters into their connected forms (pango)
   harfbuzz = mkSystemPackage {
@@ -336,6 +370,6 @@ in
 {
   inherit libdrm wayland wayland-protocols python-mako python-pyyaml spirv-headers spirv-tools spirv-llvm-translator mesa;
   inherit libevdev mtdev libinput seatd xkeyboard-config libxkbcommon;
-  inherit libpng freetype fontconfig harfbuzz fribidi cairo pango;
+  inherit libpng freetype fontconfig fonts harfbuzz fribidi cairo pango;
   inherit hwdata niri;
 }

@@ -10,11 +10,13 @@ The desktop extension (`nix/images/desktop.nix`, its packages in
 the next release waits for the last:
 
 1. **First pixels** (done): Mesa, libinput and seatd, the text stack
-   (FreeType, Fontconfig, HarfBuzz, FriBidi, cairo, pango) and niri.
-   `tools/desktop-test.sh` merges the extension, starts niri, and has it
-   take a picture of its screen.
+   (FreeType, Fontconfig, HarfBuzz, FriBidi, cairo, pango), the fonts
+   (Noto, and the Arabic fonts) and niri.  `tools/desktop-test.sh`
+   merges the extension, checks which fonts the generic names are, in
+   English and Arabic, starts niri, and has it take a picture of its
+   screen.
 2. **The shell**: Qt 6, Quickshell, DMS, greetd and dms-greeter,
-   accountsservice, the session bus of a user, and the fonts.
+   accountsservice, and the session bus of a user.
 3. **Sound**: PipeWire and WirePlumber.
 4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
    fusermount, libfuse 2 and 3) so that an AppImage runs; then the
@@ -25,6 +27,11 @@ What changed from 0.4.0:
 - **No GTK 4**, libadwaita, gtk4-layer-shell, graphene or gdk-pixbuf, and
   Alacritty for a terminal where 0.4.0 had Ghostty, which is a GTK
   program.  Nothing of the rest needs GTK.
+- **Noto Serif for serif**, where 0.4.0 had Noto Naskh Arabic first,
+  which carries Latin letters too, and drew English serif text in them
+  (`files/fontconfig/58-bunix-fonts.conf`).  Arabic serif text is still
+  Naskh's.  And Kawkab Mono for Arabic in monospace, which was Noto Sans
+  Arabic's, a proportional face.
 - **Both architectures.**  On a Mac, Mesa's asahi driver draws with the
   GPU, which the kernel's driver (built in: `nix/boot/linux/aarch64.config`)
   runs.

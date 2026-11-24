@@ -131,8 +131,8 @@ for x86-64 alone.  An element is removed from `elements/` once Nix builds
 what it built, and BuildStream's tooling is gone; what is left there is
 kept to port from, and no longer builds:
 
-- of the desktop: the DMS shell and its login screen, PipeWire, the
-  fonts, and a terminal, Alacritty, where 0.4.0 had Ghostty and GTK 4.
+- of the desktop: the DMS shell and its login screen, PipeWire, and a
+  terminal, Alacritty, where 0.4.0 had Ghostty and GTK 4.
   The rest of it is ported (`docs/desktop.md`, "The port to Nix"), and
   its extension is in no release until all is;
 - the gcc, rust and swift extensions; Rust built from source, Go and Zig;

@@ -1,7 +1,7 @@
 # The desktop extension: the graphical system, which a machine has when
 # its person chooses a desktop and not a console (docs/desktop.md; after
 # elements/sysext/desktop*.bst).  So far the drivers -- Mesa, libinput,
-# seatd -- the text stack and niri, the compositor: what puts a desktop
+# seatd -- the text stack and its fonts, and niri, the compositor: what puts a desktop
 # on the screen.  The shell, its login screen, sound and the terminal
 # come next.  It needs no other extension.
 #
@@ -17,7 +17,7 @@ let
 in
 extension {
   name = "desktop";
-  contents = [ desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.niri ];
+  contents = [ desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.fonts desktop.niri ];
   # Programs of what these need to run that are for building software
   # against them, not for a desktop.  And libinput's tools that are
   # Python, which the system does not have: `libinput measure`,
