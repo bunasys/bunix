@@ -611,7 +611,9 @@ extension is there (`systemd-sysext.service.d/bunix.conf`).
 its programs after the restart, and checks that what is in its place is
 not merged when it is not signed, or signed as of another hash.
 
-Not ported: the gcc, rust, swift and desktop extensions.
+Not ported: the gcc, rust and swift extensions.  The desktop extension
+is being ported (docs/desktop.md, "The port to Nix"), and is in no
+release yet.
 
 ### Who signs
 

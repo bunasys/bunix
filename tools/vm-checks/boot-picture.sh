@@ -2,12 +2,12 @@
 # (src/boot-picture), on a bunix that was just started: run on it, as
 # root, by
 #
-#   BUNIX_ARCHITECTURE=x86_64 BUNIX_CHECK_SCRIPT=tools/vm-checks/boot-picture.sh tools/boot-vm.sh disk check console=tty0 systemd.mask=console-shell@tty1.service
+#   BUNIX_CHECK_SCRIPT=tools/vm-checks/boot-picture.sh tools/boot-vm.sh disk check console=tty0 systemd.mask=console-shell@tty1.service
 #
-# systemd.mask=...: with no program at the console nothing writes text,
-# and the picture stays on the screen to be looked at here.  The x86_64
-# test machine has a screen, and a GPU whose driver is a module; the
-# arm64 one has no screen, and passes with nothing checked.
+# on either architecture (BUNIX_ARCHITECTURE).  systemd.mask=...: with no
+# program at the console nothing writes text, and the picture stays on
+# the screen to be looked at here.  The x86_64 test machine's GPU driver
+# is a module, the arm64 one's is in the kernel image.
 #
 # Checked here: first, that this is such a machine, with no text on its
 # screen.  Then that the screen is the GPU's driver's and no longer the
@@ -26,13 +26,7 @@ fail() {
     exit 1
 }
 screen=/sys/class/graphics/fb0
-if [ ! -e $screen ]; then
-    if [ "$(uname -m)" = x86_64 ]; then
-        fail "no screen ($screen)"
-    fi
-    echo "this machine has no screen: nothing to check"
-    exit 0
-fi
+[ -e $screen ] || fail "no screen ($screen)"
 # every device's driver loaded, and every rule run
 udevadm settle
 

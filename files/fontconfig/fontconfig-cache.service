@@ -1,0 +1,14 @@
+# The font cache, made again at every start: what fonts there are depends
+# on which extensions are merged.  Without it every program that draws
+# text reads every font file when it starts.  Started by
+# multi-user.target.d/fontconfig-cache.conf (docs/desktop.md, "Units in
+# an extension"); `-`: an upheld unit that fails is started again and
+# again.
+[Unit]
+Description=Fontconfig's font cache
+After=systemd-sysext.service local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/bin/fc-cache --force --system-only

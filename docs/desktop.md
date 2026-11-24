@@ -1,8 +1,41 @@
 # A graphical bunix: from boot to install
 
-The desktop is not in what Nix builds yet (`docs/nix-usr-system.md`): this
-is the plan and the state of 0.4.0, which BuildStream built.  Its elements
-are kept, to port from, and no longer build.
+This is the plan and the state of 0.4.0, which BuildStream built.  Its
+elements are kept, to port from, and no longer build.
+
+## The port to Nix
+
+The desktop extension (`nix/images/desktop.nix`, its packages in
+`nix/desktop.nix`) comes back in four steps, for both architectures;
+the next release waits for the last:
+
+1. **First pixels** (done): Mesa, libinput and seatd, the text stack
+   (FreeType, Fontconfig, HarfBuzz, FriBidi, cairo, pango) and niri.
+   `tools/desktop-test.sh` merges the extension, starts niri, and has it
+   take a picture of its screen.
+2. **The shell**: Qt 6, Quickshell, DMS, greetd and dms-greeter,
+   accountsservice, the session bus of a user, and the fonts.
+3. **Sound**: PipeWire and WirePlumber.
+4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
+   fusermount, libfuse 2 and 3) so that an AppImage runs; then the
+   extension in releases.
+
+What changed from 0.4.0:
+
+- **No GTK 4**, libadwaita, gtk4-layer-shell, graphene or gdk-pixbuf, and
+  Alacritty for a terminal where 0.4.0 had Ghostty, which is a GTK
+  program.  Nothing of the rest needs GTK.
+- **Both architectures.**  On a Mac, Mesa's asahi driver draws with the
+  GPU, which the kernel's driver (built in: `nix/boot/linux/aarch64.config`)
+  runs.
+- **LLVM inside Mesa** (`nix/desktop/mesa.sh`): the extension carries the
+  part of LLVM that Mesa uses, and not LLVM's whole library.  radeonsi
+  compiles with ACO, Mesa's own compiler for AMD's GPUs, since LLVM is
+  built without AMD's target (`files/mesa/`).
+- **niri draws with llvmpipe when told to**, which upstream's never
+  does: `BUNIX_NIRI_SOFTWARE_RENDERING=1` (`files/niri/`).  The test
+  machines have no GPU that draws, and only the test sets it; a machine
+  without a GPU Mesa drives gets no desktop, as upstream has it.
 
 Status: plan (2026-11-04).  Phases 1 and 2 built, tested in QEMU and on
 real hardware (an Intel Coffee Lake desktop).

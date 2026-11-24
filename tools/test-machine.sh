@@ -90,8 +90,10 @@ case $architecture in
 aarch64)
     architecture_in_file_names=arm64
     console=ttyAMA0
-    # -accel hvf: the Mac's hypervisor
-    machine_on_real_processor="-M virt -accel hvf -cpu host"
+    # -accel hvf: the Mac's hypervisor.  virtio-gpu-pci: a screen, which
+    # the firmware draws on as a Mac's does, and the kernel then takes
+    # (boot/linux/aarch64.config); 2D only, as QEMU on a Mac has it.
+    machine_on_real_processor="-M virt -accel hvf -cpu host -device virtio-gpu-pci"
 
     prepare_place() {
         source=/bunix

@@ -1,12 +1,11 @@
 # What a boot shows on the screen, on a bunix that was just started: run
 # on it, as root, by
 #
-#   BUNIX_ARCHITECTURE=x86_64 BUNIX_CHECK_SCRIPT=tools/vm-checks/boot-screen.sh tools/boot-vm.sh disk check console=tty0
+#   BUNIX_CHECK_SCRIPT=tools/vm-checks/boot-screen.sh tools/boot-vm.sh disk check console=tty0
 #
-# console=tty0, last: the screen is then where systemd writes, as on a
-# PC, and not the test machine's serial port.  The x86_64 test machine
-# has a screen; the arm64 one has none, and only the first step is
-# checked there.
+# on either architecture (BUNIX_ARCHITECTURE).  console=tty0, last: the
+# screen is then where systemd writes, as on a PC or a Mac, and not the
+# test machine's serial port.
 #
 # Checked here: a kernel that stops would say so with a QR code.  Then,
 # of the picture a boot shows (docs/nix-usr-system.md, "What a boot
@@ -33,14 +32,8 @@ panic_screen_setting=/sys/module/drm/parameters/panic_screen
 panic_screen=$(cat $panic_screen_setting)
 [ "$panic_screen" = qr_code ] || fail "a kernel that stops would show: $panic_screen"
 
-if [ ! -e /sys/class/graphics/fb0 ]; then
-    if [ "$(uname -m)" = x86_64 ]; then
-        fail "no screen (/sys/class/graphics/fb0): the kernel did not take the firmware's"
-    fi
-    echo "this machine has no screen: no more to check"
-    echo "boot-screen.sh: passed"
-    exit 0
-fi
+[ -e /sys/class/graphics/fb0 ] \
+    || fail "no screen (/sys/class/graphics/fb0): the kernel did not take the firmware's"
 
 echo "the console waited for text before it took the screen"
 # the kernel's log since it started, each line with its time since then
