@@ -7,11 +7,21 @@
 # in this file as it was at v0.4.0, by BuildStream element:
 # `git show v0.4.0:upstreams.yml`.
 
+accountsservice:
+  anitya: 13107
+  cpe: 'a:ray_stode:accountsservice'
+  debian: accountsservice
+  alpine: accountsservice
 acl:
   anitya: 16
   cpe: ['a:acl_project:acl', 'a:acl:acl']
   debian: acl
   alpine: acl
+alsa-lib:
+  anitya: 38
+  cpe: 'a:alsa-project:alsa-lib'
+  debian: alsa-lib
+  alpine: alsa-lib
 attr:
   anitya: 137
   cpe: 'a:attr_project:attr'
@@ -73,6 +83,9 @@ cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
 cargo-x86_64-linux:
   part-of: rustc-x86_64-linux
+cli11:
+  anitya: 20578
+  debian: cli11
 cmake:
   anitya: 306
   cpe: 'a:cmake_project:cmake'
@@ -107,6 +120,14 @@ diffutils:
   cpe: 'a:gnu:diffutils'
   debian: diffutils
   alpine: diffutils
+dms:
+  anitya: 388076
+dms-greeter:
+  github: duxlabs-dev/dux-greeter
+dms-greeter-qml-common:
+  pinned-by: dms-greeter
+dms-qml-common:
+  pinned-by: dms
 dosfstools:
   anitya: 455
   cpe: 'a:dosfstools_project:dosfstools'
@@ -223,10 +244,20 @@ gmp:
   cpe: 'a:gmplib:gmp'
   debian: gmp
   alpine: gmp
+go-aarch64-linux:
+  part-of: go-x86_64-linux
+go-x86_64-linux:
+  anitya: 1227
+  cpe: 'a:golang:go'
+  alpine: go
 gperf:
   anitya: 1237
   debian: gperf
   alpine: gperf
+greetd:
+  anitya: 236458
+  debian: greetd
+  alpine: greetd
 grep:
   anitya: 1251
   cpe: 'a:gnu:grep'
@@ -269,6 +300,10 @@ iwd:
   cpe: 'a:intel:inet_wireless_daemon'
   debian: iwd
   alpine: iwd
+jemalloc:
+  anitya: 1441
+  debian: jemalloc
+  alpine: jemalloc
 json-c:
   anitya: 390279
   cpe: ['a:json-c:json-c', 'a:json-c_project:json-c']
@@ -316,6 +351,11 @@ libinput:
   cpe: 'a:freedesktop:libinput'
   debian: libinput
   alpine: libinput
+libjpeg-turbo:
+  anitya: 1648
+  cpe: ['a:libjpeg-turbo:libjpeg-turbo', 'a:d.r.commander:libjpeg-turbo']
+  debian: libjpeg-turbo
+  alpine: libjpeg-turbo
 libmnl:
   anitya: 1663
   cpe: 'a:netfilter:libmnl'
@@ -464,6 +504,10 @@ perl:
   cpe: 'a:perl:perl'
   debian: perl
   alpine: perl
+pipewire:
+  anitya: 57357
+  debian: pipewire
+  alpine: pipewire
 pixman:
   anitya: 3648
   cpe: 'a:pixman:pixman'
@@ -516,6 +560,20 @@ qemu:
   cpe: 'a:qemu:qemu'
   debian: qemu
   alpine: qemu
+qt6-base:
+  anitya: 7927
+  cpe: 'a:qt:qt'
+  debian: qt6-base
+  alpine: qt6-qtbase
+qt6-declarative:
+  part-of: qt6-base
+qt6-shadertools:
+  part-of: qt6-base
+qt6-svg:
+  part-of: qt6-base
+quickshell:
+  anitya: 378649
+  debian: quickshell
 readline:
   anitya: 4173
   cpe: 'a:gnu:readline'
@@ -589,6 +647,9 @@ util-linux:
   cpe: ['a:kernel:util-linux', 'a:util-linux_project:util-linux']
   debian: util-linux
   alpine: util-linux
+vulkan-headers:
+  anitya: 88835
+  alpine: vulkan-headers
 wayland:
   anitya: 10061
   cpe: 'a:wayland:wayland'

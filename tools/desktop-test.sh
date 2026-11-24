@@ -12,19 +12,20 @@
 #      (the font cache) runs, the generic font names are the fonts bunix
 #      means, in English and Arabic, and libinput's udev rules reach the
 #      keyboard, which was there before them
-#   2. niri starts on the machine's screen, through seatd, as root at the
-#      console would start it: it finds the screen, and libinput the
-#      keyboard
-#   3. niri takes a picture of its screen, which it draws with OpenGL
-#      through Mesa's llvmpipe: the picture is copied here, to be looked
-#      at
+#   2. the login screen comes up: greetd, upheld once merged, runs DMS's
+#      greeter on tty1, in niri, which draws with OpenGL through Mesa's
+#      llvmpipe; libinput finds the keyboard; niri takes a picture of the
+#      screen, copied here to be looked at
+#   3. a person logs in, typing their name and password on the machine's
+#      keyboard: their session is niri with DMS, and a session bus; a
+#      picture of the desktop is copied here too
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
 # Mac): Mesa draws with llvmpipe on both, which niri is told to take.
-# Nor how text is drawn: niri's screen shows little.  Nor what a person sees: the
-# picture is the screen as niri drew it, which only a look at it says is
-# right.
+# Nor what a person sees: the pictures are the screen as niri drew it,
+# which only a look at them says is right.  Nor the greeter's picker of
+# people, which only a click opens: the test has it ask for a name.
 #
 #   BUNIX_ARCHITECTURE, BUNIX_X86_BUILDER
 #                      tools/test-machine.sh
@@ -32,7 +33,8 @@
 #                      ~/.ssh/id_ed25519.pub
 #   BUNIX_SSH_PORT     the port for the machine's SSH; default 2022
 #
-# Needs: what tools/boot-vm.sh needs.
+# Needs: what tools/boot-vm.sh needs, and python3 where QEMU runs (this
+# Mac, or the x86_64 builder): it types on the machine's keyboard.
 set -eu
 
 public_key_file=${BUNIX_SSH_KEY:-$HOME/.ssh/id_ed25519.pub}
@@ -69,6 +71,8 @@ copy_built_file "$desktop/desktop_*.raw" "$work/desktop.raw"
 # kernel's command line, which the firmware hands over (SMBIOS).
 key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$public_key_file" | tr -d '\n')"
 smbios_words=$(printf 'console=%s %s' "$console" "$key_word" | sed 's/,/,,/g')
+# BUNIX_MONITOR: the keyboard of step 3 is typed on through QEMU's monitor
+export BUNIX_MONITOR=1
 # shellcheck disable=SC2086
 start_qemu $machine_on_real_processor $efi_firmware \
     -drive "file=$machine_directory/disk.raw,format=raw,if=virtio" \
@@ -134,68 +138,145 @@ grep -q "^LIBINPUT_DEVICE_GROUP=" "$work/input.log" \
     || fail "libinput's udev rules did not reach the input devices; see $work/input.log"
 echo "  merged; niri is there, the font cache was made with the Noto and Arabic fonts, and libinput's rules reached the keyboard"
 
-echo "2. niri starts on the screen"
-# As root would start it at the console: seatd-launch runs seatd, which
-# gives niri the screen and the input devices, and ends with it.  A unit
-# of its own, so that it runs on when this login ends; its log is
-# systemd's.
-# BUNIX_NIRI_SOFTWARE_RENDERING: niri draws with llvmpipe, which it
-# refuses otherwise (files/niri/), since these machines have no GPU that
-# draws.  RUST_LOG: niri's own filter, and the renderer's line, which it
-# leaves out.
-in_guest "systemd-run --unit=desktop-test-niri --setenv=XDG_RUNTIME_DIR=/run/desktop-test \
-    --setenv=BUNIX_NIRI_SOFTWARE_RENDERING=1 \
-    --setenv=RUST_LOG=niri=debug,smithay::backend::renderer::gles=info \
-    --property=RuntimeDirectory=desktop-test seatd-launch -- niri" > /dev/null \
-    || fail "could not start niri"
-# What niri said, and what screens and input devices the kernel has:
-# kept here, after a failure as after a pass
-save_niri_log() {
-    in_guest "journalctl -u desktop-test-niri --no-pager; ls -l /dev/dri /dev/input; cat /sys/class/drm/*/status" \
-        > "$work/niri.log" 2>&1 || true
-}
-fail_with_niri_log() {
-    save_niri_log
-    fail "$* (niri's log, and the kernel's screens: $work/niri.log)"
-}
-# niri says where it listens (NIRI_SOCKET) once it has its screens
-socket=
-deadline=$(($(date +%s) + 60))
-while [ -z "$socket" ]; do
-    socket=$(in_guest "ls /run/desktop-test/niri.*.sock 2> /dev/null" || true)
-    if [ -z "$socket" ] && [ "$(date +%s)" -ge "$deadline" ]; then
-        fail_with_niri_log "niri did not start"
+echo "2. the login screen comes up"
+# The services the login screen needs, upheld once merged: the list of
+# people (accountsservice) and greetd, which runs the greeter on tty1
+for unit in accounts-daemon.service greetd.service; do
+    if ! in_guest "timeout 60 sh -c 'until systemctl is-active -q $unit; do sleep 1; done'"; then
+        in_guest "systemctl status --no-pager $unit; journalctl -b --no-pager -u $unit" > "$work/$unit.log" 2>&1 || true
+        fail "$unit did not start; see $work/$unit.log"
     fi
-    sleep 2
 done
-niri_msg="NIRI_SOCKET=$socket niri msg"
-in_guest "$niri_msg outputs" > "$work/outputs.log" 2>&1 \
-    || fail_with_niri_log "niri does not answer; see $work/outputs.log"
-grep -q "^Output" "$work/outputs.log" || fail_with_niri_log "niri has no screen"
+# A person to log in as, and greetd started again with the test's own
+# configuration: the extension's (/usr/share/greetd), with three
+# variables more for the greeter's command:
+#   BUNIX_NIRI_SOFTWARE_RENDERING=1   niri draws with llvmpipe (as the
+#                                     person's own niri, through their
+#                                     systemd's environment)
+#   RUST_LOG                          niri's renderer line in its log
+#   DMS_GREET_REMEMBER_LAST_USER=false
+#                                     the greeter asks for a name: one that
+#                                     remembers shows a picker of people,
+#                                     which only a click opens
+in_guest "useradd --create-home sara && echo sara:secret | chpasswd" \
+    || fail "could not make a person to log in as"
+in_guest "mkdir -p /run/desktop-test /run/systemd/system/greetd.service.d /etc/systemd/user.conf.d
+    sed 's|^command = \"|command = \"env BUNIX_NIRI_SOFTWARE_RENDERING=1 RUST_LOG=niri=info,smithay::backend::renderer::gles=info DMS_GREET_REMEMBER_LAST_USER=false |' \
+        /usr/share/greetd/config.toml > /run/desktop-test/greetd.toml
+    grep -q '^command = \"env BUNIX_NIRI_SOFTWARE_RENDERING=1 ' /run/desktop-test/greetd.toml
+    printf '[Service]\nExecStart=\nExecStart=/usr/bin/greetd --config /run/desktop-test/greetd.toml\n' \
+        > /run/systemd/system/greetd.service.d/desktop-test.conf
+    printf '[Manager]\nDefaultEnvironment=BUNIX_NIRI_SOFTWARE_RENDERING=1\n' \
+        > /etc/systemd/user.conf.d/desktop-test.conf
+    systemctl daemon-reload && systemctl restart greetd.service" \
+    || fail "could not start greetd again with the test's configuration (has /usr/share/greetd/config.toml a command line still?)"
+# What greetd, the greeter and sara's session said: kept here, after a
+# failure as after a pass
+save_login_log() {
+    in_guest "journalctl -b --no-pager -u greetd; journalctl -b --no-pager _UID=\$(id -u greeter); journalctl -b --no-pager _UID=\$(id -u sara); ls -l /dev/dri /dev/input; cat /sys/class/drm/*/status" \
+        > "$work/login.log" 2>&1 || true
+}
+fail_with_login_log() {
+    save_login_log
+    fail "$* (greetd's, the greeter's and sara's log: $work/login.log)"
+}
+# The socket niri listens on (NIRI_SOCKET), once whom it runs as has it
+# and the interface on it (Quickshell's qs, the greeter's or DMS's): in
+# their runtime directory, the newest, should a niri before it have left
+# one
+wait_for_shell_of() {
+    user=$1
+    failure=$2
+    socket=
+    deadline=$(($(date +%s) + 90))
+    until [ -n "$socket" ] && in_guest "pgrep -u $user -x 'qs|quickshell'" > /dev/null; do
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            fail_with_login_log "$failure"
+        fi
+        sleep 2
+        socket=$(in_guest "ls -t /run/user/\$(id -u $user)/niri.*.sock 2> /dev/null | head -n 1" || true)
+    done
+    echo "$socket"
+}
+greeter_socket=$(wait_for_shell_of greeter "the login screen did not come up: no niri, or no Quickshell, as the greeter user") \
+    || exit 1
+in_guest "NIRI_SOCKET=$greeter_socket niri msg outputs" > "$work/outputs.log" 2>&1 \
+    || fail_with_login_log "the greeter's niri does not answer; see $work/outputs.log"
+grep -q "^Output" "$work/outputs.log" || fail_with_login_log "the greeter's niri has no screen"
 sed -n 's/^Output /  screen: /p' "$work/outputs.log"
+save_login_log
+renderer=$(grep -o "GL Renderer: .*" "$work/login.log" | head -n 1 || true)
+case $renderer in
+    *llvmpipe*) echo "  $renderer" ;;
+    *) fail "the greeter's niri did not draw with llvmpipe (${renderer:-no renderer in its log}); see $work/login.log" ;;
+esac
 # what libinput makes of the machine's input devices, as niri sees them
 in_guest "libinput list-devices" > "$work/libinput.log" 2>&1 || true
 grep -q "^Capabilities: *keyboard" "$work/libinput.log" \
-    || fail_with_niri_log "libinput finds no keyboard; see $work/libinput.log"
+    || fail_with_login_log "libinput finds no keyboard; see $work/libinput.log"
 echo "  libinput finds the keyboard"
 
-echo "3. niri draws, and takes a picture of what it drew"
-in_guest "$niri_msg action screenshot-screen --path /run/desktop-test/screen.png" \
-    > /dev/null || fail_with_niri_log "niri did not take a picture of its screen"
-in_guest "timeout 10 sh -c 'until [ -s /run/desktop-test/screen.png ]; do sleep 1; done'
-    cat /run/desktop-test/screen.png" > "$work/screen.png" \
-    || fail_with_niri_log "niri wrote no picture of its screen"
-# a PNG file starts with these eight bytes
-[ "$(head -c 8 "$work/screen.png" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a ] \
-    || fail "what niri wrote is not a picture"
-# what drew it: the renderer Mesa gave niri, in its log
-save_niri_log
-renderer=$(grep -o "GL Renderer: .*" "$work/niri.log" | head -n 1 || true)
-case $renderer in
-    *llvmpipe*) echo "  $renderer" ;;
-    *) fail "niri did not draw with llvmpipe (${renderer:-no renderer in its log}); see $work/niri.log" ;;
-esac
-echo "  the picture: $work/screen.png"
+# A picture of a screen, as niri drew it: written where its user can
+# write, and copied here
+take_picture() {
+    user=$1
+    socket=$2
+    copy=$3
+    picture=/run/user/$(in_guest "id -u $user")/desktop-test.png
+    in_guest "NIRI_SOCKET=$socket niri msg action screenshot-screen --path $picture" > /dev/null \
+        || fail_with_login_log "niri did not take a picture of its screen"
+    in_guest "timeout 10 sh -c 'until [ -s $picture ]; do sleep 1; done'; cat $picture" > "$copy" \
+        || fail_with_login_log "niri wrote no picture of its screen"
+    # a PNG file starts with these eight bytes
+    [ "$(head -c 8 "$copy" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a ] \
+        || fail "what niri wrote is not a picture"
+}
+# Quickshell has started, and draws its first frame some seconds after:
+# no sign of that reaches outside, so the test waits
+qs_draws_its_first_frame=10
+sleep $qs_draws_its_first_frame
+take_picture greeter "$greeter_socket" "$work/login-screen.png"
+echo "  the login screen: $work/login-screen.png"
+
+echo "3. a person logs in, and DMS comes up"
+# Typed on the machine's keyboard, through QEMU's monitor
+# (test-machine.sh, BUNIX_MONITOR), which python3 talks to where QEMU
+# runs: the name, then the password
+cat > "$work/monitor.py" <<'PYTHON'
+# Each line of the standard input to QEMU's monitor, a moment apart
+import socket, sys, time
+monitor = socket.socket(socket.AF_UNIX)
+monitor.connect("monitor")
+for line in sys.stdin:
+    monitor.sendall(line.encode())
+    time.sleep(0.15)
+monitor.close()
+PYTHON
+send_to_machine monitor.py
+type_on_keyboard() {
+    keys=$(printf '%s' "$1" | fold -w 1 | sed 's/^/sendkey /')
+    printf '%s\nsendkey ret\n' "$keys" | in_machine_directory "python3 monitor.py" \
+        || fail "could not type on the machine's keyboard (is python3 where QEMU runs?)"
+}
+type_on_keyboard sara
+# the greeter asks greetd about the name before it shows the password's
+# field, which takes it a moment
+greeter_shows_the_password_field=3
+sleep $greeter_shows_the_password_field
+type_on_keyboard secret
+# The session greetd starts (niri-session, niri.service) as sara, and DMS
+# in it (dms.service, wanted by niri.service)
+sara_socket=$(wait_for_shell_of sara "sara's session did not come up: no niri, or no DMS's Quickshell") \
+    || exit 1
+in_guest "loginctl list-sessions --no-legend" > "$work/sessions.log" 2>&1 || true
+grep -q " sara " "$work/sessions.log" || fail "sara has no logind session; see $work/sessions.log"
+# the session bus, which the person's own services talk over
+in_guest "test -S /run/user/\$(id -u sara)/bus" \
+    || fail "sara's session has no session bus (dbus-user-session)"
+echo "  sara is logged in, with DMS and a session bus"
+sleep $qs_draws_its_first_frame
+take_picture sara "$sara_socket" "$work/desktop.png"
+echo "  the desktop: $work/desktop.png"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

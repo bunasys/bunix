@@ -15,9 +15,14 @@ the next release waits for the last:
    merges the extension, checks which fonts the generic names are, in
    English and Arabic, starts niri, and has it take a picture of its
    screen.
-2. **The shell**: Qt 6, Quickshell, DMS, greetd and dms-greeter,
-   accountsservice, and the session bus of a user.
-3. **Sound**: PipeWire and WirePlumber.
+2. **The shell** (done): Qt 6, Quickshell, DMS, greetd and dms-greeter,
+   accountsservice, the session bus of a user, and PipeWire, whose
+   library Quickshell links (DMS's interface will not load without it).
+   `tools/desktop-test.sh` brings up the login screen, types a name and
+   password on the machine's keyboard, and checks that the person's
+   session comes up with DMS.
+3. **Sound**: WirePlumber, which routes PipeWire's sound, and the arm64
+   kernel's sound drivers, built in.
 4. **The terminal and AppImages**: Alacritty, and FUSE (the kernel's,
    fusermount, libfuse 2 and 3) so that an AppImage runs; then the
    extension in releases.
@@ -111,8 +116,9 @@ screen, `buna` included, is translated with gettext.
 
 ### Units in an extension
 
-The desktop extension brings systemd units of its own (ALSA's volumes,
-the font cache, later PipeWire and greetd).  Two things make them start:
+The desktop extension brings systemd units of its own (the font cache,
+accountsservice, greetd; later ALSA's volumes).  Two things make them
+start:
 
 - **systemd has to know them.**  It reads its units before
   `systemd-sysext.service` merges the extensions in early boot.  Every
@@ -127,13 +133,17 @@ the font cache, later PipeWire and greetd).  Two things make them start:
   unit must not fail at boot (prefix its command with `-`), or systemd
   keeps restarting it.
 
-0.4.0's build refused an extension with a service that no target
-upholds; the Nix build does not check it yet.  `tools/desktop-test.sh`
-checks that the unit the desktop has now (the font cache) runs.
+An extension's build refuses a service that nothing starts: no target
+upholds it, and it has no socket of its own (`extension-parts.sh`; a
+socket, as devtools' Nix daemon has, is started by `sockets.target`,
+which the same drop-in asks again).  `tools/desktop-test.sh` checks that
+the desktop's units run.
 
-udev's rules are the same: udev reads them before the merge.  After it,
-`systemd-sysext.service.d/bunix.conf` has udev read them again, and go
-over the input devices once more, for libinput's rules.
+udev's rules and the system bus's policies are the same: each is read
+before the merge.  After it, `systemd-sysext.service.d/bunix.conf` has
+udev read its rules again and go over the input devices once more, for
+libinput's rules; and has the bus read its policies again, without which
+accountsservice cannot take its name on the bus.
 
 ## Phases
 

@@ -1,0 +1,50 @@
+DMS knows programs a Nix profile installs by the text "/nix/store" in
+their paths, and so carries that text in its program.  bunix's package
+check refuses a package with that text in it, as it would a reference to
+the store the package was built in.  Here the text is put together when
+DMS runs, from two parts: what DMS does is unchanged.
+
+--- a/core/cmd/dms/commands_doctor.go
++++ b/core/cmd/dms/commands_doctor.go
+@@ -820,7 +820,7 @@
+ 	if doctorVerbose {
+ 		installType := "Unknown"
+ 		switch {
+-		case strings.Contains(dmsPath, "/nix/store"):
++		case strings.Contains(dmsPath, filepath.Join("/nix", "store")):
+ 			installType = "Nix store"
+ 		case strings.Contains(dmsPath, ".local/share") || strings.Contains(dmsPath, "/usr/share"):
+ 			installType = "System package"
+--- a/core/internal/server/sysupdate/shell.go
++++ b/core/internal/server/sysupdate/shell.go
+@@ -80,7 +80,7 @@
+ 	info := unprobedShell(running)
+ 	path := dmsBinaryPath()
+ 
+-	if strings.HasPrefix(path, "/nix/store/") {
++	if strings.HasPrefix(path, filepath.Join("/nix", "store")+"/") {
+ 		info.InstallMethod = InstallNix
+ 	} else if method, name, version := packageOwner(ctx, path); method != "" {
+ 		info.InstallMethod = method
+--- a/quickshell/Modals/DLauncherV2/ControllerUtils.js
++++ b/quickshell/Modals/DLauncherV2/ControllerUtils.js
+@@ -122,7 +122,7 @@
+     if (/\.appimage(\s|$|")/i.test(execRaw) || id.indexOf("appimagekit_") === 0)
+         return "appimage";
+ 
+-    if (exec.indexOf("/nix/store/") !== -1 || exec.indexOf("/run/current-system/sw/") !== -1 || exec.indexOf("/etc/profiles/per-user/") !== -1)
++    if (exec.indexOf("/nix/" + "store/") !== -1 || exec.indexOf("/run/current-system/sw/") !== -1 || exec.indexOf("/etc/profiles/per-user/") !== -1)
+         return "nix";
+ 
+     return "system";
+--- a/quickshell/Services/DesktopService.qml
++++ b/quickshell/Services/DesktopService.qml
+@@ -105,7 +105,7 @@
+                     if (!execPath)
+                         continue;
+ 
+-                    if (execPath.startsWith("/nix/store/") || execPath.startsWith("/gnu/store/")) {
++                    if (execPath.startsWith("/nix/" + "store/") || execPath.startsWith("/gnu/store/")) {
+                         const basePath = execPath;
+                         const sizes = ["256x256", "128x128", "64x64", "48x48", "32x32", "24x24", "16x16"];
+ 
