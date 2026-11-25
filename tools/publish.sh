@@ -161,10 +161,16 @@ in_builder() {
 # has what was built, and nothing else, on its standard output.  That is
 # the store path nix-build prints, but for x86_64: its store is under its
 # user's home directory, and /nix/store/... is no path there.
+#
+# Called inside $(...), where bash leaves set -e off: a build that fails
+# returns so, or it would print an empty store path, and what is sent
+# back would be whatever that names (a trial run sent the x86_64
+# builder's whole store).  (Not inherit_errexit: a Mac's bash is 3.2.)
 build() {
     built_for=$1
     shift
-    store_path=$(in_builder "$built_for" "nix-build $* --no-out-link")
+    store_path=$(in_builder "$built_for" "nix-build $* --no-out-link") || return 1
+    [ -n "$store_path" ] || return 1
     case $built_for in
         x86_64) echo "nix-root$store_path" ;;
         *) echo "$store_path" ;;
