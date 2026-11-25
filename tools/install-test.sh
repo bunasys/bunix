@@ -11,10 +11,13 @@
 # its boot loader loads from the ESP, and U-Boot.
 #
 # bunix is started in memory, as on a machine it is to be installed on,
-# with two disks, is handed firmware of the machine's own as a Mac is,
-# and is given the files of its own version (nix/images/update.nix), with
-# its desktop extension (nix/images/desktop.nix) as a release has it.  It
-# installs twice:
+# with two disks.  The Mac's machine is started as tools/boot-mac.sh
+# starts a Mac, handed firmware of its own as a Mac is, and given the
+# files of its version (nix/images/update.nix), with its desktop
+# extension (nix/images/desktop.nix) as a release has it.  The PC starts
+# from the live image (nix/images/live.nix), as a USB stick, which has
+# the same files; the stick is not to be offered as a disk.  It installs
+# twice:
 #
 #   1. onto a whole, empty disk, with the desktop; the machine's flash
 #      chip is not to be offered as one
@@ -100,21 +103,27 @@ mkdir "$work/files"
 
 # ---- What is installed, and what installs it ------------------------------------
 
-echo "building the system, and the files of its version"
-image=$(build "$source/nix/images/system.nix")
-update=$(build "$source/nix/images/update.nix")
-# the kernel the system was built with: its modules are in the image
-copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
-copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
-copy_built_directory "$update" "$work/files"
 version=$(release_version)
-# named as a release names it (tools/publish.sh), which the installer
-# looks for
-desktop=$(build "$source/nix/images/desktop.nix" -A image)
-copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
 if [ $like_an_apple_silicon_mac = yes ]; then
+    echo "building the system, and the files of its version"
+    image=$(build "$source/nix/images/system.nix")
+    update=$(build "$source/nix/images/update.nix")
+    # the kernel the system was built with: its modules are in the image
+    copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
+    copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
+    copy_built_directory "$update" "$work/files"
+    # named as a release names it (tools/publish.sh), which the installer
+    # looks for
+    desktop=$(build "$source/nix/images/desktop.nix" -A image)
+    copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
     u_boot=$(build "$source/nix/boot.nix" -A u-boot-qemu)
     copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
+else
+    # A PC starts from the live image, as a USB stick, which has the
+    # system for memory and the files to install (images/live.nix)
+    echo "building the live image"
+    live=$(build "$source/nix/images/live.nix")
+    copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
 fi
 
 # Empty, and as large as they are only in name: what is written of them
@@ -131,8 +140,12 @@ key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$publi
 # built for.
 machine_on_played_processor="-M virt -accel tcg,thread=multi -cpu max"
 # The second is given sectors of 4096 bytes, wherever it is attached.
-whole_disk="-drive file=$machine_directory/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole"
-mac_disk="-drive file=$machine_directory/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096"
+# Both are in QEMU's list of what to start (bootindex), after a PC's live
+# stick: the PC's firmware keeps only what that list names, from the
+# stick's start on, and would otherwise not try the disk it is started
+# with later.
+whole_disk="-drive file=$machine_directory/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole,bootindex=1"
+mac_disk="-drive file=$machine_directory/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096,bootindex=2"
 
 # as <user> <command>: on the machine, over SSH
 # (a name no other function has for a variable: sh has one of each name)
@@ -174,25 +187,44 @@ pull_the_plug() {
 
 # ---- Installing --------------------------------------------------------------------
 
-# The machine is handed firmware of its own, as tools/boot-mac.sh hands a
-# Mac its: an archive before the image, not compressed, and the kernel
-# told of its directory.  One file that no driver asks for; what is
-# tested is that the installed systems still have it, and look there.
-rm -rf "$work/firmware"
-mkdir -p "$work/firmware/vendorfw"
-echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
-(cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
-cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
-send_to_machine initramfs-with-firmware
+if [ $like_an_apple_silicon_mac = yes ]; then
+    # The machine is handed firmware of its own, as tools/boot-mac.sh
+    # hands a Mac its: an archive before the image, not compressed, and
+    # the kernel told of its directory.  One file that no driver asks
+    # for; what is tested is that the installed systems still have it,
+    # and look there.
+    rm -rf "$work/firmware"
+    mkdir -p "$work/firmware/vendorfw"
+    echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
+    (cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
+    cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
+    send_to_machine initramfs-with-firmware
 
-echo "starting bunix in memory, with the two disks"
-# shellcheck disable=SC2086  # the disks' words are several each
-start_qemu $machine_on_real_processor -kernel "$machine_directory/vmlinuz" -initrd "$machine_directory/initramfs-with-firmware" \
-    -append "console=$console quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
-answers_within 90 root || fail "the system in memory did not answer on SSH"
-# (--no-xattrs: not what macOS notes about a file it copied)
-tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
-    || fail "could not give the machine the version's files"
+    echo "starting bunix in memory, with the two disks"
+    # shellcheck disable=SC2086  # the disks' words are several each
+    start_qemu $machine_on_real_processor -kernel "$machine_directory/vmlinuz" -initrd "$machine_directory/initramfs-with-firmware" \
+        -append "console=$console quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
+    answers_within 90 root || fail "the system in memory did not answer on SSH"
+    # (--no-xattrs: not what macOS notes about a file it copied)
+    tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
+        || fail "could not give the machine the version's files"
+    files=/root/install
+else
+    echo "starting bunix in memory from the live image, a USB stick, with the two disks"
+    # Started first (bootindex), read-only as a stick that is not written
+    # to.  The serial console and the key: words the firmware hands the
+    # kernel image's command line (SMBIOS), as tools/desktop-test.sh has
+    # them.
+    stick="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick,readonly=on -device usb-storage,drive=stick,bootindex=0"
+    smbios_words=$(printf 'console=%s %s' "$console" "$key_word" | sed 's/,/,,/g')
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $stick $whole_disk $mac_disk \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
+    answers_within 120 root || fail "the system in memory, from the live image, did not answer on SSH"
+    files=/run/bunix/medium/install
+    as root "ls $files/bunix_$version.$architecture_in_file_names.efi" > /dev/null \
+        || fail "the live image's files are not at $files"
+fi
 
 # The disks by what was asked of QEMU, not by the order Linux found them in
 disk_with_sectors_of() {
@@ -202,17 +234,18 @@ whole=$(disk_with_sectors_of 512)
 mac=$(disk_with_sectors_of 4096)
 [ -n "$whole" ] && [ -n "$mac" ] || fail "the machine does not have the two disks: '$whole' '$mac'"
 # The number the installer lists a disk under: it lists what lsblk does,
-# in that order, but for what is too small for bunix.  Here that is the
-# virtual machine's flash chip, and the swap in memory, which a PC's
-# kernel lists before its disks; the test's own two disks are not.
+# in that order, but for what is too small for bunix, and the disk its
+# files are on.  Here that is the virtual machine's flash chip, the swap
+# in memory, which a PC's kernel lists before its disks, and a PC's live
+# stick (sd*: the test's own two disks are vd*).
 number_of() {
-    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram/ { number++; if (\$1 == \"$1\") print number }'"
+    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram|sd/ { number++; if (\$1 == \"$1\") print number }'"
 }
 
 # run_installer <name of the log> <answers, a line each>: fails the test
 # if the installer does
 run_installer() {
-    printf '%s\n' "$2" | as root 'bunix-install /root/install' > "$work/install-$1.log" 2>&1 \
+    printf '%s\n' "$2" | as root "bunix-install $files" > "$work/install-$1.log" 2>&1 \
         || fail "the installer failed; see $work/install-$1.log"
 }
 # The partition of a disk with this name, as a device

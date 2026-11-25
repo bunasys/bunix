@@ -17,4 +17,10 @@ accounts_with_a_password=$(awk -F: '$2 ~ /\$/ { print $1 }' /etc/shadow)
 if [ -n "$accounts_with_a_password" ]; then
     exec /usr/bin/login
 fi
+# Started from the live stick (images/live.nix), which has the files of
+# its version where the person is to point the installer
+live_files=/run/bunix/medium/install
+if [ -d "$live_files" ]; then
+    echo "To install bunix on this machine:  bunix-install $live_files"
+fi
 exec /usr/bin/bash --login
