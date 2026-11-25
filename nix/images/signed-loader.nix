@@ -22,6 +22,8 @@ stagedBuild {
   buildDepends = [ base.systemd base.osslsigncode base.openssl tools.bash tools.coreutils tools.sed ];
   env = {
     sign_kernel_image = ../../tools/sign-kernel-image.sh;
+    # (it takes these four from the environment: sign_kernel_image,
+    # development_key, development_certificate, release_certificate)
     check_release_signed = ./check-release-signed.sh;
     development_key = ../development-key/development.key;
     development_certificate = ../development-key/development.crt;

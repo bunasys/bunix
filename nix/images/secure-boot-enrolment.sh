@@ -72,9 +72,9 @@ certificate_list() {
     cat $1
 }
 openssl x509 -in $certificate -outform DER -out certificate.der
-certificate_list certificate.der > value
+certificate_list certificate.der > development-key-value
 # db's: a variable's value may be several lists, one after another
-cp value db-value
+cp development-key-value db-value
 if [ -n "${microsoft_certificate:-}" ]; then
     certificate_list $microsoft_certificate >> db-value
 fi
@@ -124,5 +124,5 @@ enrolment_file() {
 # it is.  systemd-boot enrols them in that order: PK last, since setting
 # it ends setup mode, and with it the taking of keys.
 enrolment_file db $EFI_IMAGE_SECURITY_DATABASE_GUID db-value
-enrolment_file KEK $EFI_GLOBAL_VARIABLE value
-enrolment_file PK $EFI_GLOBAL_VARIABLE value
+enrolment_file KEK $EFI_GLOBAL_VARIABLE development-key-value
+enrolment_file PK $EFI_GLOBAL_VARIABLE development-key-value

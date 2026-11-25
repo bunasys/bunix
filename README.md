@@ -32,8 +32,11 @@ What can be installed today:
   0.5.2 the stick and what it installs start with Secure Boot on,
   through shim, as 0.4.0's did: a PC that does not know bunix's key yet
   shows MokManager at the first start, where `bunix.cer` (on the stick,
-  and beside shim on the ESP) is enrolled once.  0.5.1's stick and
-  installs need Secure Boot off.  A system installed from 0.4.0's live
+  and beside shim on the ESP) is enrolled once.  Some PCs (Microsoft's
+  "Secured-core") come with the certificate shim is signed by, Microsoft's
+  third-party UEFI CA, turned off: it is turned on in the firmware's
+  settings, or Secure Boot off.  0.5.1's stick and installs need Secure
+  Boot off.  A system installed from 0.4.0's live
   image stays on 0.4.0: it does not find the later releases
   (`docs/release.md`).
 

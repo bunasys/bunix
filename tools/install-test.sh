@@ -231,6 +231,10 @@ else
     echo "building the live image"
     live=$(build "$source/nix/images/live.nix" -A image)
     copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
+    # what is on the stick, to be found again after the live system ran
+    # from it (nothing is to write to it): the image's bytes
+    stick_bytes=$(in_machine_directory "stat -c %s live.img")
+    stick_before=$(in_machine_directory "sha256sum < live.img")
     # as large as a stick is, so that the installer leaves it out for
     # having its files on it, and not for being too small for bunix
     in_machine_directory "truncate -s 16G live.img"
@@ -249,6 +253,13 @@ else
     files=/run/bunix/medium/install
     as root "ls $files/bunix_$version.$architecture_in_file_names.efi" > /dev/null \
         || fail "the live image's files are not at $files"
+    # all of it started: nothing failed (a mount of the stick's ESP
+    # beside the one below, say)
+    live_state=$(as root "systemctl is-system-running --wait" || true)
+    if [ "$live_state" != running ]; then
+        as root "systemctl --failed --no-pager" > "$work/live-failed.log" 2>&1 || true
+        fail "not all of the live system started ($live_state); see $work/live-failed.log"
+    fi
     # /usr from the stick, checked against its hash, and the root in memory
     [ "$(as root "findmnt -no SOURCE /usr")" = /dev/mapper/usr ] \
         || fail "the live system's /usr is not the stick's, checked against its hash"
@@ -439,14 +450,17 @@ fi
 expect_root_locked "$mac"
 give_key_to "$mac" adam
 partitions_of root "$mac" > "$work/mac-partitions"
-# The live system wrote nothing to the stick it runs from: its four
-# partitions, and no root partition beside them (systemd-repart's, which
-# a root in memory is kept from)
+power_off
+# The live system wrote nothing to the stick it ran from: the image's
+# bytes are what they were (no random seed on its ESP), and there is no
+# partition beside them (systemd-repart's root, which a root in memory is
+# kept from)
 if [ $starts_from_live_image = yes ]; then
-    stick_partitions=$(as root "lsblk -nrpo NAME,TYPE /dev/sd? | awk '\$2 == \"part\"' | wc -l")
+    stick_after=$(in_machine_directory "head -c $stick_bytes live.img | sha256sum")
+    [ "$stick_after" = "$stick_before" ] || fail "the live system wrote to the stick it ran from"
+    stick_partitions=$(in_machine_directory "sfdisk -d live.img | grep -c 'start='")
     [ "$stick_partitions" = 4 ] || fail "the live stick has $stick_partitions partitions after the installs, not its 4"
 fi
-power_off
 
 # ---- Starting what was installed ---------------------------------------------------
 
@@ -530,6 +544,8 @@ if [ $starts_from_live_image = yes ]; then
     usr_from=$(as sara "lsblk -s -nrpo NAME /dev/mapper/usr | grep -v mapper | tr '\n' ' '")
     case $usr_from in
         *"/dev/sd"*) fail "the installed system runs the stick's /usr: $usr_from" ;;
+        *"/dev/vd"*) ;;
+        *) fail "could not tell where the installed system's /usr is from: $usr_from" ;;
     esac
 fi
 # Merged before the system counts as started; greetd, upheld once it is,
