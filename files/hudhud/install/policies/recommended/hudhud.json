@@ -4,9 +4,11 @@
   "MetricsReportingEnabled": false,
   "DefaultSearchProviderEnabled": true,
   "DefaultSearchProviderName": "Brave",
-  "DefaultSearchProviderKeyword": ":br",
+  "DefaultSearchProviderKeyword": "search.brave.com",
   "DefaultSearchProviderSearchURL": "https://search.brave.com/search?q={searchTerms}",
-  "DefaultSearchProviderSuggestURL": "https://search.brave.com/api/suggest?q={searchTerms}",
-  "DefaultSearchProviderIconURL": "https://search.brave.com/favicon.ico",
-  "DefaultSearchProviderEncodings": ["UTF-8"]
+  "DefaultSearchProviderSuggestURL": "https://search.brave.com/api/suggest?q={searchTerms}&rich=true&rich_verticals=true",
+  "DefaultSearchProviderIconURL": "https://cdn.search.brave.com/serp/favicon.ico",
+  "DefaultSearchProviderEncodings": [
+    "UTF-8"
+  ]
 }

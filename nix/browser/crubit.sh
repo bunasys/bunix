@@ -1,4 +1,6 @@
 unpack $src
+# chromium-rust's directory (chromium-rust.sh): Chromium looks for
+# Crubit in its Rust toolchain
 prefix=/usr/lib/chromium-rust
 
 # ../cargo.sh's lines that give cargo its crates: a directory of their

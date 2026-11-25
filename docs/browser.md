@@ -14,9 +14,10 @@ its packaged build and the desktop extension are next.
 0.5.3 waits for it.  In steps, each tested on both architectures and
 reviewed, as the desktop's were (`docs/desktop.md`):
 
-0. **Build hosts.**  arm64 on this Mac's builder
-   (`tools/nix-builder/lima.yaml`: 10 cores, 13 GB, a 130 GB disk, 16 GB
-   of swap): free, about half a day a build.  x86-64 on a Fly machine,
+0. **Build hosts.**  arm64 on this Mac's builder (sized for it in
+   `tools/nix-builder/lima.yaml`): free, about half a day a build; before
+   each, the guest and the Mac need room for the build (the builder's
+   image outputs deleted first, as for every large build).  x86-64 on a Fly machine,
    performance-16x (16 cores, 32 GB), with Nix and the toolchain copied
    from the x86 builder, which has 16 threads and 31 GB but not the
    100 GB a build takes: about $1 an hour while it runs, made only for
@@ -33,11 +34,22 @@ reviewed, as the desktop's were (`docs/desktop.md`):
 2. **Chromium 158** (158.0.8127.88, ungoogled-chromium 158.0.8127.88-1)
    with Hudhud's changes, GTK 4 for its dialogs:
    the patches brought from 157, and **Brave Search the default search
-   engine**, checked -- 0.4.0's build had no engine enabled.
+   engine**, checked -- 0.4.0's build had no engine enabled.  Chromium
+   looks for clang's runtime under `<clang_base_path>/lib/clang/` and for
+   libclang under `<rust_bindgen_root>/lib`, where bunix's LLVM has
+   neither (`/usr/lib/<triplet>/`): its build lays out directories of
+   links in those shapes, as 0.4.0's did.  The libraries Chromium loads
+   only when it runs (GTK 4, libpci, NSS's modules) are in Hudhud's
+   depends by name: the package check sees only what a program asks for
+   when it starts.
 3. **Shields and the desktop.**  adblock-rust built in; Hudhud in the
    desktop extension, with its launcher, icon and Super+Shift+Return;
    `tools/desktop-test.sh` opens it, loads a page from the test, has a
-   test advertisement blocked, and checks the default search engine.
+   test advertisement blocked, checks the default search engine, and
+   opens a file dialog.  The extension compiles the GSettings schemas of
+   what is in it (`glib-compile-schemas`): GTK 4's file dialog reads its
+   settings through them, and GLib stops a program whose schemas are not
+   compiled.
 4. **0.5.3**, with the Mac's sound card, Neovim and `which` (#33).
 
 ## The goal
@@ -291,7 +303,12 @@ build has not.  Until then passkeys come from the extensions above.
   working as Google edits the lists.  That alone was not enough: 0.4.0's
   build started with no default engine at all.  So the default is also
   a recommended policy (below), which holds whatever country Chromium
-  thinks it is in, and the desktop test checks it.
+  thinks it is in, and the desktop test checks it.  The policy has the
+  built-in engine's URLs and keyword, so that settings should list Brave
+  once (to see in step 3: Chromium may still list both).  While
+  it holds, an extension cannot change the search engine (Chromium
+  ranks a recommended policy above an extension); a person who picks an
+  engine in settings can.
 - **Recommended policies** (the user can change them), in
   /usr/share/hudhud/policies (the policy-path patch: vendor defaults belong in
   the signed /usr): third-party cookies blocked, HTTPS-First (balanced),
