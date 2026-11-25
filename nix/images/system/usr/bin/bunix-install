@@ -191,13 +191,22 @@ device_of_partuuid() {
   die "partition $1 did not appear on $disk"
 }
 
+# The dm-verity device /usr is checked through once written (below): its
+# own name, as the live system's /usr is "usr"
+read_back_device=bunix-install-usr
 cleanup() {
   for dir in "$WORK"/esp "$WORK"/boot "$WORK"/root; do
     mountpoint -q "$dir" && umount "$dir"
   done
+  # an install stopped while /usr was checked holds slot A open with it
+  if [ -e /dev/mapper/$read_back_device ]; then
+    /usr/lib/systemd/systemd-veritysetup detach $read_back_device 2> /dev/null
+  fi
   return 0
 }
 trap cleanup EXIT
+# and one an earlier run left, stopped where cleanup could not run
+cleanup
 
 [ "$(id -u)" = 0 ] || die "run as root"
 # It is in every /usr, but installs only from a system that runs in
@@ -233,13 +242,14 @@ release=${release#bunix_}
 # The desktop extension of this version, if the files have it: a choice,
 # not one of the files a version needs
 desktop_image=$files/desktop_$release.$ARCHITECTURE.raw
-# The kernel image's usrhash= finds slot A's partitions by these UUIDs
-# (images/update.sh).  The file names carry them, as x86's do without
-# dashes.
+# 32 hex digits as an id is written, with its dashes
+as_id() {
+  echo "${1:0:8}-${1:8:4}-${1:12:4}-${1:16:4}-${1:20:12}"
+}
+# The id in the name of one of a release's /usr files (images/update.sh
+# names them so; x86's once without dashes)
 uuid_in_name() {
-  local hex
-  hex=$(basename "$1" .raw | sed 's/.*\.//' | tr -d -)
-  echo "${hex:0:8}-${hex:8:4}-${hex:12:4}-${hex:16:4}-${hex:20:12}"
+  as_id "$(basename "$1" .raw | sed 's/.*\.//' | tr -d -)"
 }
 # The disk the files are on, when they are on one (walking up through any
 # loop or device-mapper layers, as on a Ventoy stick): not one to offer,
@@ -250,41 +260,50 @@ if [ -b "$files_device" ]; then
   files_disk=$(lsblk -nslpo NAME,TYPE "$files_device" | awk '$2 == "disk" { disk = $1 } END { print disk }')
   files_disk=${files_disk:-$files_device}
 fi
-# The ids slot A's partitions are to have: made of /usr's hash, as
-# images/update.sh makes them, by which the kernel image's usrhash= finds
-# them.  Read from that kernel image, which names the hash.
+# The ids slot A's partitions are to have, by which the kernel image's
+# usrhash= finds them: made of /usr's hash as images/update.sh makes them
+# (the data's of its first half, the hashes' of its second, the
+# signature's of 'bunix usr-verity-sig <hash>').  Read from that kernel
+# image, which names the hash.
 usrhash=$(grep -a -o -m 1 'usrhash=[0-9a-f]*' "$uki" | cut -d= -f2)
 [ ${#usrhash} = 64 ] || die "$uki names no /usr by its hash (usrhash=)"
-as_id() {
-  echo "${1:0:8}-${1:8:4}-${1:12:4}-${1:16:4}-${1:20:12}"
-}
 usr_id=$(as_id "${usrhash:0:32}")
 verity_id=$(as_id "${usrhash:32:32}")
 signature_id=$(as_id "$(printf 'bunix usr-verity-sig %s' "$usrhash" | sha256sum | head -c 32)")
-# One of the three of /usr, to read it from: a file of $files, as a
-# release has them, whose name carries its id, which is to be the one the
-# hash makes; or, on the live stick (images/live.nix), the stick's own
-# partition of that name, which the system started from it runs /usr
-# from (by ids of the stick's own).
-#   usr_source <the file's pattern> <the partition's name> <the id>
-usr_source() {
+# Where /usr's three are read from: files of $files, as a release has
+# them; or, on the live stick (images/live.nix), which has none, the
+# stick's own partitions, which the system started from it runs /usr
+# from (by ids of the stick's own, and the names slot A's have).
+# A file's name carries its id, which is to be the one the hash makes.
+#   usr_file <the file's pattern> <the id>
+usr_file() {
   local found=("$files"/$1)
-  if [ -e "${found[0]}" ]; then
-    [ ${#found[@]} = 1 ] || die "$files has ${#found[@]} files named $1; a version has one"
-    [ "$(uuid_in_name "${found[0]}")" = "$3" ] || die "${found[0]} is not of the /usr $uki starts"
-    echo "${found[0]}"
-    return
-  fi
-  [ -n "$files_disk" ] || die "$files has no file named $1"
+  [ -e "${found[0]}" ] || die "$files has no file named $1"
+  [ ${#found[@]} = 1 ] || die "$files has ${#found[@]} files named $1; a version has one"
+  [ "$(uuid_in_name "${found[0]}")" = "$2" ] || die "${found[0]} is not of the /usr $uki starts"
+  echo "${found[0]}"
+}
+#   usr_partition <its name>
+usr_partition() {
   local partition
-  partition=$(lsblk -nrpo NAME,PARTLABEL "$files_disk" | awk -v name="$2" '$2 == name { print $1 }')
-  [ -n "$partition" ] || die "$files has no file named $1, and its disk no partition named $2"
+  partition=$(lsblk -nrpo NAME,PARTLABEL "$files_disk" | awk -v name="$1" '$2 == name { print $1 }')
+  [ -n "$partition" ] || die "$files has no /usr files, and its disk no partition named $1"
   echo "$partition"
 }
+usr_files=("$files"/bunix_$release.usr-$ARCHITECTURE.*.raw)
+has_usr_files=no
+[ ! -e "${usr_files[0]}" ] || has_usr_files=yes
 # (each on a line of its own: a failure in $(...) ends the script)
-usr_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE.*.raw" "bunix_$release" "$usr_id")
-verity_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity.*.raw" "bunix_${release}_verity" "$verity_id")
-signature_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw" "bunix_${release}_verity_sig" "$signature_id")
+if [ $has_usr_files = yes ]; then
+  usr_image=$(usr_file "bunix_$release.usr-$ARCHITECTURE.*.raw" "$usr_id")
+  verity_image=$(usr_file "bunix_$release.usr-$ARCHITECTURE-verity.*.raw" "$verity_id")
+  signature_image=$(usr_file "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw" "$signature_id")
+else
+  [ -n "$files_disk" ] || die "$files has no file named bunix_$release.usr-$ARCHITECTURE.*.raw"
+  usr_image=$(usr_partition "bunix_$release")
+  verity_image=$(usr_partition "bunix_${release}_verity")
+  signature_image=$(usr_partition "bunix_${release}_verity_sig")
+fi
 # systemd-boot, from this system's own /usr, the same version's:
 # systemd-bootaa64.efi, which goes on an ESP as EFI/BOOT/BOOTAA64.EFI
 systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
@@ -662,8 +681,14 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
     # disk has them)
     is_systemd_boot=no
     ! grep -q -a 'LoaderInfo: systemd-boot' "$WORK/esp/$default_loader" || is_systemd_boot=yes
+    # (shim as this system has it: the file beside alone would take
+    # another system's loader for bunix's)
     beside_default_loader=$WORK/esp/$(dirname "$default_loader")/grub$loader_kind.efi
-    if [ -e "$beside_default_loader" ] && grep -q -a 'LoaderInfo: systemd-boot' "$beside_default_loader"; then
+    is_shim=no
+    if [ -f "$shim" ] && cmp -s "$shim" "$WORK/esp/$default_loader"; then
+      is_shim=yes
+    fi
+    if [ $is_shim = yes ] && grep -q -a 'LoaderInfo: systemd-boot' "$beside_default_loader" 2>/dev/null; then
       is_systemd_boot=yes
     fi
     is_earlier_bunix_shim=no
@@ -974,12 +999,13 @@ dd if="$signature_image" of="$(device_of_partuuid "$signature_id")" bs=4M conv=f
 # the install here, and not the machine's first start.  Under a name of
 # its own: the live system's /usr is "usr".
 echo "Checking /usr as written..."
-checked=bunix-install-usr
-/usr/lib/systemd/systemd-veritysetup attach $checked "$(device_of_partuuid "$usr_id")" \
-  "$(device_of_partuuid "$verity_id")" "$usrhash"
+/usr/lib/systemd/systemd-veritysetup attach $read_back_device "$(device_of_partuuid "$usr_id")" \
+  "$(device_of_partuuid "$verity_id")" "$usrhash" ||
+  die "could not set up /usr as written to $disk to be checked against its hash"
 reads_whole=yes
-dd if=/dev/mapper/$checked of=/dev/null bs=4M status=none || reads_whole=no
-/usr/lib/systemd/systemd-veritysetup detach $checked
+dd if=/dev/mapper/$read_back_device of=/dev/null bs=4M status=none || reads_whole=no
+/usr/lib/systemd/systemd-veritysetup detach $read_back_device ||
+  die "could not close /dev/mapper/$read_back_device after checking /usr"
 [ $reads_whole = yes ] || die "/usr as written to $disk does not match its hash: the stick, or the files,
 are damaged.  Write the stick again, or download the files again."
 
@@ -998,9 +1024,8 @@ fi
 mkdir -p "$WORK/esp/$(dirname "$loader_on_esp")" "$WORK"/esp/EFI/Linux "$WORK"/esp/loader
 # Where firmware looks when it has no entry for a disk, which is all a
 # Mac's ever does (checked above: the place is free, or an earlier
-# bunix's); or bunix's own directory, which an entry names (below).  On
-# x86 shim, with systemd-boot, MokManager and bunix's certificate beside
-# it; elsewhere systemd-boot.
+# bunix's); or bunix's own directory, which an entry names (below).  What
+# starts bunix: above, where $has_shim is decided.
 if [ "$has_shim" = yes ]; then
   loader_directory=$WORK/esp/$(dirname "$loader_on_esp")
   # Shim starts fallback (fbx64.efi) in place of systemd-boot where one is

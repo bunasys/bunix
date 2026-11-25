@@ -29,9 +29,10 @@
 #                  which a PC's owner enrols in MokManager when its shim
 #                  does not know the key yet
 #   /usr         this version's (images/update.nix), block for block, by
-#                the ids and names a disk's slot A has: what the system
-#                on the stick runs, and what bunix-install copies to the
-#                disk (it finds them by those names)
+#                the names a disk's slot A has, but by ids of the stick's
+#                own (live-kernel-image.sh says why): what the system on
+#                the stick runs, and what bunix-install copies to the disk
+#                (it finds them by those names)
 #
 # So, started from the stick, as root on its console:
 #
@@ -110,8 +111,11 @@ let
   # (bunix-root-in-memory.service).  fsck.mode=skip: the check systemd
   # runs before it mounts a partition, which fails on a stick that cannot
   # be written (and then nothing after it starts); a root in memory has
-  # nothing to check.  live-kernel-image.sh adds /usr's hash, and the
-  # stick's ESP's mount.
+  # nothing to check.  systemd.gpt_auto=0: with a root in memory, systemd
+  # takes the disk /usr is on -- the stick -- for the machine's own, and
+  # would mount the stick's ESP at /boot, writable (a random seed written
+  # to it), beside the mount below; nothing here is found that way.
+  # live-kernel-image.sh adds /usr's hash, and the stick's ESP's mount.
   liveKernelImageBuild = stagedBuild {
     name = "bunix-live-kernel-image";
     run = ./live-kernel-image.sh;
@@ -125,7 +129,7 @@ let
       inherit version;
       # x86: the processor's microcode, as in images/uki.nix
       microcode = if isX86 then boot.microcode else "";
-      command_line = "root=tmpfs mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet fsck.mode=skip";
+      command_line = "root=tmpfs mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet fsck.mode=skip systemd.gpt_auto=0";
       splash = ../../files/branding/splash.bmp;
       # signed here, with the development key, where it is a test system's
       sign_here = if isX86 && !isRelease then "yes" else "";
@@ -146,21 +150,21 @@ in
 {
   liveKernelImage = liveKernelImageBuild;
 
-  # (the stick takes a release's signatures all, or none of them: a
-  # release's system with a test system's anything is no system anybody
-  # should install.  Its kernel image alone is built before they are
-  # made.)
+  # (its kernel image alone is built before a release's signatures are
+  # made: the checks are the stick's)
   image = assert signaturesAgree; assert enrolmentIsForTests; stagedBuild {
     name = "bunix-live";
     run = ./live.sh;
     # systemd: systemd-repart, which makes the image.  dosfstools and
     # mtools: the ESP's file system, and what fills it.  osslsigncode:
     # what a release's signatures are checked with.
-    buildDepends = [ base.systemd base.dosfstools base.mtools
+    # util-linux: sfdisk, which says where the ESP is in the image
+    buildDepends = [ base.systemd base.dosfstools base.mtools base.util-linux
                      tools.bash tools.coreutils tools.findutils tools.grep tools.sed ]
       ++ (if isX86 then [ base.osslsigncode ] else []);
-    # what a release's signed kernel images are checked with
     env = developmentSigning // {
+      # what a release's signed kernel images are checked with (and it
+      # signs with the development key, above, to compare)
       check_release_signed = ./check-release-signed.sh;
       release_certificate = ../../keys/secureboot.crt;
       inherit update version;

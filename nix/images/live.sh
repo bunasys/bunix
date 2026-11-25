@@ -57,6 +57,15 @@ else
     cp $systemd_boot $default_loader
 fi
 printf '%s\n' 'timeout 0' 'console-mode keep' 'auto-entries no' > tree/esp/loader/loader.conf
+# systemd-boot keeps a random seed, and a secret mixed into what it
+# measures, in files on the ESP it starts from, which it makes where they
+# are not; on a stick that is written once and copied to many, it would
+# write to the stick at every start.  Files that are there and marked
+# read-only tell it to leave both alone (systemd's own way for an image
+# copied to many machines: src/boot/random-seed.c, boot-secret.c); marked
+# so once the image is made, below, as repart does not.
+: > tree/esp/loader/random-seed
+: > tree/esp/loader/boot-secret-mixin
 
 # A test machine with Secure Boot (live.nix: secureBootEnrolment): its
 # firmware has no keys yet and starts anything; systemd-boot gives it
@@ -109,7 +118,22 @@ partition 12-usr-verity-sig.conf Type=usr-verity-sig Label=bunix_${version}_veri
 mkdir -p $out tmp
 # as disk.sh: no loop devices, 512-byte sectors, ids that are the same at
 # every build
+image=$out/bunix-$partition_architecture-live.img
 TMPDIR=/build/tmp systemd-repart --empty=create --size=auto --dry-run=no --offline=yes \
     --sector-size=512 --definitions=live.d --copy-source=/build/tree \
     --seed=$(printf 'bunix live %s' $version | sha256sum | head -c 32) \
-    $out/bunix-$partition_architecture-live.img
+    $image
+
+# systemd-boot's two files marked read-only (above), in the ESP, which
+# repart puts first, at 1 MiB
+esp_offset=$(( $(sfdisk -d $image | sed -n 's/.*start= *\([0-9]*\),.*name="bunix-live".*/\1/p') * 512 ))
+[ $esp_offset -gt 0 ]
+for file in random-seed boot-secret-mixin; do
+    MTOOLS_SKIP_CHECK=1 mattrib -i $image@@$esp_offset +r ::/loader/$file
+    # (mattrib shows a file's flags before its name: A, S, H, R)
+    flags=$(MTOOLS_SKIP_CHECK=1 mattrib -i $image@@$esp_offset ::/loader/$file | sed 's/::.*//')
+    case $flags in
+        *R*) ;;
+        *) echo "live.sh: loader/$file on the ESP is not marked read-only ($flags)" >&2; exit 1 ;;
+    esac
+done

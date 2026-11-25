@@ -133,8 +133,9 @@ fi
 # The files are gathered beside where they are to be, and the directory
 # gets its name once all of it is there and checked.
 unfinished=$release.unfinished
-# what is signed for Secure Boot here, kept beside them: the kernel image
-# goes into the release, the rest into builds
+# what is signed for Secure Boot here, kept beside them while it runs:
+# the builds are handed each, and the kernel image's copy goes into the
+# release
 signed_here=$release.signed-here
 rm -rf "$unfinished" "$signed_here"
 mkdir -p "$unfinished" "$signed_here"
@@ -214,11 +215,20 @@ for architecture in $architectures; do
     # A test system's images are signed in their builds.  A release's
     # are built up to their hashes, the hashes signed here, and the
     # builds then given the signatures.
+    # A release's x86_64 files that Secure Boot checks are signed here, where
+    # the password manager is: systemd-boot, which shim starts, and the
+    # kernel images.  A test system's are signed in their builds, with the
+    # development key.
+    signs_for_secure_boot=no
+    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+        signs_for_secure_boot=yes
+    fi
+
     # x86_64's /usr has systemd-boot signed for Secure Boot, which shim
-    # starts (images/signed-loader.nix): signed here before the system is
+    # starts (images/signed-loader.nix): signed before the system is
     # built, as it is part of what the system's hash covers
     loader_signed=
-    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+    if [ $signs_for_secure_boot = yes ]; then
         echo "$architecture: signing systemd-boot for Secure Boot"
         systemd=$(build "$architecture" bunix-release/source/nix/base.nix -A systemd)
         sign_for_secure_boot "$systemd/usr/lib/systemd/boot/efi/systemd-bootx64.efi" bunix-release/systemd-boot.efi
@@ -241,7 +251,7 @@ for architecture in $architectures; do
     # manager is: it goes into the release (below), and onto the live
     # stick.  A test system's was signed in its build, with the
     # development key (nix/images/uki.nix).
-    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+    if [ $signs_for_secure_boot = yes ]; then
         echo "$architecture: signing the kernel image for Secure Boot"
         sign_for_secure_boot "$update/bunix_$version.x86-64.efi" bunix-release/kernel-image.efi
     fi
@@ -328,7 +338,7 @@ for architecture in $architectures; do
     chmod u+w "$received"/*
 
     # A release's x86_64 kernel image, signed here when it was built
-    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+    if [ $signs_for_secure_boot = yes ]; then
         cp "$signed_here/kernel-image.efi" "$received/bunix_$version.$named.efi"
     fi
     mv "$received"/* "$unfinished/"
