@@ -1,24 +1,30 @@
 # bunix-<architecture>-live.img: bunix on a USB stick, to start a machine
 # in memory and install bunix from (bunix-install): written whole to the
-# stick.  After 0.4.0's live image, without its /usr from the stick: the
-# system the stick starts is all in memory, as the one tools/boot-mac.sh
-# starts on a Mac.  About 575 MB of it unpacked, from 380 MB packed,
-# both in memory while it unpacks: a machine with 2 GB has room
-# (tools/install-test.sh's has 4).
+# stick.  As 0.4.0's: the system it starts runs /usr from the stick, the
+# release's own, checked against its hash block by block as it is read;
+# its root is in memory (root=tmpfs), and filled as an installed
+# system's is at its first boot.  The kernel image is an installed
+# system's but for its command line, and the stick a disk with bunix
+# installed but for the root partition: started as such a disk is, by
+# the initrd (images/initrd.nix), which finds /usr by its hash.
 #
 #   nix-build /bunix/nix/images/live.nix       (result: bunix-x86-64-live.img)
 #   BUNIX_ARCHITECTURE=x86_64 tools/install-test.sh   (installs from it)
 #
-# One partition, the one a machine boots from (live.sh):
+# Its partitions (live.sh):
 #
-#   EFI/BOOT/      systemd-boot, which starts the one kernel image there
-#   EFI/Linux/     the live kernel image: the kernel, and the whole system
-#                  as its initramfs, and a command line that mounts this
-#                  partition at /run/bunix/medium, by an id of this
-#                  version's (live.sh)
-#   install/       the files of this version that bunix-install installs
-#                  (images/update.nix), and the desktop extension, which
-#                  it offers
+#   ESP          the one a machine boots from:
+#     EFI/BOOT/    systemd-boot, which starts the one kernel image there
+#     EFI/Linux/   the live kernel image: the kernel, the initrd, and a
+#                  command line with /usr's hash, root=tmpfs, and the
+#                  mount of this partition at /run/bunix/medium, by an id
+#                  of this version's
+#     install/     this version's kernel image, which bunix-install
+#                  installs, and the desktop extension, which it offers
+#   /usr         this version's (images/update.nix), block for block, by
+#                the ids and names a disk's slot A has: what the system
+#                on the stick runs, and what bunix-install copies to the
+#                disk (it finds them by those names)
 #
 # So, started from the stick, as root on its console:
 #
@@ -60,21 +66,23 @@ stagedBuild {
   buildDepends = [ base.systemd tools.python base.python-pefile base.dosfstools base.mtools
                    tools.bash tools.coreutils tools.findutils tools.grep tools.sed ];
   env = {
-    # the system in memory is the one installed: of a release, it takes
-    # only what the release key signed
+    # the system the stick runs is the one installed: of a release, it
+    # takes only what the release key signed
     system_image = import ./system.nix { inherit system signing version; };
+    initrd = import ./initrd.nix { inherit system; };
     update = import ./update.nix { inherit system signature version; };
     desktop = (import ./desktop.nix { inherit system version; signature = desktopSignature; }).image;
     inherit version;
     partition_architecture = architecture.partitionArchitecture;
     # x86: the processor's microcode, as in images/uki.nix
     microcode = if system == "x86_64-linux" then boot.microcode else "";
-    # console=tty0 quiet: as an installed system's (images/uki.nix).
+    # As an installed system's (images/uki.nix), but root=tmpfs: a root in
+    # memory, which the initrd gives its top (bunix-root-in-memory.service).
     # fsck.mode=skip: the check systemd runs before it mounts a
     # partition, which fails on a stick that cannot be written (and then
-    # nothing after it starts); a system in memory has no file system of
-    # its own to check.  live.sh adds the stick's mount.
-    command_line = "console=tty0 quiet fsck.mode=skip";
+    # nothing after it starts); a root in memory has nothing to check.
+    # live.sh adds /usr's hash, and the stick's mount.
+    command_line = "root=tmpfs mount.usrfstype=erofs mount.usrflags=ro console=tty0 quiet fsck.mode=skip";
     splash = ../../files/branding/splash.bmp;
   };
 }
