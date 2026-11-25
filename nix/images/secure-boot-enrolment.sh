@@ -1,9 +1,12 @@
 # The three files by which systemd-boot gives a machine's firmware the
 # keys Secure Boot checks with (PK.auth, KEK.auth, db.auth): for a test
-# machine, whose firmware comes with none (images/disk.nix:
-# secureBootEnrolment).  All three hold the one certificate, $certificate,
-# and are signed with its key, $key: the development key, which is not
-# secret.  A real machine's keys are its owner's to enrol.
+# machine, whose firmware comes with none (images/disk.nix,
+# images/live.nix: secureBootEnrolment).  All three hold the one
+# certificate, $certificate, and are signed with its key, $key: the
+# development key, which is not secret.  With $microsoft_certificate, db
+# holds Microsoft's UEFI CA as well, as every PC's has: what the shim of
+# the live stick is signed by (images/live.nix).  A real machine's keys
+# are its owner's to enrol.
 #
 # Each file is what the firmware's SetVariable takes for such a variable
 # (UEFI 2.10, 8.2.6 and 32.4.1), an EFI_VARIABLE_AUTHENTICATION_2: a
@@ -53,19 +56,28 @@ EFI_IMAGE_SECURITY_DATABASE_GUID=d719b2cb-3d3a-4596-a3bc-dad00e67656f  # db's
 # and "testke" in ASCII, with the bits an id of this kind has.
 owner=62756e69-7800-4000-8000-746573746b65
 
-# The value: a list of one certificate (EFI_SIGNATURE_LIST).
-openssl x509 -in $certificate -outform DER -out certificate.der
-certificate_size=$(stat -c %s certificate.der)
-{
+# A value: a list of one certificate (EFI_SIGNATURE_LIST), of the
+# certificate in DER in the file named
+#   certificate_list <file>
+certificate_list() {
+    local size
+    size=$(stat -c %s $1)
     id_bytes $EFI_CERT_X509_GUID                 # SignatureType
     # SignatureListSize: these 28 bytes (type 16, three sizes of 4), and
     # the one entry
-    four_bytes $((16 + 4 + 4 + 4 + 16 + certificate_size))
+    four_bytes $((16 + 4 + 4 + 4 + 16 + size))
     four_bytes 0                                 # SignatureHeaderSize: none
-    four_bytes $((16 + certificate_size))        # SignatureSize: an owner and a certificate
+    four_bytes $((16 + size))                    # SignatureSize: an owner and a certificate
     id_bytes $owner
-    cat certificate.der
-} > value
+    cat $1
+}
+openssl x509 -in $certificate -outform DER -out certificate.der
+certificate_list certificate.der > value
+# db's: a variable's value may be several lists, one after another
+cp value db-value
+if [ -n "${microsoft_certificate:-}" ]; then
+    certificate_list $microsoft_certificate >> db-value
+fi
 
 # The time (EFI_TIME, 16 bytes): 1 January 2026, and nothing in the
 # fields the firmware wants empty.  The firmware takes a variable only
@@ -85,12 +97,12 @@ attributes=$((0x1 | 0x2 | 0x4 | 0x20))
 
 mkdir -p $out
 enrolment_file() {
-    local variable=$1 vendor=$2
+    local variable=$1 vendor=$2 value=$3
     {
         name_bytes $variable
         id_bytes $vendor
         four_bytes $attributes
-        cat time value
+        cat time $value
     } > signed-$variable
     # -noattr: the signature is of those bytes and nothing else, as the
     # firmware computes it
@@ -105,12 +117,12 @@ enrolment_file() {
         two_bytes 0x0200                         # wRevision: WIN_CERT_REVISION
         two_bytes 0x0ef1                         # wCertificateType: WIN_CERT_TYPE_EFI_GUID
         id_bytes $EFI_CERT_TYPE_PKCS7_GUID       # CertType
-        cat signature-$variable value            # CertData, then the variable's value
+        cat signature-$variable $value           # CertData, then the variable's value
     } > $out/$variable.auth
 }
 # what may sign what is started; what may change that; and whose machine
 # it is.  systemd-boot enrols them in that order: PK last, since setting
 # it ends setup mode, and with it the taking of keys.
-enrolment_file db $EFI_IMAGE_SECURITY_DATABASE_GUID
-enrolment_file KEK $EFI_GLOBAL_VARIABLE
-enrolment_file PK $EFI_GLOBAL_VARIABLE
+enrolment_file db $EFI_IMAGE_SECURITY_DATABASE_GUID db-value
+enrolment_file KEK $EFI_GLOBAL_VARIABLE value
+enrolment_file PK $EFI_GLOBAL_VARIABLE value

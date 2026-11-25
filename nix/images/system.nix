@@ -27,7 +27,15 @@
 #            files are named by: an update is a system with a later one.
 #            The release's (nix/release.nix), unless a test asks for
 #            another, to have something to update to.
-{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix }:
+#   secureBootLoader
+#            x86, for release: systemd-boot signed by bunix's Secure Boot
+#            key, which tools/publish.sh makes (images/signed-loader.sh
+#            takes it only if it is this systemd-boot).  A test system's
+#            is signed in its build, with the development key.  A system
+#            for release without it has no signed systemd-boot, and its
+#            installer no Secure Boot.
+{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix
+, secureBootLoader ? null }:
 
 assert signing == "development" || signing == "release";
 # Digits and dots: the version is part of the names of partitions and of
@@ -41,6 +49,11 @@ let
   base = import ../base.nix { inherit system; };
   boot = import ../boot.nix { inherit system; };
   stagedBuild = import ../stage.nix { inherit system; };
+
+  # x86, for Secure Boot: systemd-boot signed, which shim starts
+  # (images/signed-loader.nix)
+  hasSignedLoader = system == "x86_64-linux" && (signing == "development" || secureBootLoader != null);
+  signedLoader = import ./signed-loader.nix { inherit system signing secureBootLoader; };
 in
 stagedBuild {
   name = "bunix-system";
@@ -96,7 +109,10 @@ stagedBuild {
   # boot.microcode: the processor's, which the kernel image carries
   # (images/uki.nix); here for its makers' terms, which are to be where
   # their files go, and a machine's own copy of what it was started with.
-  ++ (if system == "x86_64-linux" then [ boot.linux boot.firmware boot.microcode ] else []);
+  ++ (if system == "x86_64-linux" then [ boot.linux boot.firmware boot.microcode ] else [])
+  # x86, for Secure Boot, for the installer to put on the ESP: shim, which
+  # a PC's firmware starts, and the systemd-boot it starts, signed
+  ++ (if hasSignedLoader then [ boot.shim signedLoader ] else []);
 
   # What makes it.  systemd: its own tools make the accounts, enable the
   # units and compile the hardware database, on the tree that is to be the

@@ -98,7 +98,7 @@ NEEDED_SIZE=$((2 * USR_SLOT_SIZE + ROOT_MIN_SIZE))
 # images and more, as x86's had; and what the ESP then needs free still,
 # for systemd-boot and its settings
 XBOOTLDR_SIZE=1024
-ESP_LOADER_FREE=2
+ESP_LOADER_FREE=4
 # What an ESP that is already there needs free: two kernel images, the
 # one installed and an update's beside it, of about 105 MiB each;
 # systemd-boot; and on a Mac what its boot loader loads, of about 14 MiB
@@ -281,6 +281,21 @@ systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
 loader_kind=$(basename "$systemd_boot" .efi)
 loader_kind=${loader_kind#systemd-boot}
 default_loader=EFI/BOOT/BOOT${loader_kind^^}.EFI
+# x86, for Secure Boot: shim, signed by Microsoft, which a PC's firmware
+# starts; systemd-boot signed with bunix's key, which shim starts from
+# beside it, by the name shim looks for (grub<kind>.efi); MokManager,
+# which shim starts to enrol a key; and the certificate of bunix's, for a
+# PC's owner to enrol (images/signed-loader.nix).  Where /usr has them,
+# these go on the ESP in systemd-boot's place; elsewhere (a Mac, which
+# has no Secure Boot) systemd-boot alone.
+shim=/usr/lib/shim/shim$loader_kind.efi
+mok_manager=/usr/lib/shim/mm$loader_kind.efi
+signed_systemd_boot=$systemd_boot.signed
+secure_boot_certificate=/usr/share/bunix/secure-boot.cer
+has_shim=no
+if [ -f "$shim" ] && [ -f "$signed_systemd_boot" ]; then
+  has_shim=yes
+fi
 # For an Apple Silicon Mac: what aura's first stage loads from the ESP
 # (nix/boot.nix, mac-stage2), from this system's own /usr too: its device
 # trees are this version's kernel's.  The place on the ESP is the one the
@@ -626,8 +641,14 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
   # the ESP was its own: then the place is bunix's.
   [ ! -d "$WORK"/esp/EFI/bunix ] || has_earlier_bunix_directory=yes
   if [ -e "$WORK/esp/$default_loader" ]; then
+    # systemd-boot, or shim with systemd-boot beside it (as bunix's own
+    # disk has them)
     is_systemd_boot=no
     ! grep -q -a 'LoaderInfo: systemd-boot' "$WORK/esp/$default_loader" || is_systemd_boot=yes
+    beside_default_loader=$WORK/esp/$(dirname "$default_loader")/grub$loader_kind.efi
+    if [ -e "$beside_default_loader" ] && grep -q -a 'LoaderInfo: systemd-boot' "$beside_default_loader"; then
+      is_systemd_boot=yes
+    fi
     is_earlier_bunix_shim=no
     if [ -e "$WORK"/esp/EFI/bunix/shimx64.efi ] && cmp -s "$WORK"/esp/EFI/bunix/shimx64.efi "$WORK/esp/$default_loader"; then
       is_earlier_bunix_shim=yes
@@ -692,6 +713,9 @@ by default ($default_loader), and this machine keeps no firmware boot entries
 for bunix's beside it.  If that system is the one being replaced, move the
 file away first, and run bunix-install again."
     loader_on_esp=EFI/bunix/systemd-boot${loader_kind}.efi
+    if [ "$has_shim" = yes ]; then
+      loader_on_esp=EFI/bunix/shim$loader_kind.efi
+    fi
     writes_boot_entry=yes
   fi
   echo
@@ -710,18 +734,25 @@ file away first, and run bunix-install again."
   fi
 fi
 
-# Secure Boot: bunix's systemd-boot is not signed yet, and shim is not in
-# this release; the firmware would refuse what it starts.  Checked on
-# every install, as it is so for every disk.  (An earlier bunix's shim,
-# which would start it, is replaced.)
+# Secure Boot on: what starts bunix has to be shim's chain, which a system
+# without shim in its /usr does not have; the firmware would refuse
+# systemd-boot alone.  With it, shim starts systemd-boot if it knows
+# bunix's key, as a PC that had bunix before does; else it shows
+# MokManager at the first start, where the key is enrolled once.
 secure_boot_variable=/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
 secure_boot_is_on=no
 if [ -r "$secure_boot_variable" ] && [ "$(od -An -t u1 -j 4 -N 1 "$secure_boot_variable" | tr -d ' ')" = 1 ]; then
   secure_boot_is_on=yes
 fi
-[ "$secure_boot_is_on" = no ] || die "Secure Boot is on, and this bunix's boot loader is not signed for it yet:
-the firmware would not start it.  Turn Secure Boot off in the firmware's
-settings, and keep it off for bunix."
+if [ "$secure_boot_is_on" = yes ]; then
+  [ "$has_shim" = yes ] || die "Secure Boot is on, and this system has no boot loader signed for it
+(shim): the firmware would not start bunix.  Turn Secure Boot off in the
+firmware's settings, and keep it off for bunix."
+  echo
+  echo "Secure Boot is on.  A PC that does not know bunix's key yet shows a blue"
+  echo "screen at bunix's first start (MokManager): choose \"Enroll key from disk\","
+  echo "the ESP, $(dirname "$loader_on_esp")/bunix.cer, and confirm; it then starts bunix."
+fi
 
 # --- the system and its user --------------------------------------------
 
@@ -939,8 +970,18 @@ fi
 mkdir -p "$WORK/esp/$(dirname "$loader_on_esp")" "$WORK"/esp/EFI/Linux "$WORK"/esp/loader
 # Where firmware looks when it has no entry for a disk, which is all a
 # Mac's ever does (checked above: the place is free, or an earlier
-# bunix's); or bunix's own directory, which an entry names (below)
-cp "$systemd_boot" "$WORK/esp/$loader_on_esp"
+# bunix's); or bunix's own directory, which an entry names (below).  On
+# x86 shim, with systemd-boot, MokManager and bunix's certificate beside
+# it; elsewhere systemd-boot.
+if [ "$has_shim" = yes ]; then
+  loader_directory=$WORK/esp/$(dirname "$loader_on_esp")
+  cp "$shim" "$WORK/esp/$loader_on_esp"
+  cp "$signed_systemd_boot" "$loader_directory/grub$loader_kind.efi"
+  cp "$mok_manager" "$loader_directory/"
+  cp "$secure_boot_certificate" "$loader_directory/bunix.cer"
+else
+  cp "$systemd_boot" "$WORK/esp/$loader_on_esp"
+fi
 # An earlier bunix's kernel images, whose /usr is gone: systemd-boot would
 # start the newest version among them and this one
 rm -f "$WORK"/esp/EFI/Linux/bunix_*.efi

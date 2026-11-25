@@ -878,5 +878,21 @@
     "version": "18",
     "url": "https://github.com/rhboot/efibootmgr/releases/download/18/efibootmgr-18.tar.bz2",
     "sha256": "2b195f912aa353f0d11f21f207684c91460fbc37f9a4f2673e63e5e32d108b10"
+  },
+  "shim-signed": {
+    "version": "16.1",
+    "url": "https://snapshot.debian.org/archive/debian/20260622T023321Z/pool/main/s/shim-signed/shim-signed_1.51+16.1-2_amd64.deb",
+    "sha256": "993868c31cca3eab054a0c51c124a4a8b3904f49fb002feb4b09cb9415200e74"
+  },
+  "shim-helpers": {
+    "version": "16.1",
+    "url": "https://snapshot.debian.org/archive/debian/20260403T203237Z/pool/main/s/shim-helpers-amd64-signed/shim-helpers-amd64-signed_1+16.1+2_amd64.deb",
+    "sha256": "6a6d340710ffc067198af33785d1e04836b2cc0d259ec4b080a06604d333a8cb"
+  },
+  "microsoft-uefi-ca-2011": {
+    "version": "2011",
+    "name": "MicCorUEFCA2011_2011-06-27.crt",
+    "url": "https://go.microsoft.com/fwlink/p/?linkid=321194",
+    "sha256": "48e99b991f57fc52f76149599bff0a58c47154229b9f8d603ac40d3500248507"
   }
 }

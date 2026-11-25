@@ -154,7 +154,18 @@ let
     # AMD's microcode comes in linux-firmware; the version is Intel's
     env = { linux_firmware = fetch sources.linux-firmware; };
   };
+
+  # shim and MokManager for x86_64, signed by Microsoft: what a PC with
+  # Secure Boot on starts first, which starts systemd-boot, signed with
+  # bunix's key (boot/shim.sh).  Debian's, from snapshot.debian.org,
+  # which keeps every file Debian's archive ever had.
+  shim = mkSystemPackage {
+    name = "shim";
+    source = sources.shim-signed;
+    script = ./boot/shim.sh;
+    env = { shim_helpers = fetch sources.shim-helpers; };
+  };
 in
 {
-  inherit linux aura mac-stage2 u-boot-apple u-boot-qemu firmware microcode;
+  inherit linux aura mac-stage2 u-boot-apple u-boot-qemu firmware microcode shim;
 }

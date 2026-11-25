@@ -17,11 +17,25 @@
 #   3. a few bytes of its kernel image are changed, on its own disk: the
 #      firmware refuses the image, and the machine does not start
 #
-# The kernel image and systemd-boot are signed by the script a release's
-# kernel image is signed by (tools/sign-kernel-image.sh), with another
-# key.  What is not tested here: shim, and a key enrolled with it, which
-# is how a PC with Microsoft's keys starts bunix (docs/install.md).  A
-# Mac has no Secure Boot.
+# Then as a PC with Microsoft's keys starts bunix, through shim:
+#
+#   4. a firmware with no keys again starts the live stick
+#      (nix/images/live.nix, of a test system): shim, signed by
+#      Microsoft, which starts systemd-boot, which gives the firmware
+#      Microsoft's UEFI CA and the development key, and the machine
+#      restarts
+#   5. the stick starts with Secure Boot on -- firmware, shim, systemd-boot,
+#      the live kernel image, each checking the next -- and bunix-install
+#      puts bunix on an empty disk: shim, and systemd-boot beside it
+#   6. that disk starts with Secure Boot on, by the shim on it, and the
+#      person the installer was told of logs in
+#
+# The kernel images and systemd-boot are signed by the script a
+# release's are signed by (tools/sign-kernel-image.sh), with another
+# key.  What is not tested here: a key enrolled with shim's MokManager
+# (MOK), which is how a PC whose firmware has Microsoft's keys alone
+# takes bunix's: its screen asks a person (here the key is in the
+# firmware's db, which shim takes too).  A Mac has no Secure Boot.
 #
 #   BUNIX_X86_BUILDER  tools/test-machine.sh
 #   BUNIX_SSH_KEY      the public key the test logs in with; default
@@ -53,11 +67,17 @@ fail() {
 }
 prepare_machine
 
-echo "building a disk whose firmware is to be given the development key"
+echo "building a disk whose firmware is to be given the development key, and a live stick"
 disk=$(build "$source/nix/images/disk.nix" --arg secureBootEnrolment true \
     --argstr espSize 256M --argstr usrSlotSize 512M --argstr usrVeritySize 16M)
 copy_built_file_to_machine "$disk/disk.raw" disk.raw
 in_machine_directory "truncate -s +2G disk.raw"
+live=$(build "$source/nix/images/live.nix" -A image --arg secureBootEnrolment true)
+copy_built_file_to_machine "$live/bunix-x86-64-live.img" live.img
+# as large as a stick is, and a disk to install to: empty, and as large as
+# it is only in name
+in_machine_directory "truncate -s 16G live.img && rm -f installed.raw && truncate -s 16G installed.raw"
+version=$(release_version)
 
 # The firmware with Secure Boot, which it can keep only where nothing
 # but the firmware writes its variables: in the processor's system
@@ -74,16 +94,24 @@ secure_firmware="-machine q35,smm=on -global driver=cfi.pflash01,property=secure
 key_credential="io.systemd.credential.binary:bunix.authorized_keys=$(base64 < "$public_key_file" | tr -d '\n')"
 # Each start's own lines of the console are what follow those before it
 # (start_qemu adds to one file): this start's begin after $console_seen.
-start() {
+#   start_with <QEMU's words for the disks>
+start_with() {
     console_seen=0
     if [ -f "$work/console.log" ]; then
         console_seen=$(wc -c < "$work/console.log")
     fi
     # shellcheck disable=SC2086
-    start_qemu $secure_firmware \
-        -drive "file=$machine_directory/disk.raw,format=raw,if=virtio" \
-        -smbios "type=11,value=$key_credential"
+    start_qemu $secure_firmware $1 -smbios "type=11,value=$key_credential"
 }
+start() {
+    start_with "-drive file=$machine_directory/disk.raw,format=raw,if=virtio"
+}
+# The stick first (bootindex), and the disk bunix is installed to, as
+# tools/install-test.sh has them; the disk alone, by what is on it.
+stick_and_disk="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick,readonly=on
+    -device usb-storage,drive=stick,bootindex=0
+    -drive file=$machine_directory/installed.raw,format=raw,if=none,id=installed -device virtio-blk-pci,drive=installed,bootindex=1"
+installed_disk="-drive file=$machine_directory/installed.raw,format=raw,if=none,id=installed -device virtio-blk-pci,drive=installed,bootindex=1"
 trap 'kill $qemu 2> /dev/null || true' EXIT
 # what this start has written to the console
 this_start_said() {
@@ -94,10 +122,17 @@ in_guest() {
     ssh -p "$ssh_port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o ConnectTimeout=3 -o LogLevel=ERROR root@127.0.0.1 "$@"
 }
-# answers_within <seconds>: does the machine take a login in that time?
+# the person the installer was told of, on the installed system
+as_tessa() {
+    ssh -p "$ssh_port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o ConnectTimeout=3 -o LogLevel=ERROR -o BatchMode=yes tessa@127.0.0.1 "$@"
+}
+# answers_within <seconds> [the login's command]: does the machine take a
+# login in that time?
 answers_within() {
     deadline=$(($(date +%s) + $1))
-    until in_guest true 2> /dev/null; do
+    login=${2:-in_guest}
+    until $login true 2> /dev/null; do
         if [ "$(date +%s)" -ge "$deadline" ] || ! kill -0 "$qemu" 2> /dev/null; then
             return 1
         fi
@@ -154,6 +189,54 @@ kill -0 "$qemu" 2> /dev/null \
 this_start_said "security violation\|access denied" \
     || fail "the machine did not start, but not because the firmware refused the image"
 echo "  the firmware refused it"
+end_qemu
+
+# Whether the firmware says Secure Boot is on: its variable SecureBoot
+#   secure_boot_is_on <the login's command>
+secure_boot_is_on() {
+    secure_boot=$($1 "od -An -tu1 -j4 -N1 /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c" | tr -d ' ')
+    [ "$secure_boot" = 1 ]
+}
+
+echo "4. a firmware with no keys starts the live stick: shim, then systemd-boot gives it the keys"
+# the firmware's variables as a new machine has them: none
+in_machine_directory "cp $builder_store$qemu_package/usr/share/qemu/edk2-i386-vars.fd efi-variables.fd && chmod u+w efi-variables.fd"
+start_with "$stick_and_disk"
+ends_within 120 || fail "the machine did not restart after it was to be given the keys"
+this_start_said "keys successfully enrolled" \
+    || fail "systemd-boot, started by the stick's shim, did not say it gave the firmware the keys"
+echo "  the stick's shim started systemd-boot, which gave the firmware the keys"
+
+echo "5. the stick starts with Secure Boot on, and installs bunix"
+start_with "$stick_and_disk"
+answers_within 120 || fail "the live stick did not start with Secure Boot on"
+secure_boot_is_on in_guest || fail "the live stick started, but Secure Boot is not on"
+# the disk to install to: the one virtio disk (the stick is USB's)
+installed=$(in_guest "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 ~ /vd/ { print \$1 }'")
+# The one disk it offers (the stick is not one), whole; the console;
+# bash; the disk's name to go on
+printf '%s\n' 1 1 2 tessas-pc "Tessa of the PC" tessa 1 "a password of Tessa's" "a password of Tessa's" "$installed" |
+    in_guest "bunix-install /run/bunix/medium/install" > "$work/install.log" 2>&1 \
+    || fail "the installer failed with Secure Boot on; see $work/install.log"
+grep -q "Secure Boot is on" "$work/install.log" \
+    || fail "the installer did not say what Secure Boot asks of a first start; see $work/install.log"
+# The test's own way in: its key in Tessa's home, as tools/install-test.sh
+# gives one
+in_guest "mkdir -p /run/new-root && mount \$(lsblk -nrpo NAME,PARTLABEL $installed | sed -n 's| bunix-root\$||p') /run/new-root &&
+    install -d -m 700 /run/new-root/home/tessa/.ssh && cat > /run/new-root/home/tessa/.ssh/authorized_keys &&
+    chown -R --reference=/run/new-root/home/tessa /run/new-root/home/tessa/.ssh && umount /run/new-root" < "$public_key_file" \
+    || fail "could not put the test's key in Tessa's home"
+in_guest systemctl poweroff || true
+ends_within 60 || fail "the live stick's system did not power off"
+echo "  started, Secure Boot on, and bunix-install put bunix on the disk"
+
+echo "6. the installed disk starts with Secure Boot on, by its shim"
+start_with "$installed_disk"
+answers_within 120 as_tessa || fail "the installed disk did not start with Secure Boot on"
+secure_boot_is_on as_tessa || fail "the installed disk started, but Secure Boot is not on"
+running=$(as_tessa "sed -n 's/^IMAGE_VERSION=//p' /usr/lib/os-release")
+[ "$running" = "$version" ] || fail "bunix $running started, not $version"
+echo "  bunix $running started with Secure Boot on, and Tessa logged in"
 end_qemu
 
 echo "secure-boot-test.sh: passed"
