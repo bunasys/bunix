@@ -7,7 +7,9 @@ import 'chrome://resources/cr_elements/cr_shared_style.css.js';
 import './shared_style.css.js';
 
 import {I18nMixin} from 'chrome://resources/cr_elements/i18n_mixin.js';
-import {WebUiListenerMixin} from 'chrome://resources/cr_elements/web_ui_listener_mixin.js';
+// Polymer's WebUiListenerMixin, in the settings pages' shared code since
+// Chromium 158 (cr_elements keeps only Lit's)
+import {WebUiListenerMixin} from '/shared/settings/web_ui_listener_mixin.js';
 import {sendWithPromise} from 'chrome://resources/js/cr.js';
 import {PolymerElement} from 'chrome://resources/polymer/v3_0/polymer/polymer_bundled.min.js';
 

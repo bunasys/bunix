@@ -60,11 +60,14 @@ ln -sfn /usr/lib/chromium-rust third_party/rust-toolchain
 
 # clang as Chromium expects its own: programs in bin/, the runtime
 # (compiler-rt) in lib/clang/<version>/lib/<target>/.  bunix's LLVM has its
-# resource directory under /usr/lib/<triplet>/.
+# resource directory under /usr/lib/<triplet>/, and clang finds it from
+# the path it was started by (Chromium's -no-canonical-prefixes): it is
+# here under both names.
 clang_version=$(llvm-config --version | cut -d. -f1)
 mkdir -p clang-root/lib
 ln -sfn /usr/bin clang-root/bin
 ln -sfn /usr/lib/$triplet/clang clang-root/lib/clang
+ln -sfn /usr/lib/$triplet clang-root/lib/$triplet
 
 # bindgen's tools as Chromium expects them: bindgen and rustfmt in bin/,
 # libclang in lib/
@@ -151,7 +154,9 @@ sh hudhud/scripts/merge-gn-args.sh ungoogled/flags.gn $out_dir/hudhud-args.gn > 
 cat $out_dir/args.gn
 $out_dir/gn gen $out_dir --fail-on-unused-args
 
-ninja -C $out_dir -j$jobs chrome
+# -k 0: on an error, everything that does not need what failed is built
+# still, so that one build of hours shows all of its errors, not the first
+ninja -C $out_dir -j$jobs -k 0 chrome
 
 # ---- Install: /usr/lib/hudhud ------------------------------------------------------
 
