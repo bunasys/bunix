@@ -27,11 +27,12 @@ arch: aarch64
 
 # Chromium (Hudhud, docs/browser.md) is built here for arm64: as many of
 # the Mac's cores and as much of its memory as it can spare (an M2 Pro,
-# 10 cores and 16 GB, leaving macOS 3 GB), and a 16 GB swap file in the
-# guest (provision, below) for its largest links.  A build takes the Mac
+# 10 cores and 16 GB, leaving macOS 2 GB, enough while the Mac does
+# little else), and a 16 GB swap file in the guest (provision, below) for
+# its largest links.  A build takes the Mac
 # for half a day.
 cpus: 10
-memory: 13GiB
+memory: 14GiB
 # grows as it fills; this is the limit: Chromium's source and its build
 # take over 100 GB
 disk: 130GiB
