@@ -28,7 +28,7 @@
 #      once with libfuse 3 and once with libfuse 2, as AppImages do
 #   6. another console: Ctrl+Alt+F2, pressed on the keyboard while the
 #      person's desktop has tty1, shows a login prompt on tty2, and the
-#      person logs in there
+#      person logs in there; Ctrl+Alt+F1 brings their desktop back
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
@@ -383,41 +383,65 @@ done
 echo "  sara mounted FUSE file systems with libfuse 3 and 2, and read them"
 
 echo "6. another console"
-# A console opens root's shell while root has never had a password, as
-# on this test system (usr/lib/bunix/console-shell); an installed one
-# has: given one, it asks for a login.  (Not locked, as the installer
-# has it: that would end the test's own way in, root's key.)
-in_guest "echo 'root:a password of root' | chpasswd" || fail "could not give root a password"
-# niri hands the screen over when it is asked to, and logind then starts
-# what the console has (system/usr/lib/systemd/system/autovt@.service)
-printf 'sendkey ctrl-alt-f2\n' | in_machine_directory "python3 monitor.py" \
-    || fail "could not press Ctrl+Alt+F2 on the machine's keyboard"
-console_has_a_login_prompt() {
-    in_guest "cat /sys/class/tty/tty0/active; systemctl is-active autovt@tty2.service; ps -o comm= -t tty2" \
-        > "$work/tty2.log" 2>&1 || true
-    grep -q '^tty2$' "$work/tty2.log" && grep -q '^active$' "$work/tty2.log" && grep -q '^login$' "$work/tty2.log"
+# Pressed on the machine's keyboard, as type_on_keyboard types
+press_on_keyboard() {
+    printf 'sendkey %s\n' "$1" | in_machine_directory "python3 monitor.py" \
+        || fail "could not press $1 on the machine's keyboard (is python3 where QEMU runs?)"
 }
-deadline=$(($(date +%s) + 30))
-until console_has_a_login_prompt; do
-    if [ "$(date +%s)" -ge "$deadline" ]; then
-        fail "Ctrl+Alt+F2 shows no login prompt on tty2; see $work/tty2.log"
-    fi
-    sleep 2
-done
+# What tty2 has on its screen (/dev/vcs2), and which console is shown:
+# for the prompts that come and go, not a time to wait out
+tty2_shows() {
+    in_guest "cat /sys/class/tty/tty0/active; cat /dev/vcs2" > "$work/tty2.log" 2>&1 || true
+    tty2_is_shown=no
+    grep -q '^tty2$' "$work/tty2.log" && tty2_is_shown=yes
+    has_the_text=no
+    grep -q -F "$1" "$work/tty2.log" && has_the_text=yes
+    [ $tty2_is_shown = yes ] && [ $has_the_text = yes ]
+}
+# wait_for_tty2_to_show <text> <what is wrong if it does not>
+wait_for_tty2_to_show() {
+    deadline=$(($(date +%s) + 30))
+    until tty2_shows "$1"; do
+        [ "$(date +%s)" -lt "$deadline" ] || fail "$2; see $work/tty2.log"
+        sleep 2
+    done
+}
+# niri hands the screen over when it is asked to, and logind then starts
+# what the console has (system/usr/lib/systemd/system/autovt@.service).
+# sara has a password, so it asks for a login (usr/lib/bunix/console-shell).
+press_on_keyboard ctrl-alt-f2
+wait_for_tty2_to_show "login:" "Ctrl+Alt+F2 shows no login prompt on tty2"
 type_on_keyboard sara
-# login asks for the password once it has the name
-login_asks_for_the_password=2
-sleep $login_asks_for_the_password
+wait_for_tty2_to_show "Password:" "login on tty2 did not ask for sara's password"
 type_on_keyboard secret
+sara_has_a_session_on_tty2() {
+    in_guest "loginctl list-sessions --no-legend" > "$work/sessions.log" 2>&1 || true
+    grep -q " sara .* tty2 " "$work/sessions.log"
+}
 deadline=$(($(date +%s) + 20))
-until in_guest "loginctl list-sessions --no-legend" 2> /dev/null | grep -q " sara .* tty2 "; do
-    if [ "$(date +%s)" -ge "$deadline" ]; then
-        in_guest "loginctl list-sessions --no-legend" > "$work/sessions.log" 2>&1 || true
-        fail "sara could not log in on tty2; see $work/sessions.log"
-    fi
+until sara_has_a_session_on_tty2; do
+    [ "$(date +%s)" -lt "$deadline" ] || fail "sara could not log in on tty2; see $work/sessions.log"
     sleep 2
 done
 echo "  Ctrl+Alt+F2 shows a login prompt on tty2, and sara logged in there"
+# and Ctrl+Alt+F1 the desktop again, which kept running
+press_on_keyboard ctrl-alt-f1
+desktop_is_back() {
+    in_guest "cat /sys/class/tty/tty0/active; systemctl is-active greetd.service" > "$work/tty1.log" 2>&1 || true
+    tty1_is_shown=no
+    grep -q '^tty1$' "$work/tty1.log" && tty1_is_shown=yes
+    greetd_runs=no
+    grep -q '^active$' "$work/tty1.log" && greetd_runs=yes
+    [ $tty1_is_shown = yes ] && [ $greetd_runs = yes ]
+}
+deadline=$(($(date +%s) + 20))
+until desktop_is_back; do
+    [ "$(date +%s)" -lt "$deadline" ] || fail "Ctrl+Alt+F1 did not bring the desktop back; see $work/tty1.log"
+    sleep 2
+done
+in_guest "NIRI_SOCKET=$sara_socket niri msg outputs" > "$work/outputs.log" 2>&1 \
+    || fail "sara's niri does not answer after the switch back; see $work/outputs.log"
+echo "  Ctrl+Alt+F1 brings sara's desktop back"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

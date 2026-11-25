@@ -65,7 +65,7 @@ PAM
 # default start limit it would be failed within seconds -- tty1 blank for
 # good, and the boot not blessed, so that an update rolls back.  So no
 # start limit, and a pause between tries; the consoles on tty2 to tty6
-# stay for whoever has to look.  The font cache is made before the
+# (autovt@) stay for whoever has to look.  The font cache is made before the
 # greeter's first start needs it.
 units=$out/usr/lib/systemd/system
 install -D -m 644 /dev/stdin $units/greetd.service <<'UNIT'
@@ -91,3 +91,8 @@ install -D -m 644 /dev/stdin $units/multi-user.target.d/greetd.conf <<'UNIT'
 [Unit]
 Upholds=greetd.service
 UNIT
+# Nor a console on tty1 when a person switches there in such a pause:
+# logind would start autovt@tty1, which is console-shell@tty1
+# (system/usr/lib/systemd/system/autovt@.service), and so stop greetd
+# until multi-user.target upholds it again, ending that console.
+ln -s /dev/null $units/autovt@tty1.service
