@@ -229,7 +229,7 @@ if [ $starts_from_live_image = no ]; then
     files=/root/install
 else
     echo "building the live image"
-    live=$(build "$source/nix/images/live.nix")
+    live=$(build "$source/nix/images/live.nix" -A image)
     copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
     # as large as a stick is, so that the installer leaves it out for
     # having its files on it, and not for being too small for bunix
@@ -643,8 +643,13 @@ $windows"
     [ "$(grep -c -E '^Boot[0-9A-F]{4}[* ] bunix' "$work/boot-entries")" = 1 ] \
         || fail "the firmware has more than one entry for bunix (0.4.0's is to go); see $work/boot-entries"
     as root "mount -o ro ${windows}1 /run/windows-esp && ls /run/windows-esp/EFI/bunix; umount /run/windows-esp" > "$work/esp-bunix" 2>&1
-    [ "$(cat "$work/esp-bunix")" = "systemd-bootx64.efi" ] \
-        || fail "EFI/bunix is not bunix's systemd-boot alone (0.4.0's shim is to go): $(cat "$work/esp-bunix")"
+    # this bunix's: shim, systemd-boot beside it under shim's name for it,
+    # MokManager and bunix's certificate; 0.4.0's shim was a file of
+    # random bytes, and is gone
+    [ "$(tr '\n' ' ' < "$work/esp-bunix")" = "bunix.cer grubx64.efi mmx64.efi shimx64.efi " ] \
+        || fail "EFI/bunix is not this bunix's shim and systemd-boot: $(cat "$work/esp-bunix")"
+    as root "mount -o ro ${windows}1 /run/windows-esp && cmp /usr/lib/shim/shimx64.efi /run/windows-esp/EFI/bunix/shimx64.efi; umount /run/windows-esp" \
+        || fail "EFI/bunix/shimx64.efi is not this bunix's shim (0.4.0's was to be replaced)"
     expect_root_locked "$windows"
     give_key_to "$windows" wendy
     partitions_of root "$windows" > "$work/windows-partitions"

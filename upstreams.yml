@@ -464,6 +464,8 @@ meson:
   anitya: 6472
   debian: meson
   alpine: meson
+microsoft-uefi-ca-2011:
+  untracked: Microsoft's certificate, which a test machine's firmware is given (nix/images/live.nix); the one shim-signed is signed by
 mpc:
   anitya: 1667
   debian: mpclib3
@@ -647,6 +649,13 @@ shadow:
   cpe: 'a:shadow_project:shadow'
   debian: shadow
   alpine: shadow
+shim-helpers:
+  part-of: shim-signed
+  debian: shim-helpers-amd64-signed
+shim-signed:
+  anitya: 10719
+  cpe: 'a:redhat:shim'
+  debian: shim-signed
 spirv-headers:
   pinned-by: spirv-llvm-translator
 spirv-llvm-translator:

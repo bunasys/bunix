@@ -1,11 +1,10 @@
-# Makes the live image of images/live.nix: its kernel image with
-# systemd's ukify, then the image itself with systemd-repart, as disk.sh
-# makes a disk.
+# Makes the live image of images/live.nix with systemd-repart, as disk.sh
+# makes a disk: its ESP, with what starts it and the kernel images, and
+# /usr's three partitions.
 set -euo pipefail
 cd /build
 export SOURCE_DATE_EPOCH=1728000000
 
-usr=$system_image/usr-partition
 mkdir -p tree/esp/EFI/BOOT tree/esp/EFI/Linux tree/esp/loader tree/esp/install
 
 # This version's files, by the names update.sh gives them (as disk.sh
@@ -16,69 +15,67 @@ verity_file=$(echo $name-verity.*.raw)
 signature_file=$(echo $name-verity-sig.*.raw)
 uki=$update/bunix_$version.$partition_architecture.efi
 desktop_image=$(echo $desktop/desktop_*.raw)
-[ -f "$usr_file" ] && [ -f "$verity_file" ] && [ -f "$signature_file" ] && [ -f "$uki" ] && [ -f "$desktop_image" ]
+live_uki=$built_live_kernel_image/bunix-live_$version.efi
+[ -f "$usr_file" ] && [ -f "$verity_file" ] && [ -f "$signature_file" ] && [ -f "$uki" ] && [ -f "$desktop_image" ] && [ -f "$live_uki" ]
 # the id is what is between the last two dots of a name
 id_of() {
     local name=${1%.raw}
     echo ${name##*.}
 }
 
-# The stick's ESP, by an id of its own, the same at every build of a
-# version and another for every version: what the kernel image's command
-# line mounts it by.  Not by its name, which every stick of every version
-# has: with two sticks in, or a copy of one on a disk, the other would be
-# mounted, its version installed, and this stick offered as a disk to
-# install to.
-esp_id=$(printf 'bunix live partition %s' $version | sha256sum | head -c 32 \
-    | sed -E 's/(.{8})(.{4})(.{4})(.{4})(.{12})/\1-\2-\3-\4-\5/')
-
-# ---- The kernel image ------------------------------------------------------------
-
-# As uki.sh makes an installed system's, of the same kernel and initrd,
-# but for its command line (live.nix), to which /usr's hash is added, as
-# there, and the stick's ESP, mounted read-only where bunix-install is
-# told to look, as a line of /etc/fstab would have it, which a root in
-# memory has none of (systemd.mount-extra).  nofail: without the stick's
-# ESP (pulled out, or not found) the system starts all the same.
-stub=$(echo /usr/lib/systemd/boot/efi/linux*.efi.stub)
-with_microcode=
-if [ -n "$microcode" ]; then
-    with_microcode=--microcode=$microcode/usr/lib/microcode/microcode.cpio
-fi
-kernel_image=tree/esp/EFI/Linux/bunix-live_$version.efi
-mount_the_esp="systemd.mount-extra=PARTUUID=$esp_id:/run/bunix/medium:vfat:ro,nofail"
-python3 /usr/lib/systemd/ukify build \
-    --linux=$usr/vmlinuz --uname=$(cat $usr/kernel-release) \
-    $with_microcode --initrd=$initrd/initramfs.cpio.gz \
-    --os-release=@$usr/os-release \
-    --cmdline="usrhash=$(cat $usr/usrhash) $command_line $mount_the_esp" \
-    --splash=$splash \
-    --stub=$stub \
-    --output=$kernel_image
-# as uki.sh: an image without its microcode starts as well, and no test
-# would say
-if [ -n "$microcode" ]; then
-    if ! grep -a -q kernel/x86/microcode/GenuineIntel.bin $kernel_image; then
-        echo "live.sh: the kernel image has no microcode in it" >&2
-        exit 1
-    fi
+# A release's kernel images, signed for Secure Boot where bunix's key is
+# (tools/publish.sh), in place of what was built here unsigned, if they
+# are those (check-release-signed.sh).  A test system's were signed in
+# their builds, with the development key.
+if [ -n "$release_kernel_image" ]; then
+    bash $check_release_signed $uki $release_kernel_image
+    uki=$release_kernel_image
+    bash $check_release_signed $live_uki $release_live_kernel_image
+    live_uki=$release_live_kernel_image
 fi
 
 # ---- What starts it --------------------------------------------------------------
 
-# The file every EFI starts from a stick: systemd-boot, which starts the
-# one kernel image in EFI/Linux, with its menu hidden (as disk.sh)
+# The file every EFI starts from a stick, EFI/BOOT/BOOT<kind>.EFI.  On
+# x86 that is shim, signed by Microsoft, as a PC's firmware with Secure
+# Boot on starts; shim starts grubx64.efi beside it, which is
+# systemd-boot, signed with bunix's key, and asks the firmware's keys and
+# its own (MOK) about it; and systemd-boot asks shim about each kernel
+# image.  Beside them MokManager, which shim starts to enrol a key, and
+# the certificate of bunix's, to enrol.  Elsewhere (no Secure Boot):
+# systemd-boot itself.  Either way, systemd-boot starts the one kernel
+# image in EFI/Linux, with its menu hidden (as disk.sh).
 systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
 [ -f "$systemd_boot" ]
 kind=$(basename $systemd_boot .efi)
 kind=${kind#systemd-boot}
-cp $systemd_boot tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
+default_loader=tree/esp/EFI/BOOT/BOOT${kind^^}.EFI
+if [ -n "$shim" ]; then
+    cp $shim/usr/lib/shim/shim$kind.efi $default_loader
+    cp $shim/usr/lib/shim/mm$kind.efi tree/esp/EFI/BOOT/
+    cp $signed_loader/usr/lib/systemd/boot/efi/systemd-boot$kind.efi.signed tree/esp/EFI/BOOT/grub$kind.efi
+    cp $signed_loader/usr/share/bunix/secure-boot.cer tree/esp/bunix.cer
+else
+    cp $systemd_boot $default_loader
+fi
 printf '%s\n' 'timeout 0' 'console-mode keep' 'auto-entries no' > tree/esp/loader/loader.conf
+
+# A test machine with Secure Boot (live.nix: secureBootEnrolment): its
+# firmware has no keys yet and starts anything; systemd-boot gives it
+# Microsoft's and the development key from loader/keys/auto and restarts
+# the machine, which then starts only what they signed (as disk.sh)
+if [ -n "$secure_boot_enrolment" ]; then
+    mkdir -p tree/esp/loader/keys/auto
+    cp $secure_boot_enrolment/*.auth tree/esp/loader/keys/auto/
+    echo 'secure-boot-enroll force' >> tree/esp/loader/loader.conf
+fi
+
+cp $live_uki tree/esp/EFI/Linux/bunix-live_$version.efi
 
 # ---- What bunix-install installs beside /usr -------------------------------------
 
 # by the names a release gives them, which bunix-install looks for
-cp $uki tree/esp/install/
+cp $uki tree/esp/install/bunix_$version.$partition_architecture.efi
 cp $desktop_image tree/esp/install/desktop_$version.$partition_architecture.raw
 
 # the time of each file, which the partition keeps: the build's own would
@@ -93,9 +90,11 @@ partition() {
     printf '%s\n' '[Partition]' "$@" > live.d/$file
 }
 mkdir -p live.d
-# The ESP, as large as what is in it and 64 MiB more for the file
-# system's own tables: repart's own guess (Minimize=guess) nearly
+# The ESP, by the id the live kernel image mounts it by
+# (live-kernel-image.sh), as large as what is in it and 64 MiB more for
+# the file system's own tables: repart's own guess (Minimize=guess) nearly
 # doubles it, and the image is downloaded whole
+esp_id=$(cat $built_live_kernel_image/esp-id)
 contents_mib=$(( $(du -sb tree/esp | cut -f1) / 1048576 ))
 esp_mib=$(( contents_mib + 64 ))
 partition 00-esp.conf Type=esp Label=bunix-live UUID=$esp_id Format=vfat CopyFiles=/esp:/ \
