@@ -1,25 +1,27 @@
 unpack $src
+# where Chromium looks for its Rust (and crubit.sh installs Crubit)
 prefix=/usr/lib/chromium-rust
+# where chromium-rust-stage0.sh installs the Rust this is built from
 stage0=/usr/lib/chromium-rust-stage0
 # Rust's name for this machine: x86_64-linux-gnu is x86_64-unknown-linux-gnu
 rust_target=${triplet/-linux-/-unknown-linux-}
 
-# rustc-dev: rustc's crates, for Crubit; rustfmt: Crubit and bindgen tidy
-# the code they make with it.  profiler: the profiler's runtime (the
-# compiler-rt in this source), which Chromium's build expects in the
-# standard library, as in its own package.  vendor, and no download:
-# everything is in this source, and the network is not there.
 cat > bootstrap.toml <<TOML
 change-id = "ignore"
 
 [build]
 rustc = "$stage0/bin/rustc"
 cargo = "$stage0/bin/cargo"
+# every crate is in this source, and the network is not there
 vendor = true
 locked-deps = true
 extended = true
+# rustc-dev: rustc's crates, which Crubit is built against; rustfmt:
+# Crubit and bindgen tidy the code they make with it
 tools = ["rustc-dev", "rustfmt"]
 docs = false
+# the profiler's runtime (the compiler-rt in this source): Chromium's
+# build expects it in the standard library, as in its own package
 profiler = true
 jobs = $jobs
 description = "bunix chromium"
@@ -47,23 +49,23 @@ export CARGO_NET_OFFLINE=true
 python3 x.py build
 DESTDIR=$out python3 x.py install
 
-cd $out$prefix
+rustlib=$out$prefix/lib/rustlib
 # the installer's lists, for its own uninstall script
-rm -f lib/rustlib/install.log lib/rustlib/uninstall.sh lib/rustlib/manifest-* \
-      lib/rustlib/components lib/rustlib/rust-installer-version
-# LLVM's objcopy, linked against the system's libLLVM (rustc itself has
-# LLVM inside): nothing of Chromium's build uses it (as ../base/rust.sh)
-rm lib/rustlib/*/bin/rust-objcopy
+rm $rustlib/{install.log,uninstall.sh,components,rust-installer-version} $rustlib/manifest-*
+# LLVM's objcopy, linked against the system's libLLVM, which this
+# package does not depend on (rustc has LLVM inside); nothing of
+# Chromium's build uses it
+rm $rustlib/*/bin/rust-objcopy
 # Chromium reads the toolchain's version from here (build/config/
 # rust.gni), as its own package has it
-bin/rustc --version > VERSION
-cat VERSION
-cd -
+$out$prefix/bin/rustc --version > $out$prefix/VERSION
+cat $out$prefix/VERSION
 
 # The standard library's source with the crates it uses, which Chromium
 # compiles itself (build/rust/std/rules/BUILD.gn); Rust's own rust-src
 # leaves those crates out
-library=$out$prefix/lib/rustlib/src/rust
-mkdir -p $library
-cp -r library $library/
-[ -d $library/library/vendor ]
+rust_src=$rustlib/src/rust
+mkdir -p $rust_src
+cp -r library $rust_src/
+# the crates are there: Chromium names each by its directory in vendor/
+[ -d $rust_src/library/vendor ]

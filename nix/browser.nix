@@ -1,7 +1,8 @@
 # Hudhud, the browser (docs/browser.md), and what only it is built with:
 # Chromium's own toolchain pieces and the libraries the system has no
-# other use for.  In the desktop extension (images/desktop.nix).  Ported
-# from 0.4.0's elements the way desktop.nix says
+# other use for.  Its packages go into the desktop extension
+# (images/desktop.nix) with Hudhud itself, in step 3 of the plan.
+# Ported from 0.4.0's elements the way desktop.nix says
 # (`git show v0.4.0:elements/base/chromium.bst`).
 #
 #   nix-build /bunix/nix/browser.nix -A nss
@@ -48,10 +49,7 @@ let
     buildDepends = [ base.perl ];
   };
 
-  # ---- GTK 4: Chromium's file dialogs ------------------------------------------
-  # Chromium draws its open and save dialogs with GTK 4 (as 0.4.0's did):
-  # a portal's would take Nautilus or GTK 3 (docs/browser.md, step 1).
-  # Wayland only, nothing printed or streamed, as 0.4.0's elements.
+  # ---- What Chromium itself links, beside GTK ---------------------------------
 
   # libxml2: XML, which at-spi2-core reads its interfaces' descriptions in
   libxml2 = mkSystemPackage {
@@ -82,6 +80,10 @@ let
     depends = [ glibc base.kmod ];
     buildDepends = [ pkgconf ];
   };
+
+  # ---- GTK 4: Chromium's file dialogs ------------------------------------------
+  # Chromium draws its open and save dialogs with GTK 4 (as 0.4.0's did):
+  # a portal's would take Nautilus or GTK 3 (docs/browser.md, step 1).
 
   # libepoxy: finds OpenGL's functions at run time (GTK 4 draws with it)
   libepoxy = mkSystemPackage {
@@ -120,9 +122,15 @@ let
     script = ./meson.sh;
     depends = [ glibc base.glib desktop.libjpeg-turbo desktop.libpng ];
     buildDepends = [ meson ninja pkgconf ];
-    env = { meson_arguments = "-Dpng=enabled -Djpeg=enabled -Dtiff=disabled -Dgif=enabled -Dglycin=disabled -Dothers=disabled -Dthumbnailer=disabled -Dgio_sniffing=false -Dintrospection=disabled -Dman=false -Ddocumentation=false -Dtests=false -Dinstalled_tests=false"; };
+    # the loaders built in: as modules they would need a loaders.cache,
+    # which gdk-pixbuf makes only when installed on a running system
+    env = { meson_arguments = "-Dbuiltin_loaders=png,jpeg,gif -Dpng=enabled -Djpeg=enabled -Dtiff=disabled -Dgif=enabled -Dglycin=disabled -Dothers=disabled -Dthumbnailer=disabled -Dgio_sniffing=false -Dintrospection=disabled -Dman=false -Ddocumentation=false -Dtests=false -Dinstalled_tests=false"; };
   };
 
+  # GTK 4 itself, Wayland only (browser/gtk4.sh has what of it is built).
+  # Its file dialog reads its settings through GSettings, and GLib stops
+  # a program whose schemas are not compiled: the desktop extension
+  # compiles the schemas of everything in it (step 3).
   gtk4 = mkSystemPackage {
     name = "gtk4";
     source = sources.gtk4;
@@ -134,10 +142,13 @@ let
   # ---- Chromium's compilers ------------------------------------------------------
 
   # compiler-rt's builtins and profile runtime, which Chromium links
-  # itself from clang's resource directory: the math functions that must
-  # win over Rust's, and what its Rust code is built with.  The system's
-  # LLVM (base.llvm) leaves compiler-rt out; this adds it beside that
-  # clang, from the same source, and changes nothing of the system's.
+  # itself: the math functions that must win over Rust's, and what its
+  # Rust code is built with.  The system's LLVM (base.llvm) leaves
+  # compiler-rt out; this adds it beside that clang, in its resource
+  # directory (/usr/lib/<triplet>/clang/23), from the same source, and
+  # changes nothing of the system's.  Chromium looks under its
+  # clang_base_path's lib/clang/ instead: its build lays out a directory
+  # of links in that shape (step 2).
   compiler-rt = mkSystemPackage {
     name = "compiler-rt";
     source = sources.llvm;
@@ -145,9 +156,10 @@ let
     buildDepends = [ base.llvm base.cmake ninja ];
   };
 
-  # Rust 1.100, as the Rust project publishes it: only what
-  # chromium-rust is built from (a nightly builds from the release before
-  # it), beside the system's Rust (base.rust), which stays where it is.
+  # The Rust release before chromium-rust's nightly, which a nightly is
+  # built with, as the Rust project publishes it (sources.json has the
+  # version).  For that build alone, beside the system's Rust
+  # (base.rust), which stays where it is.
   chromium-rust-stage0 = mkSystemPackage {
     name = "chromium-rust-stage0";
     source = sources."chromium-rust-stage0-rustc-${system}";

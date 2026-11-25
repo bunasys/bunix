@@ -11,7 +11,18 @@ make BUILD_OPT=1 USE_64=1 NSS_ENABLE_WERROR=0 NSS_DISABLE_GTESTS=1 \
 cd ../dist
 
 mkdir -p $out$libdir/pkgconfig $out/usr/include/nss $out/usr/bin
+# The libraries and the modules NSS loads by name when it runs (softokn,
+# freebl, nssckbi's built-in roots), with their .chk signatures, which
+# the FIPS self-test checks them against.  The signatures are made before
+# system-package.sh strips the libraries, so on a machine in FIPS mode
+# (fips_enabled=1) the self-test fails; bunix does not run in it.
+# libsqlite3.so is NSS's own SQLite, which softokn needs: nothing else of
+# bunix links SQLite.
 cp Linux*/lib/*.so Linux*/lib/*.chk $out$libdir/
+# a module for NSS's own tests
+rm $out$libdir/libnssckbi-testlib.so
+# What NSS installs for others to build against is both directories'
+# headers: "private" ones that public ones include
 cp -RL public/nss/* private/nss/* $out/usr/include/nss/
 # certutil and pk12util: a person's certificate databases, by hand
 cp Linux*/bin/certutil Linux*/bin/pk12util $out/usr/bin/

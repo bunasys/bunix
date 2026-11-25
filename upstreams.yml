@@ -99,6 +99,7 @@ cargo-x86_64-linux:
 chromium:
   anitya: 13344
   cpe: 'a:google:chrome'
+  debian: chromium
 chromium-rust:
   pinned-by: chromium
   version-regex: 'nightly-(\d{4}-\d\d-\d\d)'
@@ -266,7 +267,7 @@ gdk-pixbuf:
   anitya: 9533
   cpe: 'a:gnome:gdk-pixbuf'
   debian: gdk-pixbuf
-  alpine: gdk-pixbuf2
+  alpine: gdk-pixbuf
 gettext:
   anitya: 898
   cpe: 'a:gnu:gettext'
@@ -317,8 +318,8 @@ grep:
 gtk4:
   anitya: 13942
   cpe: 'a:gnome:gtk'
-  debian: libgtk-4-1
-  alpine: gtk4
+  debian: gtk4
+  alpine: gtk4.0
 gzip:
   anitya: 1290
   cpe: 'a:gnu:gzip'
