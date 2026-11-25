@@ -249,6 +249,10 @@ else
     files=/run/bunix/medium/install
     as root "ls $files/bunix_$version.$architecture_in_file_names.efi" > /dev/null \
         || fail "the live image's files are not at $files"
+    # /usr from the stick, checked against its hash, and the root in memory
+    [ "$(as root "findmnt -no SOURCE /usr")" = /dev/mapper/usr ] \
+        || fail "the live system's /usr is not the stick's, checked against its hash"
+    [ "$(as root "findmnt -no FSTYPE /")" = tmpfs ] || fail "the live system's root is not in memory"
 fi
 
 # The disks by what was asked of QEMU, not by the order Linux found them in
