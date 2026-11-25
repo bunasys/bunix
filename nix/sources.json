@@ -858,5 +858,15 @@
     "version": "0.17.0",
     "url": "https://codeload.github.com/alacritty/alacritty/tar.gz/refs/tags/v0.17.0",
     "sha256": "38d6527d346cda5c6049332a1f3338a89ea66cd7981b54d4c3ce801b392496f8"
+  },
+  "libgudev": {
+    "version": "238",
+    "url": "https://download.gnome.org/sources/libgudev/238/libgudev-238.tar.xz",
+    "sha256": "61266ab1afc9d73dbc60a8b2af73e99d2fdff47d99544d085760e4fa667b5dd1"
+  },
+  "upower": {
+    "version": "1.91.5",
+    "url": "https://gitlab.freedesktop.org/upower/upower/-/archive/v1.91.5/upower-v1.91.5.tar.gz",
+    "sha256": "d900f175e39fbc0dfd8632f7c70606e10f79903ee4171d199aa777dfa3a396e2"
   }
 }

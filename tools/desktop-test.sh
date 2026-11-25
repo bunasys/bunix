@@ -11,7 +11,7 @@
 #      update puts it, and systemd-sysext merges it; the unit it brings
 #      (the font cache) runs, the generic font names are the fonts bunix
 #      means, in English and Arabic, and libinput's udev rules reach the
-#      keyboard, which was there before them
+#      keyboard, which was there before them; and upower answers
 #   2. the login screen comes up: greetd, upheld once merged, runs DMS's
 #      greeter on tty1, in niri, which draws with OpenGL through Mesa's
 #      llvmpipe; libinput finds the keyboard; niri takes a picture of the
@@ -161,6 +161,26 @@ in_guest "udevadm settle && udevadm info --query=property /dev/input/event*" > "
 grep -q "^LIBINPUT_DEVICE_GROUP=" "$work/input.log" \
     || fail "libinput's udev rules did not reach the input devices; see $work/input.log"
 echo "  merged; niri is there, the font cache was made with the Noto and Arabic fonts, and libinput's rules reached the keyboard"
+# upower, upheld once merged, answers on the system bus, with its
+# settings, which are in /usr (desktop/upower.sh).  No battery: neither
+# machine has one, and what it says of a Mac's is not tested.
+upower_answers() {
+    in_guest "systemctl is-active -q upower.service && upower --dump" > "$work/upower.log" 2>&1
+}
+deadline=$(($(date +%s) + 60))
+until upower_answers; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        in_guest "systemctl status --no-pager upower.service; journalctl -b --no-pager -u upower.service" >> "$work/upower.log" 2>&1 || true
+        fail "upower does not answer; see $work/upower.log"
+    fi
+    sleep 2
+done
+grep -q "Daemon:" "$work/upower.log" || fail "upower's daemon says nothing of itself; see $work/upower.log"
+in_guest "journalctl -b --no-pager -u upower.service" > "$work/upower-journal.log" 2>&1 || true
+if grep -q "failed to load config file" "$work/upower-journal.log"; then
+    fail "upower did not find its settings; see $work/upower-journal.log"
+fi
+echo "  upower answers, with its settings"
 
 echo "2. the login screen comes up"
 # The services the login screen needs, upheld once merged: the list of

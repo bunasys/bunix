@@ -653,6 +653,30 @@ let
     env = { release = sources.accountsservice.version; };
   };
 
+  # libgudev: udev's devices as GLib objects, for upower.
+  libgudev = mkSystemPackage {
+    name = "libgudev";
+    source = sources.libgudev;
+    script = ./meson.sh;
+    depends = [ glibc base.glib base.systemd ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dtests=disabled -Dintrospection=disabled -Dvapi=disabled"; };
+  };
+
+  # UPower: a D-Bus service that reads the kernel's batteries and
+  # chargers (/sys/class/power_supply: a Mac's system controller's, a
+  # Bluetooth mouse's) and tells the desktop the charge, whether it is
+  # charging, and the time left (org.freedesktop.UPower).  DMS's battery
+  # in its bar asks it (desktop/upower.sh).  polkit decides who may set
+  # the battery's charge limit.
+  upower = mkSystemPackage {
+    name = "upower";
+    source = sources.upower;
+    script = ./desktop/upower.sh;
+    depends = [ glibc base.glib libgudev base.polkit base.systemd ];
+    buildDepends = [ meson ninja pkgconf base.gettext ];
+  };
+
   # The session bus: the D-Bus bus of each logged-in person's own services
   # and programs.  dbus-daemon is the base's, built without these two
   # units, which are made here from the same source and started with the
@@ -725,7 +749,7 @@ in
   inherit libpng freetype fontconfig fonts harfbuzz fribidi cairo pango;
   inherit hwdata niri;
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
-  inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice dbus-user-session;
+  inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice libgudev upower dbus-user-session;
   inherit alsa-lib pipewire lua wireplumber alsa-utils;
   inherit alacritty libfuse3 libfuse2 fuse-hello;
 }
