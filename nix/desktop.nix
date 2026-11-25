@@ -667,8 +667,8 @@ let
   # chargers (/sys/class/power_supply: a Mac's system controller's, a
   # Bluetooth mouse's) and tells the desktop the charge, whether it is
   # charging, and the time left (org.freedesktop.UPower).  DMS's battery
-  # in its bar asks it (desktop/upower.sh).  polkit decides who may set
-  # the battery's charge limit.
+  # in its bar asks it.  It powers the machine off when the battery is
+  # all but empty, and its settings are in /usr (desktop/upower.sh).
   upower = mkSystemPackage {
     name = "upower";
     source = sources.upower;

@@ -164,18 +164,13 @@ echo "  merged; niri is there, the font cache was made with the Noto and Arabic 
 # upower, upheld once merged, answers on the system bus, with its
 # settings, which are in /usr (desktop/upower.sh).  No battery: neither
 # machine has one, and what it says of a Mac's is not tested.
-upower_answers() {
-    in_guest "systemctl is-active -q upower.service && upower --dump" > "$work/upower.log" 2>&1
-}
-deadline=$(($(date +%s) + 60))
-until upower_answers; do
-    if [ "$(date +%s)" -ge "$deadline" ]; then
-        in_guest "systemctl status --no-pager upower.service; journalctl -b --no-pager -u upower.service" >> "$work/upower.log" 2>&1 || true
-        fail "upower does not answer; see $work/upower.log"
-    fi
-    sleep 2
-done
-grep -q "Daemon:" "$work/upower.log" || fail "upower's daemon says nothing of itself; see $work/upower.log"
+if ! in_guest "timeout 60 sh -c 'until systemctl is-active -q upower.service; do sleep 1; done'"; then
+    in_guest "systemctl status --no-pager upower.service; journalctl -b --no-pager -u upower.service" > "$work/upower.log" 2>&1 || true
+    fail "upower did not start; see $work/upower.log"
+fi
+in_guest "upower --dump" > "$work/upower.log" 2>&1 || fail "upower does not answer; see $work/upower.log"
+grep -q "critical-action: *PowerOff" "$work/upower.log" \
+    || fail "upower would not power off at an empty battery; see $work/upower.log"
 in_guest "journalctl -b --no-pager -u upower.service" > "$work/upower-journal.log" 2>&1 || true
 if grep -q "failed to load config file" "$work/upower-journal.log"; then
     fail "upower did not find its settings; see $work/upower-journal.log"

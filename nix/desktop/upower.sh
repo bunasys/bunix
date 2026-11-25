@@ -20,22 +20,34 @@ rm -rf $out/var
 # empty) are in /etc/UPower, which an extension cannot bring: it lays
 # /usr over the system, and nothing else.  Without the file every
 # setting reads as nought.  So they are in /usr, and the daemon is told
-# where (UPOWER_CONF_FILE_NAME, which it reads UPower.conf.d beside
-# too).  A machine's own changes then go in a drop-in for the unit that
-# names a file of its own.
+# where (UPOWER_CONF_FILE_NAME).  It reads the UPower.conf.d beside that
+# file too, which in /usr a machine cannot add to: its own settings go in
+# a drop-in for the unit that names a file in /etc instead, say
+# /etc/UPower/UPower.conf, and then /etc/UPower/UPower.conf.d is read.
 settings=$out/usr/share/upower
 mkdir -p $settings
 mv $out/etc/UPower/UPower.conf $settings/UPower.conf
 rm -r $out/etc
-install -D -m 644 /dev/stdin $out/usr/lib/systemd/system/upower.service.d/bunix.conf <<UNIT
+# When the battery is all but empty: power off.  Its own choice, Auto,
+# is logind's Sleep(), which is a suspend where there is no hibernation,
+# as on a Mac: the battery then runs out while it sleeps, and the
+# machine is cut off without a clean shutdown.
+sed -i 's/^CriticalPowerAction=Auto$/CriticalPowerAction=PowerOff/' $settings/UPower.conf
+grep -q -x 'CriticalPowerAction=PowerOff' $settings/UPower.conf || {
+    echo "upower.sh: UPower.conf's CriticalPowerAction is not Auto any more" >&2
+    exit 1
+}
+install -D -m 644 /dev/stdin $out/usr/lib/systemd/system/upower.service.d/bunix.conf <<'UNIT'
 [Service]
 Environment=UPOWER_CONF_FILE_NAME=/usr/share/upower/UPower.conf
 UNIT
 
-# Its hardware database (batteries known to report wrongly, and UPSes),
-# which udev reads only from /usr's compiled hwdb.bin, made with the
-# system: an extension's would never be read.  Its rules, which look
-# there, then find nothing, and leave the device as the kernel has it.
+# Its hardware database (batteries known to report wrongly, which
+# batteries' charge can be limited, and UPSes), which udev reads only
+# from /usr's compiled hwdb.bin, made with the system: an extension's
+# would never be read.  Its rules, which look there, then find nothing,
+# and leave the device as the kernel has it: no charge limit offered,
+# and a UPS on USB not known as one.
 rm -r $out/usr/lib/udev/hwdb.d
 
 # Started at boot, upheld by multi-user.target (docs/desktop.md, "Units
