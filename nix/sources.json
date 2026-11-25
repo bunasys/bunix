@@ -1081,5 +1081,33 @@
     "version": "158.0.8127.88",
     "url": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-158.0.8127.88-lite.tar.xz",
     "sha256": "76f5aa94996e31a59b9aa01944c5bdc181043ff58553aff572f9d5750acd326d"
+  },
+  "ungoogled-chromium": {
+    "version": "158.0.8127.88-1",
+    "url": "https://github.com/ungoogled-software/ungoogled-chromium/archive/refs/tags/158.0.8127.88-1.tar.gz",
+    "sha256": "c02190304095cd790c729d6069ecf9a43b48123efe5d93ae46489ef71459da57",
+    "name": "ungoogled-chromium-158.0.8127.88-1.tar.gz"
+  },
+  "chromium-typescript-x86_64-linux": {
+    "version": "7.0.2",
+    "url": "https://registry.npmjs.org/@typescript/typescript-linux-x64/-/typescript-linux-x64-7.0.2.tgz",
+    "sha256": "7ecad6f67377e831856367ab062ef394f21506a611405bf8ac0ff039348637d3"
+  },
+  "chromium-typescript-aarch64-linux": {
+    "version": "7.0.2",
+    "url": "https://registry.npmjs.org/@typescript/typescript-linux-arm64/-/typescript-linux-arm64-7.0.2.tgz",
+    "sha256": "c83d931ac9dd7549cde6e71246aa9d6a9812843023df3e277fe3b5dcf41dd0ea"
+  },
+  "chromium-esbuild-x86_64-linux": {
+    "version": "0.28.2",
+    "url": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.2.tgz",
+    "sha256": "9573bb2233aab0f9ea7647d5cca9726113cc1768de61d66b17267f4db84488f6",
+    "name": "esbuild-linux-x64-0.28.2.tgz"
+  },
+  "chromium-esbuild-aarch64-linux": {
+    "version": "0.28.2",
+    "url": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.2.tgz",
+    "sha256": "a96dbfa41d3ef5dbd1ef22b1c10d5187be9267e86093a870f06402a7ec931596",
+    "name": "esbuild-linux-arm64-0.28.2.tgz"
   }
 }

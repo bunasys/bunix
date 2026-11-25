@@ -115,14 +115,14 @@ are not available.
      "//chrome/browser/profiles:misc",
      "//chrome/browser/profiles:profile_io_data",
      "//chrome/browser/profiles:profiles_extra_parts",
-@@ -2432,7 +2431,6 @@
-     "//chrome/browser/preloading/search_preload",
+@@ -2485,7 +2484,6 @@
      "//chrome/browser/privacy",
      "//chrome/browser/privacy_sandbox:impl",
+     "//chrome/browser/private_ai",
 -    "//chrome/browser/private_verification_tokens",
      "//chrome/browser/profiles:misc",
+     "//chrome/browser/profiles:profile_manager_impl",
      "//chrome/browser/profiles:profile_util_impl",
-     "//chrome/browser/profiles:profiles_extra_parts_impl",
 --- a/chrome/browser/chrome_content_browser_client.cc
 +++ b/chrome/browser/chrome_content_browser_client.cc
 @@ -6264,21 +6264,6 @@
@@ -657,16 +657,6 @@ are not available.
    private_ai::PrivateAiServiceFactory::GetInstance();
    ProfileNetworkContextServiceFactory::GetInstance();
    ProfilePasswordStoreFactory::GetInstance();
---- a/chrome/browser/ui/BUILD.gn
-+++ b/chrome/browser/ui/BUILD.gn
-@@ -1638,7 +1638,6 @@
-     "//components/dom_distiller/core",
-     "//components/enterprise/buildflags",
-     "//components/paint_preview/buildflags",
--    "//components/safe_browsing:buildflags",
-     "//components/segmentation_platform/public",
-     "//components/sync",
-     "//components/sync_user_events",
 --- a/chrome/services/file_util/BUILD.gn
 +++ b/chrome/services/file_util/BUILD.gn
 @@ -47,10 +47,6 @@

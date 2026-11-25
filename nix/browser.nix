@@ -218,8 +218,60 @@ let
       }) (builtins.fromJSON (builtins.readFile ./browser/crubit-crates.json));
     };
   };
+
+  # ---- The browser -----------------------------------------------------------------
+
+  # A directory of files/hudhud, as it is in git: without what Python
+  # leaves beside the scripts it runs (__pycache__), which differs from
+  # one checkout to the next and would change the build's inputs.
+  hudhudFiles = directory: builtins.path {
+    name = "hudhud-" + builtins.replaceStrings [ "/" ] [ "-" ] directory;
+    path = ../files/hudhud + "/${directory}";
+    filter = path: type: baseNameOf path != "__pycache__";
+  };
+
+  # Chromium, built for Hudhud: ungoogled-chromium's patches and lists,
+  # then Hudhud's code and patches (files/hudhud), prepared as on macOS
+  # by files/hudhud/scripts/prepare-source.sh.  Wayland only; GTK 4 for
+  # its file dialogs.  Installs /usr/lib/hudhud.
+  #
+  # The long build alone (half a day): its inputs are only what the
+  # compiler needs, so that a filter list, a policy or an icon (Hudhud's
+  # package, step 3) does not rebuild it.  Chromium's own copies of its
+  # libraries (ICU, FFmpeg, HarfBuzz, libc++, ...) stay; it takes the rest
+  # from the system.
+  #
+  # depends names what Chromium loads only when it runs (GTK 4, libpci,
+  # NSS's modules, PipeWire): the package check sees only what a program
+  # asks for when it starts.
+  chromium = mkSystemPackage {
+    name = "chromium";
+    source = sources.chromium;
+    script = ./browser/chromium.sh;
+    depends = [
+      glibc toolchain.gccLibraries
+      desktop.alsa-lib at-spi2-core base.dbus desktop.fontconfig desktop.freetype base.glib gtk4
+      base.libffi desktop.libdrm desktop.libxkbcommon desktop.mesa nspr nss pciutils
+      desktop.pipewire base.systemd desktop.wayland base.expat base.zlib
+    ];
+    buildDepends = [
+      base.llvm compiler-rt chromium-rust crubit base.bindgen base.nodejs desktop.go
+      base.gperf ninja pkgconf desktop.wayland-protocols base.python-zlib base.python-bz2
+    ];
+    env = {
+      ungoogled = fetch sources.ungoogled-chromium;
+      typescript = fetch sources."chromium-typescript-${system}";
+      esbuild_package = fetch sources."chromium-esbuild-${system}";
+      hudhud_chromium = hudhudFiles "chromium";
+      hudhud_scripts = hudhudFiles "scripts";
+      hudhud_patches = hudhudFiles "patches";
+      hudhud_ungoogled = hudhudFiles "ungoogled";
+      hudhud_shields_include = hudhudFiles "shields/include";
+    };
+  };
 in
 {
+  inherit chromium;
   inherit compiler-rt chromium-rust-stage0 chromium-rust crubit;
   inherit nspr nss;
   inherit libxml2 at-spi2-core pciutils libepoxy graphene libtiff gdk-pixbuf gtk4;

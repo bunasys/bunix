@@ -100,6 +100,10 @@ chromium:
   anitya: 13344
   cpe: 'a:google:chrome'
   debian: chromium
+chromium-esbuild-aarch64-linux:
+  pinned-by: chromium
+chromium-esbuild-x86_64-linux:
+  pinned-by: chromium
 chromium-rust:
   pinned-by: chromium
   version-regex: 'nightly-(\d{4}-\d\d-\d\d)'
@@ -115,6 +119,10 @@ chromium-rust-stage0-rustc-aarch64-linux:
   pinned-by: chromium-rust
 chromium-rust-stage0-rustc-x86_64-linux:
   pinned-by: chromium-rust
+chromium-typescript-aarch64-linux:
+  pinned-by: chromium
+chromium-typescript-x86_64-linux:
+  pinned-by: chromium
 cli11:
   anitya: 20578
   debian: cli11
@@ -789,6 +797,8 @@ u-boot:
   follows: aurora-silicon/u-boot@aurora-wip
   version-regex: '([\d.]+)-aurora'
   cpe: 'a:denx:u-boot'
+ungoogled-chromium:
+  github: ungoogled-software/ungoogled-chromium
 upower:
   anitya: 5056
   cpe: 'a:freedesktop:upower'
