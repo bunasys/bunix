@@ -364,6 +364,10 @@ libfuse3:
   cpe: 'a:fuse_project:fuse'
   debian: fuse3
   alpine: fuse3
+libgudev:
+  anitya: 7735
+  debian: libgudev
+  alpine: libgudev
 libinput:
   anitya: 5781
   cpe: 'a:freedesktop:libinput'
@@ -664,6 +668,11 @@ u-boot:
   follows: aurora-silicon/u-boot@aurora-wip
   version-regex: '([\d.]+)-aurora'
   cpe: 'a:denx:u-boot'
+upower:
+  anitya: 5056
+  cpe: 'a:freedesktop:upower'
+  debian: upower
+  alpine: upower
 util-linux:
   anitya: 8179
   cpe: ['a:kernel:util-linux', 'a:util-linux_project:util-linux']

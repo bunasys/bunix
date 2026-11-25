@@ -3,10 +3,10 @@
 # 0.4.0's elements/sysext/desktop*.bst).  The drivers -- Mesa, libinput,
 # seatd -- the text stack and its fonts, niri, the compositor, and the
 # shell: DMS on Quickshell and Qt 6, with its login screen under greetd,
-# the list of people (accountsservice) and each one's session bus; and
-# sound: PipeWire, WirePlumber and alsa-utils; the terminal, Alacritty;
-# and FUSE's libraries and fusermount, with which an AppImage runs.  It
-# needs no other extension.
+# the list of people (accountsservice) and each one's session bus; the
+# battery (upower); sound: PipeWire, WirePlumber and alsa-utils; the
+# terminal, Alacritty; and FUSE's libraries and fusermount, with which
+# an AppImage runs.  It needs no other extension.
 #
 #   nix-build /bunix/nix/images/desktop.nix -A image
 #
@@ -24,7 +24,7 @@ extension {
   name = "desktop";
   contents = [
     desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.fonts desktop.niri
-    desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.dbus-user-session
+    desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.upower desktop.dbus-user-session
     desktop.wireplumber desktop.alsa-utils
     desktop.alacritty desktop.libfuse3 desktop.libfuse2
   ];
