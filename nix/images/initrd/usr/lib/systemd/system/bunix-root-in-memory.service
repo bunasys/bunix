@@ -1,0 +1,24 @@
+# A root in memory (root=tmpfs, the live stick's: images/live.nix) is
+# empty, and the system handed over to runs /sbin/init: it is given what
+# a new root partition gets from systemd-repart on a disk's first boot
+# (usr/lib/repart.d/50-root.conf, which does not run here): the links at
+# the top of a UAPI.9 root, the loader's on x86 too (images/image.sh),
+# and the directories that are mounted on.  /etc and /var are filled by
+# the system itself, as on that first boot.
+[Unit]
+Description=The top of a root in memory
+DefaultDependencies=no
+ConditionKernelCommandLine=root=tmpfs
+Requires=sysroot.mount sysroot-usr.mount
+After=sysroot.mount sysroot-usr.mount
+Before=initrd-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/mkdir -p /sysroot/etc /sysroot/var /sysroot/home /sysroot/srv /sysroot/tmp
+ExecStart=/usr/bin/ln -s usr/bin /sysroot/bin
+ExecStart=/usr/bin/ln -s usr/bin /sysroot/sbin
+ExecStart=/usr/bin/ln -s usr/lib /sysroot/lib
+# (the loader x86's programs ask for by /lib64; where it is not, nothing)
+ExecStart=/usr/bin/bash -c 'if [ -d /sysroot/usr/lib/x86_64-linux-gnu ]; then ln -s usr/lib/x86_64-linux-gnu /sysroot/lib64; fi'

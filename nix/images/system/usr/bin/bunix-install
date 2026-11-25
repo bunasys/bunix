@@ -229,9 +229,6 @@ the_file() {
 uki=$(the_file "bunix_*.$ARCHITECTURE.efi")
 release=$(basename "$uki" ".$ARCHITECTURE.efi")
 release=${release#bunix_}
-usr_image=$(the_file "bunix_$release.usr-$ARCHITECTURE.*.raw")
-verity_image=$(the_file "bunix_$release.usr-$ARCHITECTURE-verity.*.raw")
-signature_image=$(the_file "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw")
 # The desktop extension of this version, if the files have it: a choice,
 # not one of the files a version needs
 desktop_image=$files/desktop_$release.$ARCHITECTURE.raw
@@ -243,6 +240,40 @@ uuid_in_name() {
   hex=$(basename "$1" .raw | sed 's/.*\.//' | tr -d -)
   echo "${hex:0:8}-${hex:8:4}-${hex:12:4}-${hex:16:4}-${hex:20:12}"
 }
+# The disk the files are on, when they are on one (walking up through any
+# loop or device-mapper layers, as on a Ventoy stick): not one to offer,
+# and, for the live stick, where /usr is read from (below)
+files_device=$(findmnt -no SOURCE --target "$files")
+files_disk=""
+if [ -b "$files_device" ]; then
+  files_disk=$(lsblk -nslpo NAME,TYPE "$files_device" | awk '$2 == "disk" { disk = $1 } END { print disk }')
+  files_disk=${files_disk:-$files_device}
+fi
+# One of the three of /usr, as "<what to read it from> <its partition's
+# id>": a file of $files, as a release has them, with the id in its name;
+# or, on the live stick (images/live.nix), the stick's own partition of
+# that name, which the system started from it runs /usr from, with its id.
+#   usr_source <the file's pattern> <the partition's name>
+usr_source() {
+  local found=("$files"/$1)
+  if [ -e "${found[0]}" ]; then
+    [ ${#found[@]} = 1 ] || die "$files has ${#found[@]} files named $1; a version has one"
+    echo "${found[0]} $(uuid_in_name "${found[0]}")"
+    return
+  fi
+  [ -n "$files_disk" ] || die "$files has no file named $1"
+  local partition
+  partition=$(lsblk -nrpo NAME,PARTLABEL "$files_disk" | awk -v name="$2" '$2 == name { print $1 }')
+  [ -n "$partition" ] || die "$files has no file named $1, and its disk no partition named $2"
+  echo "$partition $(lsblk -ndo PARTUUID "$partition")"
+}
+# (each on a line of its own: a failure in $(...) ends the script)
+usr_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE.*.raw" "bunix_$release")
+read -r usr_image usr_id <<< "$usr_source_line"
+verity_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity.*.raw" "bunix_${release}_verity")
+read -r verity_image verity_id <<< "$verity_source_line"
+signature_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw" "bunix_${release}_verity_sig")
+read -r signature_image signature_id <<< "$signature_source_line"
 # systemd-boot, from this system's own /usr, the same version's:
 # systemd-bootaa64.efi, which goes on an ESP as EFI/BOOT/BOOTAA64.EFI
 systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
@@ -262,15 +293,7 @@ echo
 
 # --- the disk -----------------------------------------------------------
 
-# The disk the files are on, when they are on one, is not a choice
-# (walking up through any loop or device-mapper layers, as on a Ventoy
-# stick)
-files_device=$(findmnt -no SOURCE --target "$files")
-files_disk=""
-if [ -b "$files_device" ]; then
-  files_disk=$(lsblk -nslpo NAME,TYPE "$files_device" | awk '$2 == "disk" { disk = $1 } END { print disk }')
-  files_disk=${files_disk:-$files_device}
-fi
+# The disk the files are on (files_disk, above) is not a choice
 disks=()
 while read -r name type size; do
   [ "$type" = disk ] || continue
@@ -870,9 +893,9 @@ if [ "$needs_xbootldr" = yes ]; then
 fi
 root_uuid=$(new_uuid)
 # Slot A: read-only (GPT attribute 60), as images/disk.sh makes it
-add_partition $USR_SIZE $TYPE_USR "bunix_$release" "$(uuid_in_name "$usr_image")" GUID:60
-add_partition $USR_VERITY_SIZE $TYPE_USR_VERITY "bunix_${release}_verity" "$(uuid_in_name "$verity_image")" GUID:60
-add_partition $USR_SIGNATURE_SIZE $TYPE_USR_VERITY_SIG "bunix_${release}_verity_sig" "$(uuid_in_name "$signature_image")" GUID:60
+add_partition $USR_SIZE $TYPE_USR "bunix_$release" "$usr_id" GUID:60
+add_partition $USR_VERITY_SIZE $TYPE_USR_VERITY "bunix_${release}_verity" "$verity_id" GUID:60
+add_partition $USR_SIGNATURE_SIZE $TYPE_USR_VERITY_SIG "bunix_${release}_verity_sig" "$signature_id" GUID:60
 # Slot B: "_empty" is where sysupdate writes the next release
 add_partition $USR_SIZE $TYPE_USR "_empty" "$(new_uuid)"
 add_partition $USR_VERITY_SIZE $TYPE_USR_VERITY "_empty" "$(new_uuid)"
@@ -897,9 +920,9 @@ partx --update "$disk"
 udevadm settle
 
 echo "Writing /usr ($release)..."
-dd if="$usr_image" of="$(device_of_partuuid "$(uuid_in_name "$usr_image")")" bs=4M conv=fsync status=none
-dd if="$verity_image" of="$(device_of_partuuid "$(uuid_in_name "$verity_image")")" bs=4M conv=fsync status=none
-dd if="$signature_image" of="$(device_of_partuuid "$(uuid_in_name "$signature_image")")" bs=4M conv=fsync status=none
+dd if="$usr_image" of="$(device_of_partuuid "$usr_id")" bs=4M conv=fsync status=none
+dd if="$verity_image" of="$(device_of_partuuid "$verity_id")" bs=4M conv=fsync status=none
+dd if="$signature_image" of="$(device_of_partuuid "$signature_id")" bs=4M conv=fsync status=none
 
 echo "Writing the boot files..."
 if [ "$new_esp" = yes ]; then
