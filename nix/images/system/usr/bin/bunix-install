@@ -199,6 +199,13 @@ esac
 
 # The version to install: the files a machine downloads to become it
 files=${1:-}
+# On the live stick (images/live.nix), mounted once the stick is found:
+# a slow one may not be yet, or it was pulled out
+case $files in
+  /run/bunix/medium/*)
+    [ -d "$files" ] || die "$files is not there: the stick's files are not mounted yet.
+Is the stick still in?  What systemd says of it:  systemctl status run-bunix-medium.mount" ;;
+esac
 [ -n "$files" ] && [ -d "$files" ] || die "give the directory that has the files of the version to install:
 bunix_<version>.$ARCHITECTURE.efi and the three of its /usr"
 mkdir -p "$WORK"/esp "$WORK"/root

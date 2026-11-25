@@ -98,32 +98,18 @@ like_an_apple_silicon_mac=no
 if [ "$architecture" = aarch64 ]; then
     like_an_apple_silicon_mac=yes
 fi
+# How the system in memory is started: a Mac's as tools/boot-mac.sh
+# starts it, a PC's from the live image (images/live.nix), as a person
+# would start one
+starts_from_live_image=no
+if [ "$architecture" = x86_64 ]; then
+    starts_from_live_image=yes
+fi
 prepare_machine
-mkdir "$work/files"
-
-# ---- What is installed, and what installs it ------------------------------------
-
 version=$(release_version)
 if [ $like_an_apple_silicon_mac = yes ]; then
-    echo "building the system, and the files of its version"
-    image=$(build "$source/nix/images/system.nix")
-    update=$(build "$source/nix/images/update.nix")
-    # the kernel the system was built with: its modules are in the image
-    copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
-    copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
-    copy_built_directory "$update" "$work/files"
-    # named as a release names it (tools/publish.sh), which the installer
-    # looks for
-    desktop=$(build "$source/nix/images/desktop.nix" -A image)
-    copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
     u_boot=$(build "$source/nix/boot.nix" -A u-boot-qemu)
     copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
-else
-    # A PC starts from the live image, as a USB stick, which has the
-    # system for memory and the files to install (images/live.nix)
-    echo "building the live image"
-    live=$(build "$source/nix/images/live.nix")
-    copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
 fi
 
 # Empty, and as large as they are only in name: what is written of them
@@ -187,7 +173,20 @@ pull_the_plug() {
 
 # ---- Installing --------------------------------------------------------------------
 
-if [ $like_an_apple_silicon_mac = yes ]; then
+if [ $starts_from_live_image = no ]; then
+    echo "building the system, and the files of its version"
+    image=$(build "$source/nix/images/system.nix")
+    update=$(build "$source/nix/images/update.nix")
+    # the kernel the system was built with: its modules are in the image
+    copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
+    copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
+    mkdir "$work/files"
+    copy_built_directory "$update" "$work/files"
+    # named as a release names it (tools/publish.sh), which the installer
+    # looks for
+    desktop=$(build "$source/nix/images/desktop.nix" -A image)
+    copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
+
     # The machine is handed firmware of its own, as tools/boot-mac.sh
     # hands a Mac its: an archive before the image, not compressed, and
     # the kernel told of its directory.  One file that no driver asks
@@ -210,6 +209,13 @@ if [ $like_an_apple_silicon_mac = yes ]; then
         || fail "could not give the machine the version's files"
     files=/root/install
 else
+    echo "building the live image"
+    live=$(build "$source/nix/images/live.nix")
+    copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
+    # as large as a stick is, so that the installer leaves it out for
+    # having its files on it, and not for being too small for bunix
+    in_machine_directory "truncate -s 16G live.img"
+
     echo "starting bunix in memory from the live image, a USB stick, with the two disks"
     # Started first (bootindex), read-only as a stick that is not written
     # to.  The serial console and the key: words the firmware hands the
@@ -239,7 +245,7 @@ mac=$(disk_with_sectors_of 4096)
 # in memory, which a PC's kernel lists before its disks, and a PC's live
 # stick (sd*: the test's own two disks are vd*).
 number_of() {
-    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram|sd/ { number++; if (\$1 == \"$1\") print number }'"
+    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram|^\\/dev\\/sd/ { number++; if (\$1 == \"$1\") print number }'"
 }
 
 # run_installer <name of the log> <answers, a line each>: fails the test
@@ -299,6 +305,9 @@ a password with spaces
 $whole"
 if grep -q mtdblock "$work/install-whole.log"; then
     fail "the machine's flash chip was offered as a disk to install to"
+fi
+if [ $starts_from_live_image = yes ] && grep -q "/dev/sd" "$work/install-whole.log"; then
+    fail "the live stick the files are on was offered as a disk to install to"
 fi
 expect_root_locked "$whole"
 give_key_to "$whole" sara
