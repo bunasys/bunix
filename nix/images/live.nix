@@ -37,7 +37,8 @@
 #
 #   bunix-install /run/bunix/medium/install
 #
-#   -A kernelImage  the live kernel image alone: a test system's signed
+#   -A liveKernelImage
+#                   the live kernel image alone: a test system's signed
 #                   for Secure Boot with the development key; a release's
 #                   unsigned, for tools/publish.sh to sign.
 #   -A image        the stick.
@@ -46,12 +47,12 @@
 #              a release's: the signatures of the system's hash and of
 #              the desktop extension's (tools/publish.sh makes both),
 #              as images/update.nix and images/desktop.nix take them.
-#   kernelImage, liveKernelImage, secureBootLoader
+#   signedKernelImage, signedLiveKernelImage, secureBootLoader
 #              x86, a release's: this version's kernel image, the live
-#              one (-A kernelImage), and systemd-boot (images/system.nix),
-#              signed for Secure Boot with bunix's key, which
-#              tools/publish.sh signs them with; each is taken if it is
-#              this build's own (check-release-signed.sh).
+#              one (-A liveKernelImage), and systemd-boot
+#              (images/system.nix), signed for Secure Boot with bunix's
+#              key, which tools/publish.sh signs them with; each is taken
+#              if it is this build's own (check-release-signed.sh).
 #              Without all of these, a test system's, signed with the
 #              development key: it takes updates and Secure Boot images
 #              signed with that key, which is not secret, and is never to
@@ -66,7 +67,7 @@
 #              to replace.
 #   version    the system's, as images/system.nix takes it
 { system ? builtins.currentSystem, signature ? null, desktopSignature ? null
-, kernelImage ? null, liveKernelImage ? null, secureBootLoader ? null
+, signedKernelImage ? null, signedLiveKernelImage ? null, secureBootLoader ? null
 , secureBootEnrolment ? false, version ? import ../release.nix }:
 
 let
@@ -74,9 +75,12 @@ let
   isRelease = signature != null;
   # all of a release's signatures, or none: a release's system with a test
   # system's anything is no system anybody should install
-  hasSecureBootSignatures = kernelImage != null && liveKernelImage != null && secureBootLoader != null;
+  hasSecureBootSignatures = signedKernelImage != null && signedLiveKernelImage != null && secureBootLoader != null;
   hasAllSignatures = desktopSignature != null && (hasSecureBootSignatures || !isX86);
-  hasNoSignatures = desktopSignature == null && kernelImage == null && liveKernelImage == null && secureBootLoader == null;
+  hasNoSignatures = desktopSignature == null && signedKernelImage == null && signedLiveKernelImage == null && secureBootLoader == null;
+  signaturesAgree = if isRelease then hasAllSignatures else hasNoSignatures;
+  # the firmware's keys replaced: a test machine's, never a real one's
+  enrolmentIsForTests = secureBootEnrolment -> (!isRelease && isX86);
 
   signing = if isRelease then "release" else "development";
   tools = import ../tools.nix { inherit system; };
@@ -93,14 +97,11 @@ let
   update = import ./update.nix { inherit system signature version secureBootLoader; };
   developmentKey = ../development-key/development.key;
   developmentCertificate = ../development-key/development.crt;
-  # what a test system's files are signed with in their builds, and a
-  # release's are checked with
-  signingTools = {
+  # what a test system's files are signed with in their builds
+  developmentSigning = {
     sign_kernel_image = ../../tools/sign-kernel-image.sh;
-    check_release_signed = ./check-release-signed.sh;
     development_key = developmentKey;
     development_certificate = developmentCertificate;
-    release_certificate = ../../keys/secureboot.crt;
   };
 
   # The live kernel image: as an installed system's (images/uki.nix), of
@@ -118,7 +119,7 @@ let
     # pefile: ukify is Python, and puts the file together with pefile.
     buildDepends = [ base.systemd tools.python base.python-pefile tools.bash tools.coreutils tools.grep tools.sed ]
       ++ (if isX86 && !isRelease then [ base.osslsigncode ] else []);
-    env = signingTools // {
+    env = developmentSigning // {
       system_image = systemImage;
       initrd = import ./initrd.nix { inherit system; };
       inherit version;
@@ -143,16 +144,13 @@ let
   };
 in
 {
-  kernelImage = liveKernelImageBuild;
+  liveKernelImage = liveKernelImageBuild;
 
   # (the stick takes a release's signatures all, or none of them: a
   # release's system with a test system's anything is no system anybody
   # should install.  Its kernel image alone is built before they are
   # made.)
-  image =
-    assert (isRelease && hasAllSignatures) || (!isRelease && hasNoSignatures);
-    assert secureBootEnrolment -> (!isRelease && isX86);
-    stagedBuild {
+  image = assert signaturesAgree; assert enrolmentIsForTests; stagedBuild {
     name = "bunix-live";
     run = ./live.sh;
     # systemd: systemd-repart, which makes the image.  dosfstools and
@@ -161,7 +159,10 @@ in
     buildDepends = [ base.systemd base.dosfstools base.mtools
                      tools.bash tools.coreutils tools.findutils tools.grep tools.sed ]
       ++ (if isX86 then [ base.osslsigncode ] else []);
-    env = signingTools // {
+    # what a release's signed kernel images are checked with
+    env = developmentSigning // {
+      check_release_signed = ./check-release-signed.sh;
+      release_certificate = ../../keys/secureboot.crt;
       inherit update version;
       # x86: shim, and systemd-boot signed, which it starts: the same as
       # the system's /usr has, for its installer
@@ -171,8 +172,8 @@ in
       partition_architecture = architecture.partitionArchitecture;
       # the live kernel image as built here, and a release's, signed
       built_live_kernel_image = liveKernelImageBuild;
-      release_live_kernel_image = if liveKernelImage == null then "" else liveKernelImage;
-      release_kernel_image = if kernelImage == null then "" else kernelImage;
+      release_live_kernel_image = if signedLiveKernelImage == null then "" else signedLiveKernelImage;
+      release_kernel_image = if signedKernelImage == null then "" else signedKernelImage;
       secure_boot_enrolment = if secureBootEnrolment then enrolment else "";
     };
   };

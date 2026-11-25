@@ -26,12 +26,16 @@ What can be installed today:
 - **On an x86-64 PC**, from the live image of a release
   (`bunix-x86-64-live.img`, since 0.5.1), written to a USB stick:
   `sudo dd if=bunix-x86-64-live.img of=/dev/<the stick> bs=4M`, then
-  start the PC from it with Secure Boot off, and run what its console
-  says (`bunix-install /run/bunix/medium/install`).  It installs next to
-  Windows, or in place of an earlier bunix, 0.4.0's included.  Secure
-  Boot is to come: until then bunix starts with it off.  A system
-  installed from 0.4.0's live image stays on 0.4.0: it does not find
-  the later releases (`docs/release.md`).
+  start the PC from it and run what its console says
+  (`bunix-install /run/bunix/medium/install`).  It installs next to
+  Windows, or in place of an earlier bunix, 0.4.0's included.  Since
+  0.5.2 the stick and what it installs start with Secure Boot on,
+  through shim, as 0.4.0's did: a PC that does not know bunix's key yet
+  shows MokManager at the first start, where `bunix.cer` (on the stick,
+  and beside shim on the ESP) is enrolled once.  0.5.1's stick and
+  installs need Secure Boot off.  A system installed from 0.4.0's live
+  image stays on 0.4.0: it does not find the later releases
+  (`docs/release.md`).
 
 A system that Nix built updates itself from the latest release:
 
@@ -104,7 +108,7 @@ tools/install-test.sh               install it on two disks, and start them
 tools/update-test.sh                update it, refuse what is not signed, go back from a bad update
 tools/release-test.sh <directory> <version before>
                                     update to a release before it is uploaded
-tools/secure-boot-test.sh           x86-64 with Secure Boot on: start, and refuse a changed kernel image
+tools/secure-boot-test.sh           x86-64 with Secure Boot on: start, refuse a changed kernel image, and the live stick through shim, which installs a disk that starts so too
 tools/desktop-test.sh               merge the desktop extension, bring up the login screen, log in to DMS, and play a sound
 ```
 
@@ -127,7 +131,7 @@ signed outside the build, which is given the signature
 | --- | --- | --- |
 | image key (`keys/verity.crt`) | the hash of `/usr`, and of each extension (`tools/sign.sh`) | the kernel, which has the certificate built in |
 | release key (OpenPGP) | the list of a release's files (`tools/sign-list.sh`) | sysupdate: `import-pubring.pgp` in the system |
-| Secure Boot key (`keys/secureboot.crt`) | the x86-64 kernel image (`tools/sign-kernel-image.sh`) | PCs that enrolled it with shim, for 0.4.0 and before; none that takes a Nix-built release yet |
+| Secure Boot key (`keys/secureboot.crt`) | x86-64's kernel images, the live stick's, and systemd-boot, which shim starts (`tools/sign-kernel-image.sh`) | PCs that enrolled it with shim (MokManager, `bunix.cer`): 0.4.0's, and installs of 0.5.2 and later |
 
 ## Not ported from BuildStream yet
 
@@ -144,8 +148,6 @@ kept to port from, and no longer builds:
 - programs of the x86-64 system that the Nix one does not have: BusyBox
   and uutils' commands, bind, nftables, WireGuard's tools, neovim, less,
   htop, ripgrep, rsync, the time zones, and tools for a PC's hardware;
-- the live image, and of Secure Boot what a new install needs (shim,
-  and systemd-boot signed);
 - the tests of these (`elements/tests/`, and `tools/boot-test.py` with
   its checks).
 

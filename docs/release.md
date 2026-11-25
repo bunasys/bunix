@@ -19,8 +19,10 @@ and once, for all of them, `SHA256SUMS` and `SHA256SUMS.gpg`: the list of
 the files and its OpenPGP signature by the release key.
 
 Not in a release yet, which BuildStream's had (up to 0.4.0): the gcc,
-rust and swift extensions, and Secure Boot for the live image and what
-it installs (shim, and a signed systemd-boot).
+rust and swift extensions.  And what updates do not replace: shim and
+systemd-boot on an installed PC's ESP, which only bunix-install puts
+there.  A newer one (say, after a revocation in shim's SBAT) reaches a
+machine only by installing again, until updates bring them.
 A machine installed from 0.4.0 or before should find no update in these
 releases: it asks for a kernel image named `bunix_<version>.efi`, and so
 reads the architecture in these names as part of the version, which no
@@ -67,13 +69,14 @@ tools/publish.sh out/updates        # -> out/updates/<version>/
 
 It sends the last commit to both builders, builds, and has each
 architecture's system and extensions signed with the image key
-(`tools/sign.sh`), and the x86-64 kernel image with the Secure Boot key
-(`tools/sign-kernel-image.sh`), then writes `SHA256SUMS` (good for 30
+(`tools/sign.sh`); on x86-64, systemd-boot (which shim starts), the
+kernel image and the live stick's kernel image with the Secure Boot key
+(`tools/sign-kernel-image.sh`); then writes `SHA256SUMS` (good for 30
 days, `BUNIX_MANIFEST_DAYS`) and has it signed with the release key
 (`tools/sign-list.sh`).  1Password asks for the image key once an image
 (the system and each extension of `extensions` in `tools/publish.sh`,
-for each architecture), once
-for the Secure Boot key, and once for the release key.  It says what in
+for each architecture), three times for the Secure Boot key, and once
+for the release key: twelve in all.  It says what in
 the working tree is not in the commit, and so not in the release, and
 ends with the line that tags the commit it built.
 

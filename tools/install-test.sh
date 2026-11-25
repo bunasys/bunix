@@ -111,9 +111,9 @@ like_an_apple_silicon_mac=no
 if [ "$architecture" = aarch64 ]; then
     like_an_apple_silicon_mac=yes
 fi
-# How the system in memory is started: a Mac's as tools/boot-mac.sh
-# starts it, a PC's from the live image (images/live.nix), as a person
-# would start one
+# How the system that installs is started: a Mac's in memory, as
+# tools/boot-mac.sh starts it; a PC's from the live image
+# (images/live.nix), as a person would start one
 starts_from_live_image=no
 if [ "$architecture" = x86_64 ]; then
     starts_from_live_image=yes
@@ -236,11 +236,11 @@ else
     in_machine_directory "truncate -s 16G live.img"
 
     echo "starting bunix in memory from the live image, a USB stick, with the two disks"
-    # Started first (bootindex), read-only as a stick that is not written
-    # to.  The serial console and the key: words the firmware hands the
-    # kernel image's command line (SMBIOS), as tools/desktop-test.sh has
-    # them.
-    stick="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick,readonly=on -device usb-storage,drive=stick,bootindex=0"
+    # Started first (bootindex), and writable, as a stick is: nothing is to
+    # write to it (checked after the installs).  The serial console and the
+    # key: words the firmware hands the kernel image's command line
+    # (SMBIOS), as tools/desktop-test.sh has them.
+    stick="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick -device usb-storage,drive=stick,bootindex=0"
     smbios_words=$(printf 'console=%s %s' "$console" "$key_word" | sed 's/,/,,/g')
     # shellcheck disable=SC2086
     start_qemu $machine_on_real_processor $efi_firmware $stick $whole_disk $mac_disk \
@@ -439,6 +439,13 @@ fi
 expect_root_locked "$mac"
 give_key_to "$mac" adam
 partitions_of root "$mac" > "$work/mac-partitions"
+# The live system wrote nothing to the stick it runs from: its four
+# partitions, and no root partition beside them (systemd-repart's, which
+# a root in memory is kept from)
+if [ $starts_from_live_image = yes ]; then
+    stick_partitions=$(as root "lsblk -nrpo NAME,TYPE /dev/sd? | awk '\$2 == \"part\"' | wc -l")
+    [ "$stick_partitions" = 4 ] || fail "the live stick has $stick_partitions partitions after the installs, not its 4"
+fi
 power_off
 
 # ---- Starting what was installed ---------------------------------------------------
@@ -509,9 +516,22 @@ expect_installed() {
 }
 
 echo "3. the whole disk starts, and Sara logs in to fish"
+# On a PC with the live stick still in, after the whole disk in the
+# firmware's order: the stick's /usr is the same version's, and the
+# installed system is to take its own (images/live-kernel-image.sh)
+the_stick_too=
+if [ $starts_from_live_image = yes ]; then
+    the_stick_too="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick -device usb-storage,drive=stick,bootindex=9"
+fi
 # shellcheck disable=SC2086
-start_qemu $machine_on_real_processor $efi_firmware $whole_disk
+start_qemu $machine_on_real_processor $efi_firmware $whole_disk $the_stick_too
 expect_installed sara "Sara of the Whole Disk" /usr/bin/fish whole-disk "$work/whole-partitions"
+if [ $starts_from_live_image = yes ]; then
+    usr_from=$(as sara "lsblk -s -nrpo NAME /dev/mapper/usr | grep -v mapper | tr '\n' ' '")
+    case $usr_from in
+        *"/dev/sd"*) fail "the installed system runs the stick's /usr: $usr_from" ;;
+    esac
+fi
 # Merged before the system counts as started; greetd, upheld once it is,
 # may still be on its way
 as sara "test -e /usr/lib/extension-release.d/extension-release.desktop" \

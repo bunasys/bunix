@@ -193,7 +193,7 @@ leave_signature() {
 # to take (they take it only if it is theirs: images/check-release-signed.sh).
 # A copy stays in $signed_here.
 sign_for_secure_boot() {
-    signed_name=${2##*/}
+    local signed_name=${2##*/}
     in_builder x86_64 "cat $1" > "$signed_here/$signed_name.unsigned"
     tools/sign-kernel-image.sh "$signed_here/$signed_name.unsigned" "$signed_here/$signed_name"
     in_builder x86_64 "cat > $2" < "$signed_here/$signed_name"
@@ -237,6 +237,14 @@ for architecture in $architectures; do
     echo "$architecture: building the files of bunix $version"
     update=$(build "$architecture" $images/update.nix $system_signed $loader_signed)
     built_directories=$update
+    # A release's x86_64 kernel image signed here, where the password
+    # manager is: it goes into the release (below), and onto the live
+    # stick.  A test system's was signed in its build, with the
+    # development key (nix/images/uki.nix).
+    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+        echo "$architecture: signing the kernel image for Secure Boot"
+        sign_for_secure_boot "$update/bunix_$version.x86-64.efi" bunix-release/kernel-image.efi
+    fi
     for extension in $extensions; do
         extension_signed=
         if [ $signed_by = release ]; then
@@ -258,14 +266,13 @@ for architecture in $architectures; do
         has_live_image=yes
         live_signed=
         if [ $signed_by = release ]; then
-            # Its two kernel images signed for Secure Boot first: the one it
-            # installs, the release's own, and its own (images/live.nix)
+            # Its own kernel image signed for Secure Boot first; and it has
+            # the release's, signed above (images/live.nix)
             live_signed="--arg signature ./$system_signature --arg desktopSignature ./bunix-release/desktop.signature $loader_signed"
-            echo "$architecture: signing the kernel image, and the live stick's, for Secure Boot"
-            sign_for_secure_boot "$update/bunix_$version.x86-64.efi" bunix-release/kernel-image.efi
-            live_kernel_image=$(build "$architecture" $images/live.nix -A kernelImage $live_signed)
+            echo "$architecture: signing the live stick's kernel image for Secure Boot"
+            live_kernel_image=$(build "$architecture" $images/live.nix -A liveKernelImage $live_signed)
             sign_for_secure_boot "$live_kernel_image/bunix-live_$version.efi" bunix-release/live-kernel-image.efi
-            live_signed="$live_signed --arg kernelImage ./bunix-release/kernel-image.efi --arg liveKernelImage ./bunix-release/live-kernel-image.efi"
+            live_signed="$live_signed --arg signedKernelImage ./bunix-release/kernel-image.efi --arg signedLiveKernelImage ./bunix-release/live-kernel-image.efi"
         fi
         echo "$architecture: building the live image"
         live_image=$(build "$architecture" $images/live.nix -A image $live_signed)
@@ -320,9 +327,7 @@ for architecture in $architectures; do
     # out of a store they come read-only
     chmod u+w "$received"/*
 
-    # A release's x86_64 kernel image, signed here, where the password
-    # manager is, before the live stick (above); a test system's was
-    # signed in its build, with the development key (nix/images/uki.nix).
+    # A release's x86_64 kernel image, signed here when it was built
     if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
         cp "$signed_here/kernel-image.efi" "$received/bunix_$version.$named.efi"
     fi
