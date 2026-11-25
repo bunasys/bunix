@@ -93,13 +93,15 @@ done
 # its own.  The .wants links an extension could carry are read before it
 # is merged, so a service without either would never start
 # (docs/desktop.md, "Units in an extension").  A template (name@.service)
-# is started by name, by what needs it.  User services are not checked:
-# a person's systemd starts after the merge, and reads their .wants links.
+# is started by name, by what needs it; a link to /dev/null is a unit
+# masked, which nothing is to start.  User services are not checked: a
+# person's systemd starts after the merge, and reads their .wants links.
 units=$tree/usr/lib/systemd/system
 for unit in "$units"/*.service; do
     [ -e "$unit" ] || continue
     service=${unit##*/}
     case $service in *@.service) continue ;; esac
+    [ "$(readlink "$unit")" != /dev/null ] || continue
     upheld_by_a_target=no
     if grep -q -x -h "Upholds=$service" "$units"/*.target.d/*.conf 2> /dev/null; then
         upheld_by_a_target=yes
