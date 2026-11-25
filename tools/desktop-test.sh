@@ -26,6 +26,9 @@
 #      session, pictured too; and the person mounts a FUSE file system
 #      (libfuse's example) through fusermount3, and reads a file in it,
 #      once with libfuse 3 and once with libfuse 2, as AppImages do
+#   6. another console: Ctrl+Alt+F2, pressed on the keyboard while the
+#      person's desktop has tty1, shows a login prompt on tty2, and the
+#      person logs in there
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
@@ -378,6 +381,43 @@ for program in fuse-hello fuse2-hello; do
         || fail "$program's file system said not what it has; see $work/$program.log"
 done
 echo "  sara mounted FUSE file systems with libfuse 3 and 2, and read them"
+
+echo "6. another console"
+# A console opens root's shell while root has never had a password, as
+# on this test system (usr/lib/bunix/console-shell); an installed one
+# has: given one, it asks for a login.  (Not locked, as the installer
+# has it: that would end the test's own way in, root's key.)
+in_guest "echo 'root:a password of root' | chpasswd" || fail "could not give root a password"
+# niri hands the screen over when it is asked to, and logind then starts
+# what the console has (system/usr/lib/systemd/system/autovt@.service)
+printf 'sendkey ctrl-alt-f2\n' | in_machine_directory "python3 monitor.py" \
+    || fail "could not press Ctrl+Alt+F2 on the machine's keyboard"
+console_has_a_login_prompt() {
+    in_guest "cat /sys/class/tty/tty0/active; systemctl is-active autovt@tty2.service; ps -o comm= -t tty2" \
+        > "$work/tty2.log" 2>&1 || true
+    grep -q '^tty2$' "$work/tty2.log" && grep -q '^active$' "$work/tty2.log" && grep -q '^login$' "$work/tty2.log"
+}
+deadline=$(($(date +%s) + 30))
+until console_has_a_login_prompt; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        fail "Ctrl+Alt+F2 shows no login prompt on tty2; see $work/tty2.log"
+    fi
+    sleep 2
+done
+type_on_keyboard sara
+# login asks for the password once it has the name
+login_asks_for_the_password=2
+sleep $login_asks_for_the_password
+type_on_keyboard secret
+deadline=$(($(date +%s) + 20))
+until in_guest "loginctl list-sessions --no-legend" 2> /dev/null | grep -q " sara .* tty2 "; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        in_guest "loginctl list-sessions --no-legend" > "$work/sessions.log" 2>&1 || true
+        fail "sara could not log in on tty2; see $work/sessions.log"
+    fi
+    sleep 2
+done
+echo "  Ctrl+Alt+F2 shows a login prompt on tty2, and sara logged in there"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true

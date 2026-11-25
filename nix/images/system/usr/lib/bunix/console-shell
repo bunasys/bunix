@@ -4,6 +4,12 @@
 # away while root has never had a password -- a system in memory, or a
 # new disk, where nobody could log in otherwise -- and a login prompt in
 # every other case.
+# On tty1 from boot (usr/lib/systemd/system-preset/00-bunix.preset), and
+# on tty2 to tty6 once a person switches to one: logind then starts
+# autovt@<tty>.service, which here is a link to console-shell@.service.
+# (Elsewhere it is getty@, and agetty, which bunix does not have.)
+# Without it those consoles stay blank, and the desktop's login screen,
+# which takes tty1, leaves no console to type on.
 # "Never had one": the field holds no hash at all ('', '*', '!*', or
 # sysusers' '!unprovisioned').  A locked password ('!' before a hash,
 # `passwd -l root`) means "no logins as root" and gets the login prompt,
