@@ -25,7 +25,11 @@
 #              development key, which is not secret
 #              (nix/development-key/README).
 #   version    the system's, as images/system.nix takes it
-{ system ? builtins.currentSystem, signature ? null, version ? import ../release.nix }:
+#   secureBootLoader
+#              x86, a release's: systemd-boot signed for Secure Boot, as
+#              images/system.nix takes it (tools/publish.sh makes it)
+{ system ? builtins.currentSystem, signature ? null, version ? import ../release.nix
+, secureBootLoader ? null }:
 
 let
   tools = import ../tools.nix { inherit system; };
@@ -34,7 +38,7 @@ let
   architecture = import ../architecture.nix system;
 
   signing = if signature == null then "development" else "release";
-  systemImage = import ./system.nix { inherit system signing version; };
+  systemImage = import ./system.nix { inherit system signing version secureBootLoader; };
   certificate =
     if signing == "development" then ../development-key/development.crt else ../../keys/verity.crt;
 
@@ -62,7 +66,7 @@ stagedBuild {
   buildDepends = signingTools;
   env = {
     system_image = systemImage;
-    uki = import ./uki.nix { inherit system signing version; };
+    uki = import ./uki.nix { inherit system signing version secureBootLoader; };
     signature = if signature == null then "${developmentSignature}/signature" else signature;
     inherit certificate;
     signature_check = ./signature-check.sh;

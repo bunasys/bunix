@@ -25,7 +25,10 @@
 #
 # No device tree in it: a machine that needs one gets it from what
 # started its EFI.
-{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix }:
+#   secureBootLoader
+#            as images/system.nix takes it, for the system it is of
+{ system ? builtins.currentSystem, signing ? "development", version ? import ../release.nix
+, secureBootLoader ? null }:
 
 let
   tools = import ../tools.nix { inherit system; };
@@ -51,7 +54,7 @@ stagedBuild {
     secure_boot_key = if isSignedHere then ../development-key/development.key else "";
     secure_boot_certificate = if isSignedHere then ../development-key/development.crt else "";
     initrd = import ./initrd.nix { inherit system; };
-    system_image = import ./system.nix { inherit system signing version; };
+    system_image = import ./system.nix { inherit system signing version secureBootLoader; };
     # root=: the root partition by its name, not by its type, as systemd
     # would find it by itself: another Linux on the same disk has a root
     # partition of that type too, and it is not this system's to mount.

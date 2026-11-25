@@ -39,8 +39,9 @@
 #
 # Three keys sign, and none is in a file: 1Password asks for the image
 # key once an image (the system and each of $extensions below, for each
-# architecture; tools/sign.sh), for the Secure Boot key once (the x86_64
-# kernel image, tools/sign-kernel-image.sh), and for the release key once
+# architecture; tools/sign.sh), for the Secure Boot key three times (on
+# x86_64: systemd-boot, which shim starts, the kernel image, and the live
+# stick's; tools/sign-kernel-image.sh), and for the release key once
 # (tools/sign-list.sh).
 #
 # What a signature here vouches for is what the builders made of the
@@ -132,9 +133,12 @@ fi
 # The files are gathered beside where they are to be, and the directory
 # gets its name once all of it is there and checked.
 unfinished=$release.unfinished
-rm -rf "$unfinished"
-mkdir -p "$unfinished"
-trap 'rm -rf "$unfinished"' EXIT
+# what is signed for Secure Boot here, kept beside them: the kernel image
+# goes into the release, the rest into builds
+signed_here=$release.signed-here
+rm -rf "$unfinished" "$signed_here"
+mkdir -p "$unfinished" "$signed_here"
+trap 'rm -rf "$unfinished" "$signed_here"' EXIT
 
 # in_builder <architecture> <shell commands>: runs them where that
 # architecture is built, in the home directory there (where ssh starts).
@@ -183,6 +187,18 @@ leave_signature() {
     echo "  $2"
     tools/sign.sh "$2" | in_builder "$1" "cat > $3"
 }
+# sign_for_secure_boot <a file at the x86_64 builder> <the signed one, to
+# leave there>: brings it here, where the password manager is, signs it
+# with the Secure Boot key, and leaves it with the builder, for its builds
+# to take (they take it only if it is theirs: images/check-release-signed.sh).
+# A copy stays in $signed_here.
+sign_for_secure_boot() {
+    signed_name=${2##*/}
+    in_builder x86_64 "cat $1" > "$signed_here/$signed_name.unsigned"
+    tools/sign-kernel-image.sh "$signed_here/$signed_name.unsigned" "$signed_here/$signed_name"
+    in_builder x86_64 "cat > $2" < "$signed_here/$signed_name"
+    rm "$signed_here/$signed_name.unsigned"
+}
 
 # ---- Each architecture's files -------------------------------------------------
 
@@ -198,17 +214,29 @@ for architecture in $architectures; do
     # A test system's images are signed in their builds.  A release's
     # are built up to their hashes, the hashes signed here, and the
     # builds then given the signatures.
+    # x86_64's /usr has systemd-boot signed for Secure Boot, which shim
+    # starts (images/signed-loader.nix): signed here before the system is
+    # built, as it is part of what the system's hash covers
+    loader_signed=
+    if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
+        echo "$architecture: signing systemd-boot for Secure Boot"
+        systemd=$(build "$architecture" bunix-release/source/nix/base.nix -A systemd)
+        sign_for_secure_boot "$systemd/usr/lib/systemd/boot/efi/systemd-bootx64.efi" bunix-release/systemd-boot.efi
+        loader_signed="--arg secureBootLoader ./bunix-release/systemd-boot.efi"
+    fi
+
     system_signed=
     if [ $signed_by = release ]; then
         echo "$architecture: building the system, up to what is signed, and signing its hash"
-        system=$(build "$architecture" $images/system.nix --argstr signing release)
+        system=$(build "$architecture" $images/system.nix --argstr signing release $loader_signed)
         system_hash=$(in_builder "$architecture" "cat $system/usr-partition/usrhash")
         leave_signature "$architecture" "$system_hash" $system_signature
         system_signed="--arg signature ./$system_signature"
     fi
 
     echo "$architecture: building the files of bunix $version"
-    built_directories=$(build "$architecture" $images/update.nix $system_signed)
+    update=$(build "$architecture" $images/update.nix $system_signed $loader_signed)
+    built_directories=$update
     for extension in $extensions; do
         extension_signed=
         if [ $signed_by = release ]; then
@@ -228,12 +256,19 @@ for architecture in $architectures; do
     has_live_image=no
     if [ "$architecture" = x86_64 ]; then
         has_live_image=yes
-        echo "$architecture: building the live image"
         live_signed=
         if [ $signed_by = release ]; then
-            live_signed="--arg signature ./$system_signature --arg desktopSignature ./bunix-release/desktop.signature"
+            # Its two kernel images signed for Secure Boot first: the one it
+            # installs, the release's own, and its own (images/live.nix)
+            live_signed="--arg signature ./$system_signature --arg desktopSignature ./bunix-release/desktop.signature $loader_signed"
+            echo "$architecture: signing the kernel image, and the live stick's, for Secure Boot"
+            sign_for_secure_boot "$update/bunix_$version.x86-64.efi" bunix-release/kernel-image.efi
+            live_kernel_image=$(build "$architecture" $images/live.nix -A kernelImage $live_signed)
+            sign_for_secure_boot "$live_kernel_image/bunix-live_$version.efi" bunix-release/live-kernel-image.efi
+            live_signed="$live_signed --arg kernelImage ./bunix-release/kernel-image.efi --arg liveKernelImage ./bunix-release/live-kernel-image.efi"
         fi
-        live_image=$(build "$architecture" $images/live.nix $live_signed)
+        echo "$architecture: building the live image"
+        live_image=$(build "$architecture" $images/live.nix -A image $live_signed)
         built_directories="$built_directories $live_image"
     fi
     received=$unfinished/from-$architecture
@@ -285,14 +320,11 @@ for architecture in $architectures; do
     # out of a store they come read-only
     chmod u+w "$received"/*
 
-    # A release's x86_64 kernel image is signed here, where the password
-    # manager is; a test system's was signed in its build, with the
-    # development key (nix/images/uki.nix).
+    # A release's x86_64 kernel image, signed here, where the password
+    # manager is, before the live stick (above); a test system's was
+    # signed in its build, with the development key (nix/images/uki.nix).
     if [ $signed_by = release ] && [ "$architecture" = x86_64 ]; then
-        echo "$architecture: signing the kernel image for Secure Boot"
-        kernel_image=$received/bunix_$version.$named.efi
-        tools/sign-kernel-image.sh "$kernel_image" "$kernel_image.signed"
-        mv "$kernel_image.signed" "$kernel_image"
+        cp "$signed_here/kernel-image.efi" "$received/bunix_$version.$named.efi"
     fi
     mv "$received"/* "$unfinished/"
     rmdir "$received"

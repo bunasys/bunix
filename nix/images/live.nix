@@ -77,11 +77,7 @@ let
   hasSecureBootSignatures = kernelImage != null && liveKernelImage != null && secureBootLoader != null;
   hasAllSignatures = desktopSignature != null && (hasSecureBootSignatures || !isX86);
   hasNoSignatures = desktopSignature == null && kernelImage == null && liveKernelImage == null && secureBootLoader == null;
-in
-assert (isRelease && hasAllSignatures) || (!isRelease && hasNoSignatures);
-assert secureBootEnrolment -> (!isRelease && isX86);
 
-let
   signing = if isRelease then "release" else "development";
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
@@ -94,7 +90,7 @@ let
   # the system the stick runs is the one installed: of a release, it takes
   # only what the release key signed
   systemImage = import ./system.nix { inherit system signing version secureBootLoader; };
-  update = import ./update.nix { inherit system signature version; };
+  update = import ./update.nix { inherit system signature version secureBootLoader; };
   developmentKey = ../development-key/development.key;
   developmentCertificate = ../development-key/development.crt;
   # what a test system's files are signed with in their builds, and a
@@ -149,7 +145,14 @@ in
 {
   kernelImage = liveKernelImageBuild;
 
-  image = stagedBuild {
+  # (the stick takes a release's signatures all, or none of them: a
+  # release's system with a test system's anything is no system anybody
+  # should install.  Its kernel image alone is built before they are
+  # made.)
+  image =
+    assert (isRelease && hasAllSignatures) || (!isRelease && hasNoSignatures);
+    assert secureBootEnrolment -> (!isRelease && isX86);
+    stagedBuild {
     name = "bunix-live";
     run = ./live.sh;
     # systemd: systemd-repart, which makes the image.  dosfstools and
