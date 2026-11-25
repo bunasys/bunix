@@ -17,9 +17,11 @@ work=$(mktemp -d)
 BUNIX_SECURE_BOOT_KEY_FILE=$development_key BUNIX_SECURE_BOOT_CERTIFICATE=$development_certificate \
     bash $sign_kernel_image $unsigned $work/development-signed.efi
 
-# What a signature covers, as osslsigncode works it out of the file
+# What a signature covers, as osslsigncode works it out of the file.
+# (A file whose signature does not verify still has it worked out, and
+# is turned down below, with a word of why, not ended here by pipefail.)
 covered_hash() {
-    osslsigncode verify -CAfile "$2" -in "$1" 2>&1 | sed -n 's/^Calculated message digest *: *//p' | tr -d ' '
+    { osslsigncode verify -CAfile "$2" -in "$1" 2>&1 || true; } | sed -n 's/^Calculated message digest *: *//p' | tr -d ' '
 }
 release_hash=$(covered_hash $release_signed $release_certificate)
 own_hash=$(covered_hash $work/development-signed.efi $development_certificate)

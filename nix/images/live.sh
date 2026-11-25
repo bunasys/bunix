@@ -17,11 +17,9 @@ uki=$update/bunix_$version.$partition_architecture.efi
 desktop_image=$(echo $desktop/desktop_*.raw)
 live_uki=$built_live_kernel_image/bunix-live_$version.efi
 [ -f "$usr_file" ] && [ -f "$verity_file" ] && [ -f "$signature_file" ] && [ -f "$uki" ] && [ -f "$desktop_image" ] && [ -f "$live_uki" ]
-# the id is what is between the last two dots of a name
-id_of() {
-    local name=${1%.raw}
-    echo ${name##*.}
-}
+# The ids of the stick's partitions, which the live kernel image mounts
+# them by (live-kernel-image.sh): esp_id, usr_id, verity_id, signature_id
+. $built_live_kernel_image/partition-ids
 
 # A release's kernel images, signed for Secure Boot where bunix's key is
 # (tools/publish.sh), in place of what was built here unsigned, if they
@@ -90,25 +88,23 @@ partition() {
     printf '%s\n' '[Partition]' "$@" > live.d/$file
 }
 mkdir -p live.d
-# The ESP, by the id the live kernel image mounts it by
-# (live-kernel-image.sh), as large as what is in it and 64 MiB more for
-# the file system's own tables: repart's own guess (Minimize=guess) nearly
-# doubles it, and the image is downloaded whole
-esp_id=$(cat $built_live_kernel_image/esp-id)
+# The ESP, as large as what is in it and 64 MiB more for the file
+# system's own tables: repart's own guess (Minimize=guess) nearly doubles
+# it, and the image is downloaded whole
 contents_mib=$(( $(du -sb tree/esp | cut -f1) / 1048576 ))
 esp_mib=$(( contents_mib + 64 ))
 partition 00-esp.conf Type=esp Label=bunix-live UUID=$esp_id Format=vfat CopyFiles=/esp:/ \
     SizeMinBytes=${esp_mib}M SizeMaxBytes=${esp_mib}M
-# /usr, as disk.sh puts slot A on a disk: block for block, each partition
-# with the id its file is named by (the kernel image's usrhash= finds it
-# by them) and the name bunix-install finds it by; each as large as its
-# file
+# /usr, as disk.sh puts slot A on a disk, block for block, each partition
+# by the name bunix-install finds it by, but by the stick's own ids (not
+# the ones an installed disk's slot A has: live-kernel-image.sh says why);
+# each as large as its file
 partition 10-usr.conf Type=usr Label=bunix_$version \
-    UUID=$(id_of $usr_file) CopyBlocks=$usr_file ReadOnly=yes
+    UUID=$usr_id CopyBlocks=$usr_file ReadOnly=yes
 partition 11-usr-verity.conf Type=usr-verity Label=bunix_${version}_verity \
-    UUID=$(id_of $verity_file) CopyBlocks=$verity_file ReadOnly=yes
+    UUID=$verity_id CopyBlocks=$verity_file ReadOnly=yes
 partition 12-usr-verity-sig.conf Type=usr-verity-sig Label=bunix_${version}_verity_sig \
-    UUID=$(id_of $signature_file) CopyBlocks=$signature_file ReadOnly=yes
+    UUID=$signature_id CopyBlocks=$signature_file ReadOnly=yes
 
 mkdir -p $out tmp
 # as disk.sh: no loop devices, 512-byte sectors, ids that are the same at

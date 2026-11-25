@@ -96,7 +96,8 @@ USR_SLOT_SIZE=$((USR_SIZE + USR_VERITY_SIZE + USR_SIGNATURE_SIZE))
 NEEDED_SIZE=$((2 * USR_SLOT_SIZE + ROOT_MIN_SIZE))
 # An XBOOTLDR partition, where an ESP has not that much free: two kernel
 # images and more, as x86's had; and what the ESP then needs free still,
-# for systemd-boot and its settings
+# for what starts bunix (shim, systemd-boot, MokManager, bunix's
+# certificate) and systemd-boot's settings
 XBOOTLDR_SIZE=1024
 ESP_LOADER_FREE=4
 # What an ESP that is already there needs free: two kernel images, the
@@ -249,31 +250,41 @@ if [ -b "$files_device" ]; then
   files_disk=$(lsblk -nslpo NAME,TYPE "$files_device" | awk '$2 == "disk" { disk = $1 } END { print disk }')
   files_disk=${files_disk:-$files_device}
 fi
-# One of the three of /usr, as "<what to read it from> <its partition's
-# id>": a file of $files, as a release has them, with the id in its name;
-# or, on the live stick (images/live.nix), the stick's own partition of
-# that name, which the system started from it runs /usr from, with its id.
-#   usr_source <the file's pattern> <the partition's name>
+# The ids slot A's partitions are to have: made of /usr's hash, as
+# images/update.sh makes them, by which the kernel image's usrhash= finds
+# them.  Read from that kernel image, which names the hash.
+usrhash=$(grep -a -o -m 1 'usrhash=[0-9a-f]*' "$uki" | cut -d= -f2)
+[ ${#usrhash} = 64 ] || die "$uki names no /usr by its hash (usrhash=)"
+as_id() {
+  echo "${1:0:8}-${1:8:4}-${1:12:4}-${1:16:4}-${1:20:12}"
+}
+usr_id=$(as_id "${usrhash:0:32}")
+verity_id=$(as_id "${usrhash:32:32}")
+signature_id=$(as_id "$(printf 'bunix usr-verity-sig %s' "$usrhash" | sha256sum | head -c 32)")
+# One of the three of /usr, to read it from: a file of $files, as a
+# release has them, whose name carries its id, which is to be the one the
+# hash makes; or, on the live stick (images/live.nix), the stick's own
+# partition of that name, which the system started from it runs /usr
+# from (by ids of the stick's own).
+#   usr_source <the file's pattern> <the partition's name> <the id>
 usr_source() {
   local found=("$files"/$1)
   if [ -e "${found[0]}" ]; then
     [ ${#found[@]} = 1 ] || die "$files has ${#found[@]} files named $1; a version has one"
-    echo "${found[0]} $(uuid_in_name "${found[0]}")"
+    [ "$(uuid_in_name "${found[0]}")" = "$3" ] || die "${found[0]} is not of the /usr $uki starts"
+    echo "${found[0]}"
     return
   fi
   [ -n "$files_disk" ] || die "$files has no file named $1"
   local partition
   partition=$(lsblk -nrpo NAME,PARTLABEL "$files_disk" | awk -v name="$2" '$2 == name { print $1 }')
   [ -n "$partition" ] || die "$files has no file named $1, and its disk no partition named $2"
-  echo "$partition $(lsblk -ndo PARTUUID "$partition")"
+  echo "$partition"
 }
 # (each on a line of its own: a failure in $(...) ends the script)
-usr_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE.*.raw" "bunix_$release")
-read -r usr_image usr_id <<< "$usr_source_line"
-verity_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity.*.raw" "bunix_${release}_verity")
-read -r verity_image verity_id <<< "$verity_source_line"
-signature_source_line=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw" "bunix_${release}_verity_sig")
-read -r signature_image signature_id <<< "$signature_source_line"
+usr_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE.*.raw" "bunix_$release" "$usr_id")
+verity_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity.*.raw" "bunix_${release}_verity" "$verity_id")
+signature_image=$(usr_source "bunix_$release.usr-$ARCHITECTURE-verity-sig.*.raw" "bunix_${release}_verity_sig" "$signature_id")
 # systemd-boot, from this system's own /usr, the same version's:
 # systemd-bootaa64.efi, which goes on an ESP as EFI/BOOT/BOOTAA64.EFI
 systemd_boot=$(echo /usr/lib/systemd/boot/efi/systemd-boot*.efi)
@@ -295,6 +306,12 @@ secure_boot_certificate=/usr/share/bunix/secure-boot.cer
 has_shim=no
 if [ -f "$shim" ] && [ -f "$signed_systemd_boot" ]; then
   has_shim=yes
+fi
+# The file firmware starts, by its name in bunix's own directory, where
+# firmware's default place is another system's (below)
+loader_file=systemd-boot$loader_kind.efi
+if [ "$has_shim" = yes ]; then
+  loader_file=shim$loader_kind.efi
 fi
 # For an Apple Silicon Mac: what aura's first stage loads from the ESP
 # (nix/boot.nix, mac-stage2), from this system's own /usr too: its device
@@ -681,9 +698,10 @@ fi
 
 # --- where the boot files go --------------------------------------------
 
-# systemd-boot in the place firmware starts by default, and the kernel
-# images on the ESP, as on a disk of images/disk.nix; unless the ESP that
-# is there says otherwise.  Decided before anything on the disk changes.
+# What starts bunix (shim, or systemd-boot) in the place firmware starts
+# by default, and the kernel images on the ESP, as on a disk of
+# images/disk.nix; unless the ESP that is there says otherwise.  Decided
+# before anything on the disk changes.
 loader_on_esp=$default_loader
 writes_boot_entry=no
 needs_xbootldr=no
@@ -700,9 +718,9 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
 need a partition of their own ($XBOOTLDR_SIZE MiB) beside bunix's, which the place
 chosen has no room for"
   fi
-  # Firmware's default place another system's (Windows'): systemd-boot
-  # in bunix's own directory, and a firmware boot entry for it.  A Mac
-  # keeps no entries, and its firmware takes no other place.
+  # Firmware's default place another system's (Windows'): what starts
+  # bunix in bunix's own directory, and a firmware boot entry for it.  A
+  # Mac keeps no entries, and its firmware takes no other place.
   if [ "$default_loader_is_taken" = yes ]; then
     can_write_boot_entries=no
     if [ -d /sys/firmware/efi/efivars ] && [ "$starts_through_aura" = no ]; then
@@ -712,10 +730,7 @@ chosen has no room for"
 by default ($default_loader), and this machine keeps no firmware boot entries
 for bunix's beside it.  If that system is the one being replaced, move the
 file away first, and run bunix-install again."
-    loader_on_esp=EFI/bunix/systemd-boot${loader_kind}.efi
-    if [ "$has_shim" = yes ]; then
-      loader_on_esp=EFI/bunix/shim$loader_kind.efi
-    fi
+    loader_on_esp=EFI/bunix/$loader_file
     writes_boot_entry=yes
   fi
   echo
@@ -954,6 +969,19 @@ echo "Writing /usr ($release)..."
 dd if="$usr_image" of="$(device_of_partuuid "$usr_id")" bs=4M conv=fsync status=none
 dd if="$verity_image" of="$(device_of_partuuid "$verity_id")" bs=4M conv=fsync status=none
 dd if="$signature_image" of="$(device_of_partuuid "$signature_id")" bs=4M conv=fsync status=none
+# Read back through dm-verity, against the hash the kernel image names: a
+# stick or a file that is not what it was made as (a worn stick) fails
+# the install here, and not the machine's first start.  Under a name of
+# its own: the live system's /usr is "usr".
+echo "Checking /usr as written..."
+checked=bunix-install-usr
+/usr/lib/systemd/systemd-veritysetup attach $checked "$(device_of_partuuid "$usr_id")" \
+  "$(device_of_partuuid "$verity_id")" "$usrhash"
+reads_whole=yes
+dd if=/dev/mapper/$checked of=/dev/null bs=4M status=none || reads_whole=no
+/usr/lib/systemd/systemd-veritysetup detach $checked
+[ $reads_whole = yes ] || die "/usr as written to $disk does not match its hash: the stick, or the files,
+are damaged.  Write the stick again, or download the files again."
 
 echo "Writing the boot files..."
 if [ "$new_esp" = yes ]; then
@@ -975,6 +1003,10 @@ mkdir -p "$WORK/esp/$(dirname "$loader_on_esp")" "$WORK"/esp/EFI/Linux "$WORK"/e
 # it; elsewhere systemd-boot.
 if [ "$has_shim" = yes ]; then
   loader_directory=$WORK/esp/$(dirname "$loader_on_esp")
+  # Shim starts fallback (fbx64.efi) in place of systemd-boot where one is
+  # beside it, which another system may have left in EFI/BOOT: it makes
+  # firmware entries of what other systems left, and starts those
+  rm -f "$loader_directory/fb$loader_kind.efi"
   cp "$shim" "$WORK/esp/$loader_on_esp"
   cp "$signed_systemd_boot" "$loader_directory/grub$loader_kind.efi"
   cp "$mok_manager" "$loader_directory/"

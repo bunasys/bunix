@@ -108,10 +108,9 @@ start() {
 }
 # The stick first (bootindex), and the disk bunix is installed to, as
 # tools/install-test.sh has them; the disk alone, by what is on it.
-stick_and_disk="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick,readonly=on
-    -device usb-storage,drive=stick,bootindex=0
-    -drive file=$machine_directory/installed.raw,format=raw,if=none,id=installed -device virtio-blk-pci,drive=installed,bootindex=1"
 installed_disk="-drive file=$machine_directory/installed.raw,format=raw,if=none,id=installed -device virtio-blk-pci,drive=installed,bootindex=1"
+stick_and_disk="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick
+    -device usb-storage,drive=stick,bootindex=0 $installed_disk"
 trap 'kill $qemu 2> /dev/null || true' EXIT
 # what this start has written to the console
 this_start_said() {
