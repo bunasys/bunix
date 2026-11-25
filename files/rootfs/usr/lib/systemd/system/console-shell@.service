@@ -1,6 +1,14 @@
-# The console: root's fish while root has no password, a login prompt once
-# it has one (/usr/lib/bunix/console-shell).  The pattern is systemd's own
-# debug-shell.service.
+# The console: root's shell while nobody has a password, a login prompt
+# once someone has one (/usr/lib/bunix/console-shell).  The pattern is
+# systemd's own debug-shell.service.
+#
+# Where: from boot on tty1 and the serial consoles
+# (usr/lib/systemd/system-preset/00-bunix.preset); and on tty2 to tty6
+# once a person switches to one, where logind starts autovt@<tty>.service,
+# which is a link to this unit (nix/images/system/usr/lib/systemd/system/).
+# Elsewhere autovt@ is getty@, with agetty, which bunix does not have
+# (nix/base/systemd.sh).  Without it those consoles stay blank, and the
+# desktop's login screen, which takes tty1, leaves no console to type on.
 [Unit]
 Description=root shell on %I
 # start once boot has finished, so systemd's status lines do not land on the prompt

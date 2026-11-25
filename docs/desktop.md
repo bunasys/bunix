@@ -199,8 +199,9 @@ installed system.
    the same place, with a spinner.  `tools/render-branding.sh` renders both
    from the SVG.  The boot menu is hidden and lists only bunix
    (`timeout 0`, `auto-entries no`): Windows starts from the firmware's
-   menu.  Ctrl+Alt+F2 to F6 open root shells (logind's autovt@, the console
-   shell for now).  What it took:
+   menu.  Ctrl+Alt+F2 to F6 open the console (logind's autovt@, a link to
+   console-shell@): root's shell until someone has a password, then a
+   login prompt.  What it took:
    - Plymouth finds screens through udev's "seat" tag, set by logind's
      rules: logind is now built and started.
    - With a serial console on the command line Plymouth shows only its

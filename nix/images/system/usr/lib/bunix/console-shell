@@ -1,16 +1,20 @@
 #!/usr/bin/bash
-# The console (console-shell@.service, files/rootfs's; after its
-# console-shell, with bash where that has fish): root's shell straight
-# away while root has never had a password -- a system in memory, or a
-# new disk, where nobody could log in otherwise -- and a login prompt in
-# every other case.
-# "Never had one": the field holds no hash at all ('', '*', '!*', or
-# sysusers' '!unprovisioned').  A locked password ('!' before a hash,
-# `passwd -l root`) means "no logins as root" and gets the login prompt,
-# as does an /etc/shadow that cannot be read.
+# The console (console-shell@.service, files/rootfs's, which says on which
+# consoles; after its console-shell, with bash where that has fish):
+# root's shell straight away while nobody has a password yet -- a system
+# in memory, or a new disk, where nobody could log in otherwise -- and a
+# login prompt in every other case.
+# "Nobody": not root, and no person's account either.  A person with a
+# password can log in; root's shell beside that would let anyone at the
+# keyboard past their locked screen (Ctrl+Alt+F2), on a machine whose
+# root was never given a password, as a disk written from the image is.
+# "A password": a hash in the field.  No hash ('', '*', '!*', sysusers'
+# '!unprovisioned') is none; a locked one ('!' before a hash, `passwd -l
+# root`) is one, and gets the login prompt, as does an /etc/shadow that
+# cannot be read.
 [ -r /etc/shadow ] || exec /usr/bin/login
-root_password=$(awk -F: '$1 == "root" { print $2 }' /etc/shadow)
-case $root_password in
-    *'$'*) exec /usr/bin/login ;;
-esac
+accounts_with_a_password=$(awk -F: '$2 ~ /\$/ { print $1 }' /etc/shadow)
+if [ -n "$accounts_with_a_password" ]; then
+    exec /usr/bin/login
+fi
 exec /usr/bin/bash --login
