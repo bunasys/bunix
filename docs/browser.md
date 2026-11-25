@@ -25,12 +25,13 @@ reviewed, as the desktop's were (`docs/desktop.md`):
    23, Node 24, Go, bindgen, gperf, Wayland, Mesa, PipeWire, D-Bus,
    GLib): NSS and NSPR, pciutils, at-spi2-core, Chromium's own pinned
    Rust and Crubit, TypeScript and esbuild (prebuilt tools that
-   ungoogled-chromium prunes).  And the desktop's portal
-   (xdg-desktop-portal), for every program: file dialogs through
-   xdg-desktop-portal-gnome, with GTK 4, libadwaita and gnome-desktop,
-   which also gives niri's screen casting.
+   ungoogled-chromium prunes), and GTK 4, which Chromium draws its file
+   dialogs with (as 0.4.0's did).  Not a portal for them (2026-11-25):
+   xdg-desktop-portal-gnome hands its file dialog to Nautilus since
+   GNOME 47, and xdg-desktop-portal-gtk is GTK 3.  A portal can come
+   later, for screen sharing.
 2. **Chromium 158** (158.0.8127.88, ungoogled-chromium 158.0.8127.88-1)
-   with Hudhud's changes, without GTK (its dialogs through the portal):
+   with Hudhud's changes, GTK 4 for its dialogs:
    the patches brought from 157, and **Brave Search the default search
    engine**, checked -- 0.4.0's build had no engine enabled.
 3. **Shields and the desktop.**  adblock-rust built in; Hudhud in the
@@ -287,11 +288,14 @@ build has not.  Until then passkeys come from the extensions above.
   file; files/hudhud/scripts/brave-search-first.py moves Brave to
   the front of every country's list (the first is the default) when
   Chromium is built.  Done on the data, not as a patch, so it keeps
-  working as Google edits the lists.
+  working as Google edits the lists.  That alone was not enough: 0.4.0's
+  build started with no default engine at all.  So the default is also
+  a recommended policy (below), which holds whatever country Chromium
+  thinks it is in, and the desktop test checks it.
 - **Recommended policies** (the user can change them), in
   /usr/share/hudhud/policies (the policy-path patch: vendor defaults belong in
   the signed /usr): third-party cookies blocked, HTTPS-First (balanced),
-  no usage reports.
+  no usage reports, Brave Search the default search engine.
 - **First-run preferences** (/usr/lib/hudhud/initial_preferences):
   no sign-in, WebRTC shows only the public address, no first-run screens.
   Enforced policies would show "Managed by your organization", so none
