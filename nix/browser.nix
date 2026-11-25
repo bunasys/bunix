@@ -181,9 +181,34 @@ let
     depends = [ glibc toolchain.gccLibraries toolchain.gcc base.zlib base.zstd ];
     buildDepends = [ chromium-rust-stage0 base.llvm base.cmake ninja pkgconf ];
   };
+
+  # Crubit's cc_bindings_from_rs, the C++ bindings for Chromium's Rust
+  # code, and its support library: installed into chromium-rust's
+  # directory, where Chromium looks for them (bin/, and
+  # lib/third_party/crubit), as tools/rust/build_crubit.py lays out
+  # Chromium's own package.  It runs inside that rustc, so it is built
+  # by it.  The revision Chromium 158 pins (tools/rust/update_rust.py).
+  # Crubit's other tool, rs_bindings_from_cc, Chromium does not use
+  # unless asked (enable_rust_api_from_cpp), and it is not built.
+  crubit = mkSystemPackage {
+    name = "crubit";
+    source = sources.crubit;
+    script = ./browser/crubit.sh;
+    # librustc_driver, which it loads, is chromium-rust's
+    depends = [ glibc toolchain.gccLibraries chromium-rust ];
+    # cargo: the system's (base.rust), driving chromium-rust's rustc
+    buildDepends = [ base.rust ];
+    env = {
+      # Crubit's Cargo.lock
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./browser/crubit-crates.json));
+    };
+  };
 in
 {
-  inherit compiler-rt chromium-rust-stage0 chromium-rust;
+  inherit compiler-rt chromium-rust-stage0 chromium-rust crubit;
   inherit nspr nss;
   inherit libxml2 at-spi2-core pciutils libepoxy graphene libtiff gdk-pixbuf gtk4;
 }
