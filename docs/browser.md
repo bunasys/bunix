@@ -9,6 +9,36 @@ built on the Fly machine; Shields' engine built and tested.  Chromium 157
 compiles with Hudhud's changes and runs (headless, on the Fly machine);
 its packaged build and the desktop extension are next.
 
+## The port to Nix (2026-11-25)
+
+0.5.3 waits for it.  In steps, each tested on both architectures and
+reviewed, as the desktop's were (`docs/desktop.md`):
+
+0. **Build hosts.**  arm64 on this Mac's builder
+   (`tools/nix-builder/lima.yaml`: 10 cores, 13 GB, a 130 GB disk, 16 GB
+   of swap): free, about half a day a build.  x86-64 on a Fly machine,
+   performance-16x (16 cores, 32 GB), with Nix and the toolchain copied
+   from the x86 builder, which has 16 threads and 31 GB but not the
+   100 GB a build takes: about $1 an hour while it runs, made only for
+   the Chromium build itself (step 2).
+1. **What Chromium is built with**, beside what the Nix build has (LLVM
+   23, Node 24, Go, bindgen, gperf, Wayland, Mesa, PipeWire, D-Bus,
+   GLib): NSS and NSPR, pciutils, at-spi2-core, Chromium's own pinned
+   Rust and Crubit, TypeScript and esbuild (prebuilt tools that
+   ungoogled-chromium prunes).  And the desktop's portal
+   (xdg-desktop-portal), for every program: file dialogs through
+   xdg-desktop-portal-gnome, with GTK 4, libadwaita and gnome-desktop,
+   which also gives niri's screen casting.
+2. **Chromium 158** (158.0.8127.88, ungoogled-chromium 158.0.8127.88-1)
+   with Hudhud's changes, without GTK (its dialogs through the portal):
+   the patches brought from 157, and **Brave Search the default search
+   engine**, checked -- 0.4.0's build had no engine enabled.
+3. **Shields and the desktop.**  adblock-rust built in; Hudhud in the
+   desktop extension, with its launcher, icon and Super+Shift+Return;
+   `tools/desktop-test.sh` opens it, loads a page from the test, has a
+   test advertisement blocked, and checks the default search engine.
+4. **0.5.3**, with the Mac's sound card, Neovim and `which` (#33).
+
 ## The goal
 
 Chromium, built here from source like every other package, with Brave's
