@@ -30,6 +30,11 @@ alsa-utils:
   anitya: 37
   debian: alsa-utils
   alpine: alsa-utils
+at-spi2-core:
+  anitya: 7841
+  cpe: 'a:gnome:at-spi2-core'
+  debian: at-spi2-core
+  alpine: at-spi2-core
 attr:
   anitya: 137
   cpe: 'a:attr_project:attr'
@@ -91,6 +96,20 @@ cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
 cargo-x86_64-linux:
   part-of: rustc-x86_64-linux
+chromium-rust:
+  pinned-by: chromium
+chromium-rust-stage0-cargo-aarch64-linux:
+  pinned-by: chromium-rust
+chromium-rust-stage0-cargo-x86_64-linux:
+  pinned-by: chromium-rust
+chromium-rust-stage0-rust-std-aarch64-linux:
+  pinned-by: chromium-rust
+chromium-rust-stage0-rust-std-x86_64-linux:
+  pinned-by: chromium-rust
+chromium-rust-stage0-rustc-aarch64-linux:
+  pinned-by: chromium-rust
+chromium-rust-stage0-rustc-x86_64-linux:
+  pinned-by: chromium-rust
 cli11:
   anitya: 20578
   debian: cli11
@@ -237,6 +256,11 @@ gdb:
   cpe: 'a:gnu:gdb'
   debian: gdb
   alpine: gdb
+gdk-pixbuf:
+  anitya: 9533
+  cpe: 'a:gnome:gdk-pixbuf'
+  debian: gdk-pixbuf
+  alpine: gdk-pixbuf2
 gettext:
   anitya: 898
   cpe: 'a:gnu:gettext'
@@ -271,6 +295,10 @@ gperf:
   anitya: 1237
   debian: gperf
   alpine: gperf
+graphene:
+  anitya: 12758
+  debian: graphene
+  alpine: graphene
 greetd:
   anitya: 236458
   debian: greetd
@@ -280,6 +308,11 @@ grep:
   cpe: 'a:gnu:grep'
   debian: grep
   alpine: grep
+gtk4:
+  anitya: 13942
+  cpe: 'a:gnome:gtk'
+  debian: libgtk-4-1
+  alpine: gtk4
 gzip:
   anitya: 1290
   cpe: 'a:gnu:gzip'
@@ -354,6 +387,10 @@ libdrm:
   anitya: 1596
   debian: libdrm
   alpine: libdrm
+libepoxy:
+  anitya: 6090
+  debian: libepoxy
+  alpine: libepoxy
 libevdev:
   anitya: 20540
   debian: libevdev
@@ -402,6 +439,11 @@ libslirp:
   cpe: 'a:libslirp_project:libslirp'
   debian: libslirp
   alpine: libslirp
+libtiff:
+  anitya: 1738
+  cpe: 'a:libtiff:libtiff'
+  debian: tiff
+  alpine: tiff
 libtool:
   anitya: 1741
   cpe: 'a:gnu:libtool'
@@ -417,6 +459,11 @@ libxkbcommon:
   cpe: 'a:xkbcommon:libxkbcommon'
   debian: libxkbcommon
   alpine: libxkbcommon
+libxml2:
+  anitya: 1783
+  cpe: 'a:xmlsoft:libxml2'
+  debian: libxml2
+  alpine: libxml2
 linux:
   follows: aurora-silicon/linux@integration/aurora
   version-regex: '([\d.]+)-aurora'
@@ -542,6 +589,16 @@ nodejs:
   cpe: ['a:nodejs:node.js', 'a:nodejs:nodejs']
   debian: nodejs
   alpine: nodejs
+nspr:
+  anitya: 7953
+  cpe: 'a:mozilla:netscape_portable_runtime'
+  debian: nspr
+  alpine: nspr
+nss:
+  anitya: 2503
+  cpe: 'a:mozilla:network_security_services'
+  debian: nss
+  alpine: nss
 openssh:
   anitya: 2565
   cpe: 'a:openbsd:openssh'
@@ -566,6 +623,10 @@ patch:
   cpe: 'a:gnu:patch'
   debian: patch
   alpine: patch
+pciutils:
+  anitya: 2605
+  debian: pciutils
+  alpine: pciutils
 pcre2:
   anitya: 5832
   cpe: 'a:pcre:pcre2'

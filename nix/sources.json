@@ -983,5 +983,92 @@
     "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown/archive/v0.5.3.tar.gz",
     "sha256": "df845b1ab7c7c163ec57d7fa17170c92b04be199bddab02523636efec5224ab6",
     "name": "neovim-treesitter-markdown-0.5.3.tar.gz"
+  },
+  "nspr": {
+    "version": "4.41",
+    "url": "https://ftp.mozilla.org/pub/nspr/releases/v4.41/src/nspr-4.41.tar.gz",
+    "sha256": "c562b8ddfe93704b7dc077be013f01448fdc6c124b1821c0f10471a71cb2e9e6"
+  },
+  "nss": {
+    "version": "3.134",
+    "url": "https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_134_RTM/src/nss-3.134.tar.gz",
+    "sha256": "bb3b300b457f44da9a9486917c3b33bbc5935ae3cdf60aa759a6880889439c50"
+  },
+  "gtk4": {
+    "version": "4.24.2",
+    "url": "https://download.gnome.org/sources/gtk/4.24/gtk-4.24.2.tar.xz",
+    "sha256": "05561abc25d1b1400136bf79ab68830cb4b053d1922ae97e551b3f19755bf3cb"
+  },
+  "gdk-pixbuf": {
+    "version": "2.44.8",
+    "url": "https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.8.tar.xz",
+    "sha256": "919f529512961a12e81cd4b4b466a48c3933469e7f9a310c6513cd4fb252ba3c"
+  },
+  "graphene": {
+    "version": "1.10.8",
+    "url": "https://download.gnome.org/sources/graphene/1.10/graphene-1.10.8.tar.xz",
+    "sha256": "a37bb0e78a419dcbeaa9c7027bcff52f5ec2367c25ec859da31dfde2928f279a"
+  },
+  "libepoxy": {
+    "version": "1.5.10",
+    "url": "https://github.com/anholt/libepoxy/archive/refs/tags/1.5.10.tar.gz",
+    "sha256": "a7ced37f4102b745ac86d6a70a9da399cc139ff168ba6b8002b4d8d43c900c15",
+    "name": "libepoxy-1.5.10.tar.gz"
+  },
+  "libtiff": {
+    "version": "4.7.2",
+    "url": "https://download.osgeo.org/libtiff/tiff-4.7.2.tar.xz",
+    "sha256": "4996f0c4f93094719b1ca5c6279b20e588773ba8a247533e486416fb662ddb88"
+  },
+  "at-spi2-core": {
+    "version": "2.62.2",
+    "url": "https://download.gnome.org/sources/at-spi2-core/2.62/at-spi2-core-2.62.2.tar.xz",
+    "sha256": "7ce81820ddf873b8d930177e0790f730f60d22d8e0acee9ba8f75d8202598de3"
+  },
+  "pciutils": {
+    "version": "3.15.0",
+    "url": "https://mirrors.edge.kernel.org/pub/software/utils/pciutils/pciutils-3.15.0.tar.xz",
+    "sha256": "c02940f430841ecf158d5d9a50007afc4d5353c8678a2455003ca0b2c4e9f5ff"
+  },
+  "libxml2": {
+    "version": "2.15.4",
+    "url": "https://download.gnome.org/sources/libxml2/2.15/libxml2-2.15.4.tar.xz",
+    "sha256": "98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821"
+  },
+  "chromium-rust-stage0-rustc-aarch64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/rustc-1.100.0-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "fcbfa5b8a0cb28f0c4edfb6dda6910ee910993db31f05258613f5cd5b851263a"
+  },
+  "chromium-rust-stage0-rustc-x86_64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/rustc-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "f1d0b1dec81dab6f523cd098507763487b0d4bd7fd2c87582f154128719be03b"
+  },
+  "chromium-rust-stage0-rust-std-aarch64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.100.0-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "c73f62fbe5d837f9807ed9e0076575dd8d3475c79af2b30e3570d328e6713f8f"
+  },
+  "chromium-rust-stage0-rust-std-x86_64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/rust-std-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "4591b6486594ded52ecd6135db95bf9355bbd3ca7a380888b141528bbcf9a5d4"
+  },
+  "chromium-rust-stage0-cargo-aarch64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/cargo-1.100.0-aarch64-unknown-linux-gnu.tar.xz",
+    "sha256": "d07ee80eb6ba3c5845c554ac88086e1ff5d63f83d99c3c09cb32504cbedd6844"
+  },
+  "chromium-rust-stage0-cargo-x86_64-linux": {
+    "version": "1.100.0",
+    "url": "https://static.rust-lang.org/dist/cargo-1.100.0-x86_64-unknown-linux-gnu.tar.xz",
+    "sha256": "7e29ce07d7c6e92d1826870575ba27d57fff6cb3e754aa57d99099cb88fab35d"
+  },
+  "chromium-rust": {
+    "version": "nightly-2026-10-16",
+    "url": "https://static.rust-lang.org/dist/2026-10-16/rustc-nightly-src.tar.xz",
+    "sha256": "998e0957d579eae46f32da2cce726e5307b67822658bfbb9b4c7b9231957f743",
+    "name": "rustc-nightly-2026-10-16-src.tar.xz"
   }
 }
