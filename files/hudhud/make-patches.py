@@ -40,14 +40,21 @@ PATCHES = [
        '  hudhud_shields::MaybeProxyURLLoaderFactory(browser_context, frame, type,\n'
        '                                           isolation_info, factory_builder);\n'),
     ]),
-    ("shields-tab-helper", "chrome/browser/ui/tab_helpers.cc", [
-      ('#include "chrome/browser/bookmarks/bookmark_model_factory.h"\n',
-       '#include "chrome/browser/bookmarks/bookmark_model_factory.h"\n'
+    # A tab's helpers are its TabFeatures since Chromium 158 (they were
+    # tab_helpers.cc's): made when the tab is, and again for the new
+    # contents when a discarded tab comes back.
+    ("shields-tab-helper", "chrome/browser/ui/tabs/tab_features.cc", [
+      ('#include "chrome/browser/actor/actor_keyed_service.h"\n',
+       '#include "chrome/browser/actor/actor_keyed_service.h"\n'
        '#include "chrome/browser/hudhud_shields/shields_tab_helper.h"\n'),
-      ('  infobars::ContentInfoBarManager::CreateForWebContents(web_contents);\n',
-       '  infobars::ContentInfoBarManager::CreateForWebContents(web_contents);\n'
+      ('  infobars::ContentInfoBarManager::CreateForWebContents(tab.GetContents());\n',
+       '  infobars::ContentInfoBarManager::CreateForWebContents(tab.GetContents());\n'
        '  // Hudhud: Shields hide what blocked ads leave behind\n'
-       '  hudhud_shields::ShieldsTabHelper::CreateForWebContents(web_contents);\n'),
+       '  hudhud_shields::ShieldsTabHelper::CreateForWebContents(tab.GetContents());\n'),
+      ('  infobars::ContentInfoBarManager::CreateForWebContents(new_contents);\n',
+       '  infobars::ContentInfoBarManager::CreateForWebContents(new_contents);\n'
+       '  // Hudhud: Shields, as above\n'
+       '  hudhud_shields::ShieldsTabHelper::CreateForWebContents(new_contents);\n'),
     ]),
     ("shields-build", "chrome/browser/BUILD.gn", [
       ('  deps = [\n'
@@ -89,17 +96,15 @@ PATCHES = [
        '  // Hudhud: the start page has no Web Store tile, whatever the policy says\n'
        '  bool hide_web_store_icon = true;\n'),
     ]),
-    ("shields-tab-helper-build", "chrome/browser/ui/BUILD.gn", [
-      ('  public_deps = [ ":tab_helpers" ]\n'
-       '\n'
-       '  deps = [\n'
-       '    ":recently_audible_helper",\n',
-       '  public_deps = [ ":tab_helpers" ]\n'
-       '\n'
-       '  deps = [\n'
-       '    ":recently_audible_helper",\n'
-       '    # Hudhud: Shields (tab_helpers.cc)\n'
-       '    "//chrome/browser/hudhud_shields",\n'),
+    ("shields-tab-helper-build", "chrome/browser/ui/tabs/BUILD.gn", [
+      ('      "//chrome/browser/actor",\n'
+       '      "//chrome/browser/actor/ui",\n'
+       '      "//chrome/browser/banners",\n',
+       '      "//chrome/browser/actor",\n'
+       '      "//chrome/browser/actor/ui",\n'
+       '      "//chrome/browser/banners",\n'
+       '      # Hudhud: Shields (tab_features.cc)\n'
+       '      "//chrome/browser/hudhud_shields",\n'),
     ]),
     ("shields-button", "chrome/browser/ui/views/toolbar/toolbar_view.cc", [
       ('#include "chrome/browser/ui/views/toolbar/split_tabs_button.h"\n',
@@ -223,10 +228,11 @@ PATCHES = [
        '    display: none;\n'
        '  }\n'
        '</style>\n'),
-      ('<settings-prefs id="prefs" prefs="{{prefs_}}"></settings-prefs>\n',
-       '<settings-prefs id="prefs" prefs="{{prefs_}}"></settings-prefs>\n'
+      # before the toolbar and the page, which the rule above hides
+      ('<password-manager-toolbar id="toolbar"',
        '<hudhud-password-manager-choice full-page>\n'
-       '</hudhud-password-manager-choice>\n'),
+       '</hudhud-password-manager-choice>\n'
+       '<password-manager-toolbar id="toolbar"'),
     ]),
     ("password-manager-choice-settings-script",
      "chrome/browser/resources/password_manager/settings_section.ts", [
