@@ -20,14 +20,15 @@
 # After files/rootfs/usr/bin/bunix-install, x86's, which docs/install.md
 # describes.  What is not as there:
 #
-#   - The kernel images go on the ESP, as on the disk of images/disk.nix:
-#     no XBOOTLDR partition.  It was for an ESP as small as Windows makes
-#     it.
-#   - No firmware boot entry is written: there is no efibootmgr here, and
-#     a Mac's firmware (U-Boot) keeps none.  systemd-boot goes where
-#     firmware looks when it has no entry, EFI/BOOT/, and so the ESP has
-#     to be bunix's: one where that place is taken, and not by an earlier
-#     bunix, is refused.  Of several ESPs the person says which.
+#   - The kernel images go on the ESP, as on the disk of images/disk.nix,
+#     where it has room for them; on an ESP as small as Windows makes it,
+#     on an XBOOTLDR partition made for them, as x86's did always.
+#   - systemd-boot goes where firmware looks when it has no entry for a
+#     disk, EFI/BOOT/, with no firmware boot entry: a Mac's firmware
+#     (U-Boot) keeps none.  Where that place is another system's
+#     (Windows'), it goes in EFI/bunix/ instead, and a firmware boot entry
+#     for it is put first (efibootmgr); not on an Apple Silicon Mac, which
+#     has no such entries.  Of several ESPs the person says which.
 #   - On a disk with Apple's partitions nothing of Apple's is offered for
 #     deletion, and the whole disk is not: a Mac does not start without
 #     them, and they are not put back by installing macOS again.
@@ -44,13 +45,16 @@
 #     medium; where they have none, the question is not asked.
 #
 # Nothing outside the chosen space, and free space right after it, is
-# written, except on the disk's ESP: EFI/BOOT/, EFI/Linux/bunix_* and
-# loader/loader.conf; and aurora/stage2.bin on an Apple Silicon Mac's.
+# written, except on the disk's ESP: EFI/BOOT/ or EFI/bunix/,
+# EFI/Linux/bunix_* and loader/loader.conf; aurora/stage2.bin on an Apple
+# Silicon Mac's; and the firmware's boot entries named "bunix", where
+# EFI/bunix/ is written.
 #
 # The partitions it creates in the chosen space (UAPI Discoverable
 # Partitions), the /usr slots first:
 #
 #   ESP         only if the disk has none
+#   XBOOTLDR    only if the ESP has no room for bunix's kernel images
 #   /usr slot A this version: data, dm-verity hashes, signature
 #   /usr slot B empty, for the next update
 #   bunix-root  ext4, the rest of the space
@@ -90,6 +94,11 @@ USR_SIGNATURE_SIZE=1
 ROOT_MIN_SIZE=8192
 USR_SLOT_SIZE=$((USR_SIZE + USR_VERITY_SIZE + USR_SIGNATURE_SIZE))
 NEEDED_SIZE=$((2 * USR_SLOT_SIZE + ROOT_MIN_SIZE))
+# An XBOOTLDR partition, where an ESP has not that much free: two kernel
+# images and more, as x86's had; and what the ESP then needs free still,
+# for systemd-boot and its settings
+XBOOTLDR_SIZE=1024
+ESP_LOADER_FREE=2
 # What an ESP that is already there needs free: two kernel images, the
 # one installed and an update's beside it, of about 105 MiB each;
 # systemd-boot; and on a Mac what its boot loader loads, of about 14 MiB
@@ -182,7 +191,7 @@ device_of_partuuid() {
 }
 
 cleanup() {
-  for dir in "$WORK"/esp "$WORK"/root; do
+  for dir in "$WORK"/esp "$WORK"/boot "$WORK"/root; do
     mountpoint -q "$dir" && umount "$dir"
   done
   return 0
@@ -467,10 +476,10 @@ esp=${esps[0]:-}
 # Whether bunix fits into a place: its whole MiB, and an ESP if the place
 # brings a new one
 fits() {
-  local kind=$1 start=$2 end=$3
+  local kind=$1 start=$2 end=$3 more=${4:-0}
   local first_mib=$(( (start + MiB - 1) / MiB ))
   local end_mib=$(( end / MiB ))
-  local needed=$NEEDED_SIZE
+  local needed=$(( NEEDED_SIZE + more ))
   if [ -z "$esp" ] || [ "$kind" = disk ]; then
     needed=$(( NEEDED_SIZE + ESP_SIZE ))
   fi
@@ -568,6 +577,11 @@ fi
 esp_other_loaders=""
 esp_loader_settings=""
 has_loader_conf=no
+# Where systemd-boot goes on the ESP, and where the kernel images go:
+# firmware's default place, and the ESP, unless found otherwise here
+loader_on_esp=$default_loader
+writes_boot_entry=no
+needs_xbootldr=no
 if [ -n "$esp" ] && [ "$kind" != disk ]; then
   mount -o ro "$esp" "$WORK"/esp ||
     die "the ESP ($esp) has no file system that can be read; make one first (mkfs.vfat -F 32 $esp)"
@@ -603,11 +617,33 @@ if [ -n "$esp" ] && [ "$kind" != disk ]; then
     esp_loader_settings=$(grep -E '^(default|timeout)' "$WORK"/esp/loader/loader.conf | tr '\n' ' ' || true)
   fi
   umount "$WORK"/esp
-  [ "$esp_free_mib" -ge $ESP_NEEDED_FREE ] || die "the ESP ($esp) has only $esp_free_mib MiB free; bunix needs $ESP_NEEDED_FREE"
-  [ "$default_loader_is_taken" = no ] || die "the ESP ($esp) has another system's loader as the one firmware starts
-by default ($default_loader).  bunix would need a firmware boot entry of its
-own beside it, which this installer cannot write yet.  If that system is the
-one being replaced, move the file away first, and run bunix-install again."
+  # Too small for the kernel images (as Windows makes an ESP): they go on
+  # an XBOOTLDR partition of their own, which the place has to have room
+  # for too
+  if [ "$esp_free_mib" -lt $ESP_NEEDED_FREE ]; then
+    [ "$esp_free_mib" -ge $ESP_LOADER_FREE ] || die "the ESP ($esp) has only $esp_free_mib MiB free; bunix needs $ESP_LOADER_FREE"
+    needs_xbootldr=yes
+    has_room=no
+    fits "$kind" "$start" "$end" $XBOOTLDR_SIZE && has_room=yes
+    [ "$has_room" = yes ] || die "the ESP ($esp) has room for systemd-boot only, and the kernel images
+need a partition of their own ($XBOOTLDR_SIZE MiB) beside bunix's, which the place
+chosen has no room for"
+  fi
+  # Firmware's default place another system's (Windows'): systemd-boot
+  # in bunix's own directory, and a firmware boot entry for it.  A Mac
+  # keeps no entries, and its firmware takes no other place.
+  if [ "$default_loader_is_taken" = yes ]; then
+    can_write_boot_entries=no
+    if [ -d /sys/firmware/efi/efivars ] && [ "$starts_through_aura" = no ]; then
+      can_write_boot_entries=yes
+    fi
+    [ "$can_write_boot_entries" = yes ] || die "the ESP ($esp) has another system's loader as the one firmware starts
+by default ($default_loader), and this machine keeps no firmware boot entries
+for bunix's beside it.  If that system is the one being replaced, move the
+file away first, and run bunix-install again."
+    loader_on_esp=EFI/bunix/systemd-boot${loader_kind}.efi
+    writes_boot_entry=yes
+  fi
   if [ "$starts_through_aura" = yes ] && [ "$mac_stage2_is_taken" = yes ]; then
     die "the ESP ($esp) has what another system on this Mac is started by
 ($mac_stage2_on_esp), and bunix's would take its place.  If that system is the
@@ -781,6 +817,10 @@ if [ -z "$esp" ]; then
   esp_uuid=$(new_uuid)
   add_partition $ESP_SIZE $TYPE_ESP "ESP" "$esp_uuid"
 fi
+if [ "$needs_xbootldr" = yes ]; then
+  xbootldr_uuid=$(new_uuid)
+  add_partition $XBOOTLDR_SIZE $TYPE_XBOOTLDR "bunix-boot" "$xbootldr_uuid"
+fi
 root_uuid=$(new_uuid)
 # Slot A: read-only (GPT attribute 60), as images/disk.sh makes it
 add_partition $USR_SIZE $TYPE_USR "bunix_$release" "$(uuid_in_name "$usr_image")" GUID:60
@@ -820,17 +860,33 @@ if [ "$new_esp" = yes ]; then
   mkfs.vfat -F 32 -n ESP "$esp" >/dev/null
 fi
 mount "$esp" "$WORK"/esp
-mkdir -p "$WORK/esp/$(dirname "$default_loader")" "$WORK"/esp/EFI/Linux "$WORK"/esp/loader
+if [ "$writes_boot_entry" = yes ]; then
+  # An earlier bunix's own directory, x86's (shim, and systemd-boot under
+  # shim's name for it): this one's systemd-boot takes its place
+  rm -rf "$WORK"/esp/EFI/bunix
+fi
+mkdir -p "$WORK/esp/$(dirname "$loader_on_esp")" "$WORK"/esp/EFI/Linux "$WORK"/esp/loader
 # Where firmware looks when it has no entry for a disk, which is all a
 # Mac's ever does (checked above: the place is free, or an earlier
-# bunix's)
-cp "$systemd_boot" "$WORK/esp/$default_loader"
+# bunix's); or bunix's own directory, which an entry names (below)
+cp "$systemd_boot" "$WORK/esp/$loader_on_esp"
 # An earlier bunix's kernel images, whose /usr is gone: systemd-boot would
 # start the newest version among them and this one
 rm -f "$WORK"/esp/EFI/Linux/bunix_*.efi
 # The kernel image, under the name systemd-boot and sysupdate know an
-# installed one by
-cp "$uki" "$WORK/esp/EFI/Linux/bunix_$release.efi"
+# installed one by: on the ESP, or on the XBOOTLDR partition, which
+# systemd-boot reads as well, and the installed system mounts at /boot,
+# where updates put the next (usr/lib/sysupdate.d/90-uki.transfer)
+kernel_images=$WORK/esp/EFI/Linux
+if [ "$needs_xbootldr" = yes ]; then
+  xbootldr=$(device_of_partuuid "$xbootldr_uuid")
+  mkfs.vfat -F 32 -n BUNIX-BOOT "$xbootldr" >/dev/null
+  mkdir -p "$WORK"/boot
+  mount "$xbootldr" "$WORK"/boot
+  kernel_images=$WORK/boot/EFI/Linux
+  mkdir -p "$kernel_images"
+fi
+cp "$uki" "$kernel_images/bunix_$release.efi"
 if [ "$starts_through_aura" = yes ]; then
   mkdir -p "$WORK/esp/$(dirname "$mac_stage2_on_esp")"
   # Under another name until it is whole: a Mac that already starts from
@@ -852,6 +908,21 @@ if [ "$kind" = earlier ]; then
   printf '%s\n' "$loader_settings" 'default bunix_*' > "$loader_conf"
 elif [ ! -e "$loader_conf" ]; then
   printf '%s\n' "$loader_settings" > "$loader_conf"
+fi
+
+# The firmware's entry for bunix's systemd-boot, where it is not in the
+# default place: first in the firmware's boot order (efibootmgr --create
+# puts it there).  An earlier bunix's entries, by the name, go first:
+# they name a loader that is gone, or this one twice.
+if [ "$writes_boot_entry" = yes ]; then
+  echo "Adding bunix to the firmware's boot entries..."
+  earlier_entries=$(efibootmgr | sed -n -E 's/^Boot([0-9A-Fa-f]{4})\*? bunix(\t.*)?$/\1/p')
+  for number in $earlier_entries; do
+    efibootmgr --quiet --bootnum "$number" --delete-bootnum
+  done
+  esp_number=$(cat /sys/class/block/"$(basename "$esp")"/partition)
+  efibootmgr --quiet --create --disk "$disk" --part "$esp_number" --label bunix \
+    --loader "\\${loader_on_esp//\//\\}"
 fi
 
 echo "Creating the root file system..."
@@ -940,6 +1011,11 @@ if [ "$starts_through_aura" = yes ]; then
   echo "  tools/mac-stage1.sh $(lsblk -ndo PARTUUID "$esp") put root@<this Mac's address>"
   echo "It puts on the ESP what the recovery system needs, and says what to do."
 else
-  echo "It starts when the machine's firmware starts this disk; choose the disk"
-  echo "in the firmware's boot menu if another system starts first."
+  if [ "$writes_boot_entry" = yes ]; then
+    echo "It starts first now: the firmware's boot entry for it comes before the"
+    echo "others.  The other system is in the firmware's boot menu."
+  else
+    echo "It starts when the machine's firmware starts this disk; choose the disk"
+    echo "in the firmware's boot menu if another system starts first."
+  fi
 fi

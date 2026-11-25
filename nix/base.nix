@@ -477,6 +477,27 @@ let
     env = { configure_arguments = "--enable-compat-symlinks --without-iconv"; };
   };
 
+  # efivar: reads and writes EFI's variables, and makes the paths to
+  # devices and files they hold, for efibootmgr.
+  efivar = mkSystemPackage {
+    name = "efivar";
+    source = sources.efivar;
+    script = ./base/efivar.sh;
+    depends = [ glibc ];
+  };
+
+  # efibootmgr: the firmware's list of what to start, which bunix-install
+  # puts bunix first in where the ESP's default place is another system's
+  # (Windows').
+  efibootmgr = mkSystemPackage {
+    name = "efibootmgr";
+    source = sources.efibootmgr;
+    script = ./base/efibootmgr.sh;
+    depends = [ glibc efivar popt ];
+    # bzip2: the archive is compressed with it
+    buildDepends = [ pkgconf bzip2 ];
+  };
+
   # ps, top, free, pgrep and pkill, pidof, sysctl, uptime, vmstat, watch,
   # w.  kill comes from util-linux.
   procps-ng = mkSystemPackage {
@@ -1152,7 +1173,7 @@ let
 in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
-  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
+  inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools efivar efibootmgr procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
   inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture c-utf8-locale osslsigncode;
 }

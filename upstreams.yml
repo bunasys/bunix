@@ -155,6 +155,15 @@ e2fsprogs:
   cpe: 'a:e2fsprogs_project:e2fsprogs'
   debian: e2fsprogs
   alpine: e2fsprogs
+efibootmgr:
+  anitya: 663
+  debian: efibootmgr
+  alpine: efibootmgr
+efivar:
+  anitya: 664
+  cpe: 'a:efivar_project:efivar'
+  debian: efivar
+  alpine: efivar
 elfutils:
   anitya: 5679
   cpe: 'a:elfutils_project:elfutils'

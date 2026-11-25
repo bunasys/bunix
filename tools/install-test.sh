@@ -44,12 +44,22 @@
 #   5. the second disk again, started by U-Boot: the EFI firmware a Mac
 #      is given (nix/boot.nix), here as built for this virtual machine;
 #      and Apple's partitions are still what they were (aarch64)
+#   6. from the live stick again, onto a third disk, laid out as a PC's
+#      with Windows: an ESP of 100 MB with Windows' loader in the place
+#      firmware starts by default, its reserved, data and recovery
+#      partitions, and free space, which bunix goes into.  The kernel
+#      images get an XBOOTLDR partition, systemd-boot goes in EFI/bunix,
+#      and a firmware boot entry for it comes first (x86_64)
+#   7. that disk starts bunix by the firmware's entry, which comes before
+#      the rest; and Windows' partitions and loader are what they were
+#      (x86_64)
 #
 # The person's way in is a key this test puts in their home after the
 # installer has finished: the installed system takes no password over
 # SSH, and root's account is locked.  NOT tested: a login at the console
-# with the password, a disk whose ESP has another system's loader, or
-# what another system on the Mac is started by (both are to be refused),
+# with the password, a Mac's ESP with another system's loader, or what
+# another system on the Mac is started by (both are to be refused), a
+# Windows that starts (its partitions hold nothing that would),
 # U-Boot as built for a Mac, on one, and a driver that gets its firmware
 # when it is asked again (no device here wants any).
 #
@@ -114,7 +124,7 @@ fi
 
 # Empty, and as large as they are only in name: what is written of them
 # is all that is kept.
-in_machine_directory "truncate -s 16G whole.raw && truncate -s 24G mac.raw"
+in_machine_directory "truncate -s 16G whole.raw && truncate -s 24G mac.raw && truncate -s 24G windows.raw"
 
 # ---- Machines --------------------------------------------------------------------
 
@@ -518,6 +528,100 @@ checksums_of "$left_alone" > "$work/left-alone-after"
 cmp -s "$work/left-alone-before" "$work/left-alone-after" \
     || fail "one of Apple's partitions, or the other system's ESP, is not what it was before the installer ran"
 echo "  Apple's partitions and the other system's ESP: as they were"
+
+if [ $starts_from_live_image = yes ]; then
+    echo "6. from the live stick, onto a disk laid out as a Windows PC's"
+    # Given no place in QEMU's list of what to start (bootindex), so that
+    # the firmware goes by its own boot entries when the disk is started
+    # alone (7); while the stick is in, the stick comes first.  An id it
+    # is found by in the system in memory.
+    windows_disk="-drive file=$machine_directory/windows.raw,format=raw,if=none,id=windows -device virtio-blk-pci,drive=windows,serial=windows"
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $stick $windows_disk \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
+    answers_within 120 root || fail "the system in memory, from the live image, did not answer on SSH"
+    windows=$(as root "readlink -f /dev/disk/by-id/virtio-windows")
+    # Windows' own types, as Windows' installer makes a disk: its ESP of
+    # 100 MB, the reserved partition, its data, and its recovery
+    # partition.  As "start:size" in MiB, for checksums (below): what of
+    # Windows bunix-install is to leave alone.
+    windows_partitions="101:16 117:8192 8309:600"
+    as root "sfdisk -q $windows" <<'END' || fail "could not lay the Windows PC's disk out"
+label: gpt
+start=1MiB, size=100MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="EFI system partition"
+start=101MiB, size=16MiB, type=E3C9E316-0B5C-4DB8-817D-F92DF00215AE, name="Microsoft reserved partition"
+start=117MiB, size=8192MiB, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="Basic data partition"
+start=8309MiB, size=600MiB, type=DE94BBA4-06D1-4D40-A16A-BFD50179D6AC
+END
+    # Something in each of Windows' partitions, to be found again; and on
+    # its ESP its loader, where Windows puts it and in the place firmware
+    # starts by default, as Windows has them
+    as root "set -e
+        for number in 2 3 4; do
+            dd if=/dev/urandom of=${windows}\$number bs=1M count=8 status=none
+        done
+        mkfs.vfat -F 32 -n SYSTEM ${windows}1 > /dev/null
+        mkdir -p /run/windows-esp
+        mount ${windows}1 /run/windows-esp
+        mkdir -p /run/windows-esp/EFI/Microsoft/Boot /run/windows-esp/EFI/BOOT
+        head -c 1500000 /dev/urandom > /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi
+        cp /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi /run/windows-esp/EFI/BOOT/BOOTX64.EFI
+        umount /run/windows-esp
+        sync
+        udevadm settle" || fail "could not fill the Windows PC's disk"
+    windows_checksums() {
+        for stretch in $windows_partitions; do
+            in_machine_directory "dd if=windows.raw bs=1048576 skip=${stretch%:*} count=${stretch#*:} 2> /dev/null | sha256sum"
+        done
+        as root "mount -o ro ${windows}1 /run/windows-esp &&
+            sha256sum /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi /run/windows-esp/EFI/BOOT/BOOTX64.EFI;
+            umount /run/windows-esp"
+    }
+    windows_checksums > "$work/windows-before"
+    # Its places: Windows' three partitions (1-3), the free space after
+    # them (4), the whole disk (5).  The free space; the console (2);
+    # bash (1).
+    run_installer windows "$(number_of "$windows")
+4
+2
+windows-pc
+Wendy of the PC
+wendy
+1
+the password of Wendy
+the password of Wendy
+yes"
+    [ -n "$(partition_named "$windows" bunix-boot)" ] \
+        || fail "the installer made no XBOOTLDR partition beside the ESP of 100 MB; see $work/install-windows.log"
+    first_entry=$(as root "efibootmgr | sed -n 's/^BootOrder: \([0-9A-F]*\).*/\1/p'")
+    as root "efibootmgr" > "$work/boot-entries" 2>&1
+    grep -q -E "^Boot$first_entry\*? bunix" "$work/boot-entries" \
+        || fail "the firmware's first boot entry is not bunix's; see $work/boot-entries"
+    expect_root_locked "$windows"
+    give_key_to "$windows" wendy
+    partitions_of root "$windows" > "$work/windows-partitions"
+    power_off
+
+    echo "7. the Windows PC's disk starts bunix, by the firmware's entry for it"
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $windows_disk
+    expect_installed wendy "Wendy of the PC" /usr/bin/bash windows-pc "$work/windows-partitions"
+    [ "$(as wendy "findmnt -no SOURCE /boot")" = "$(as wendy "readlink -f /dev/disk/by-partlabel/bunix-boot")" ] \
+        || fail "the XBOOTLDR partition is not the one at /boot, where updates put kernel images"
+    as wendy sync
+    pull_the_plug
+    # (the stick in again, for the system in memory to look with)
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $stick $windows_disk \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
+    answers_within 120 root || fail "the system in memory, from the live image, did not answer on SSH"
+    windows=$(as root "readlink -f /dev/disk/by-id/virtio-windows")
+    windows_checksums > "$work/windows-after"
+    power_off
+    cmp -s "$work/windows-before" "$work/windows-after" \
+        || fail "Windows' partitions, or its loader on the ESP, are not what they were before the installer ran"
+    echo "  Windows' partitions and loader: as they were"
+fi
 
 if [ $like_an_apple_silicon_mac = yes ]; then
     echo "5. the Mac's disk starts through U-Boot too"

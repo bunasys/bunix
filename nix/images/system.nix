@@ -55,8 +55,9 @@ stagedBuild {
     # what a person at its shell expects to find
     tools.sed tools.grep tools.gawk tools.findutils tools.diffutils tools.tar tools.gzip
     base.procps-ng base.iputils base.iproute2 base.kmod
-    # a disk: systemd checks and makes file systems with these
-    base.e2fsprogs base.dosfstools
+    # a disk: systemd checks and makes file systems with these; and the
+    # firmware's list of what to start, which bunix-install writes to
+    base.e2fsprogs base.dosfstools base.efibootmgr
     # the network, and a way in over it
     base.openssh
     # accounts: what checks who logs in and opens their session (PAM),
