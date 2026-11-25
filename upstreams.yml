@@ -487,6 +487,41 @@ ncurses:
   cpe: 'a:invisible-island:ncurses'
   debian: ncurses
   alpine: ncurses
+neovim:
+  anitya: 9037
+  cpe: 'a:neovim:neovim'
+  debian: neovim
+  alpine: neovim
+neovim-libuv:
+  pinned-by: neovim
+  cpe: 'a:libuv:libuv'
+neovim-lpeg:
+  pinned-by: neovim
+neovim-lua-compat53:
+  pinned-by: neovim
+neovim-luajit:
+  pinned-by: neovim
+  cpe: 'a:luajit:luajit'
+neovim-luv:
+  pinned-by: neovim
+neovim-treesitter:
+  pinned-by: neovim
+neovim-treesitter-c:
+  pinned-by: neovim
+neovim-treesitter-lua:
+  pinned-by: neovim
+neovim-treesitter-markdown:
+  pinned-by: neovim
+neovim-treesitter-query:
+  pinned-by: neovim
+neovim-treesitter-vim:
+  pinned-by: neovim
+neovim-treesitter-vimdoc:
+  pinned-by: neovim
+neovim-unibilium:
+  pinned-by: neovim
+neovim-utf8proc:
+  pinned-by: neovim
 ninja:
   anitya: 132832
   debian: ninja-build

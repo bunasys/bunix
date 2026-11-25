@@ -65,8 +65,9 @@ stagedBuild {
   # glibc cannot depend on it, it is built from glibc.
   contents = [
     base.systemd tools.bash tools.coreutils base.util-linux toolchain.gccLibraries
-    # what a person at its shell expects to find
+    # what a person at its shell expects to find; and an editor, Neovim
     tools.sed tools.grep tools.gawk tools.findutils tools.diffutils tools.tar tools.gzip
+    base.neovim
     base.procps-ng base.iputils base.iproute2 base.kmod
     # a disk: systemd checks and makes file systems with these; and the
     # firmware's list of what to start, which bunix-install writes to

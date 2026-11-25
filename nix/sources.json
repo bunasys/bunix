@@ -894,5 +894,94 @@
     "name": "MicCorUEFCA2011_2011-06-27.crt",
     "url": "https://go.microsoft.com/fwlink/p/?linkid=321194",
     "sha256": "48e99b991f57fc52f76149599bff0a58c47154229b9f8d603ac40d3500248507"
+  },
+  "neovim": {
+    "version": "0.12.6",
+    "url": "https://codeload.github.com/neovim/neovim/tar.gz/refs/tags/v0.12.6",
+    "sha256": "8629fdc5eb951daf89a76f68cad12f2f1e03fab0d539150ba3fe6d177d254b7f"
+  },
+  "neovim-libuv": {
+    "version": "1.52.1",
+    "url": "https://github.com/libuv/libuv/archive/v1.52.1.tar.gz",
+    "sha256": "478baf2599bfbc882c355288c9cb6f92e0e7dda435fa04031fa5b607cf3f414c",
+    "name": "neovim-libuv-1.52.1.tar.gz"
+  },
+  "neovim-luajit": {
+    "version": "fbb36bb6bfa88716a47c58bcf9ce9f2ef752abac",
+    "url": "https://github.com/luajit/luajit/archive/fbb36bb6bfa88716a47c58bcf9ce9f2ef752abac.tar.gz",
+    "sha256": "e60cd2f3057aa39d33d1c895a20087ab54494d9a1ca45aa488ff0378af42df48",
+    "name": "neovim-luajit-fbb36bb6bfa8.tar.gz"
+  },
+  "neovim-luv": {
+    "version": "1.52.1-0",
+    "url": "https://github.com/luvit/luv/archive/1.52.1-0.tar.gz",
+    "sha256": "e8b8774b31d24be4fcf2b021b90599ecccc8e476c61efcc59c3c10cab813a885",
+    "name": "neovim-luv-1.52.1-0.tar.gz"
+  },
+  "neovim-lpeg": {
+    "version": "1.1.0",
+    "url": "https://github.com/neovim/deps/raw/d495ee6f79e7962a53ad79670cb92488abe0b9b4/opt/lpeg-1.1.0.tar.gz",
+    "sha256": "4b155d67d2246c1ffa7ad7bc466c1ea899bbc40fef0257cc9c03cecbaed4352a",
+    "name": "neovim-lpeg-1.1.0.tar.gz"
+  },
+  "neovim-lua-compat53": {
+    "version": "0.13",
+    "url": "https://github.com/lunarmodules/lua-compat-5.3/archive/v0.13.tar.gz",
+    "sha256": "f5dc30e7b1fda856ee4d392be457642c1f0c259264a9b9bfbcb680302ce88fc2",
+    "name": "neovim-lua-compat53-0.13.tar.gz"
+  },
+  "neovim-utf8proc": {
+    "version": "2.11.3",
+    "url": "https://github.com/juliastrings/utf8proc/archive/v2.11.3.tar.gz",
+    "sha256": "abfed50b6d4da51345713661370290f4f4747263ee73dc90356299dfc7990c78",
+    "name": "neovim-utf8proc-2.11.3.tar.gz"
+  },
+  "neovim-unibilium": {
+    "version": "2.1.2",
+    "url": "https://github.com/neovim/unibilium/archive/v2.1.2.tar.gz",
+    "sha256": "370ecb07fbbc20d91d1b350c55f1c806b06bf86797e164081ccc977fc9b3af7a",
+    "name": "neovim-unibilium-2.1.2.tar.gz"
+  },
+  "neovim-treesitter": {
+    "version": "0.26.13",
+    "url": "https://github.com/tree-sitter/tree-sitter/archive/v0.26.13.tar.gz",
+    "sha256": "ece24c3c5e2a76384075e830c7139b59fce8fb01e4ef8436fab08bbe10444c89",
+    "name": "neovim-treesitter-0.26.13.tar.gz"
+  },
+  "neovim-treesitter-c": {
+    "version": "0.24.1",
+    "url": "https://github.com/tree-sitter/tree-sitter-c/archive/v0.24.1.tar.gz",
+    "sha256": "25dd4bb3dec770769a407e0fc803f424ce02c494a56ce95fedc525316dcf9b48",
+    "name": "neovim-treesitter-c-0.24.1.tar.gz"
+  },
+  "neovim-treesitter-lua": {
+    "version": "0.5.0",
+    "url": "https://github.com/tree-sitter-grammars/tree-sitter-lua/archive/v0.5.0.tar.gz",
+    "sha256": "cf01b93f4b61b96a6d27942cf28eeda4cbce7d503c3bef773a8930b3d778a2d9",
+    "name": "neovim-treesitter-lua-0.5.0.tar.gz"
+  },
+  "neovim-treesitter-vim": {
+    "version": "0.8.1",
+    "url": "https://github.com/tree-sitter-grammars/tree-sitter-vim/archive/v0.8.1.tar.gz",
+    "sha256": "93cafb9a0269420362454ace725a118ff1c3e08dcdfdc228aa86334b54d53c2a",
+    "name": "neovim-treesitter-vim-0.8.1.tar.gz"
+  },
+  "neovim-treesitter-vimdoc": {
+    "version": "4.1.0",
+    "url": "https://github.com/neovim/tree-sitter-vimdoc/archive/v4.1.0.tar.gz",
+    "sha256": "020e8f117f648c8697fca967995c342e92dbd81dab137a115cc7555207fbc84f",
+    "name": "neovim-treesitter-vimdoc-4.1.0.tar.gz"
+  },
+  "neovim-treesitter-query": {
+    "version": "0.8.0",
+    "url": "https://github.com/tree-sitter-grammars/tree-sitter-query/archive/v0.8.0.tar.gz",
+    "sha256": "c2b23b9a54cffcc999ded4a5d3949daf338bebb7945dece229f832332e6e6a7d",
+    "name": "neovim-treesitter-query-0.8.0.tar.gz"
+  },
+  "neovim-treesitter-markdown": {
+    "version": "0.5.3",
+    "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown/archive/v0.5.3.tar.gz",
+    "sha256": "df845b1ab7c7c163ec57d7fa17170c92b04be199bddab02523636efec5224ab6",
+    "name": "neovim-treesitter-markdown-0.5.3.tar.gz"
   }
 }
