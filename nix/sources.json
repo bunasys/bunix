@@ -1070,5 +1070,16 @@
     "url": "https://static.rust-lang.org/dist/2026-10-16/rustc-nightly-src.tar.xz",
     "sha256": "998e0957d579eae46f32da2cce726e5307b67822658bfbb9b4c7b9231957f743",
     "name": "rustc-nightly-2026-10-16-src.tar.xz"
+  },
+  "crubit": {
+    "version": "d757594f6f7ac27c0cf9c8ea63d9136f8e1f77ae",
+    "url": "https://github.com/google/crubit/archive/d757594f6f7ac27c0cf9c8ea63d9136f8e1f77ae.tar.gz",
+    "sha256": "6f60a697f75ca68cdcfa91c82f40d5975370ee1633b2b6b845c21578e3f83f14",
+    "name": "crubit-d757594f.tar.gz"
+  },
+  "chromium": {
+    "version": "158.0.8127.88",
+    "url": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-158.0.8127.88-lite.tar.xz",
+    "sha256": "76f5aa94996e31a59b9aa01944c5bdc181043ff58553aff572f9d5750acd326d"
   }
 }

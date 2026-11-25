@@ -51,6 +51,9 @@ cd $out$prefix
 # the installer's lists, for its own uninstall script
 rm -f lib/rustlib/install.log lib/rustlib/uninstall.sh lib/rustlib/manifest-* \
       lib/rustlib/components lib/rustlib/rust-installer-version
+# LLVM's objcopy, linked against the system's libLLVM (rustc itself has
+# LLVM inside): nothing of Chromium's build uses it (as ../base/rust.sh)
+rm lib/rustlib/*/bin/rust-objcopy
 # Chromium reads the toolchain's version from here (build/config/
 # rust.gni), as its own package has it
 bin/rustc --version > VERSION

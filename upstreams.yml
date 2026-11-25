@@ -96,8 +96,12 @@ cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
 cargo-x86_64-linux:
   part-of: rustc-x86_64-linux
+chromium:
+  anitya: 13344
+  cpe: 'a:google:chrome'
 chromium-rust:
   pinned-by: chromium
+  version-regex: 'nightly-(\d{4}-\d\d-\d\d)'
 chromium-rust-stage0-cargo-aarch64-linux:
   pinned-by: chromium-rust
 chromium-rust-stage0-cargo-x86_64-linux:
@@ -123,6 +127,8 @@ coreutils:
   cpe: 'a:gnu:coreutils'
   debian: coreutils
   alpine: coreutils
+crubit:
+  pinned-by: chromium
 cryptsetup:
   anitya: 13709
   cpe: 'a:cryptsetup_project:cryptsetup'
