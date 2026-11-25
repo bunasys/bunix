@@ -9,5 +9,6 @@ timedatectl set-timezone Asia/Tokyo; timedatectl | grep -E 'Time zone|Local time
 hostnamectl hostname bunix-test; hostnamectl | grep -E 'Static hostname|Operating System'; hostnamectl hostname bunix
 mkdir -p /etc/sysupdate.d/devtools.feature.d; printf '[Feature]\nEnabled=true\n' > /etc/sysupdate.d/devtools.feature.d/enable.conf; for f in /usr/lib/sysupdate.d/*.transfer; sed 's#^Path=https.*#Path=http://10.0.2.2:8000/latest/#' $f > /etc/sysupdate.d/(basename $f); end
 /usr/lib/systemd/systemd-sysupdate update 2>&1 | grep -v -E '^Got |Downloading|Acquired|Download of|^Pulling'; echo "devtools update exit $status"; systemd-sysext refresh; systemd-sysext status
+which bash; which -a ls; which no-such-command; echo "which exit $status"
 git --version; gdb --version | head -1; strace -V | head -1; file -b /usr/bin/bash | cut -c1-40; command -v cc; or echo "no cc: devtools needs no gcc"
 cd /tmp; git init -q r; cd r; echo hi > a; git add a; git -c user.name=t -c user.email=t@b commit -q -m one; git log --oneline; strace -c -o /tmp/st true; and echo "strace ok"
