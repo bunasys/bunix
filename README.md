@@ -23,10 +23,15 @@ What can be installed today:
   `docs/nix-usr-system.md`, "On a Mac").  Since 0.4.1 a release has the
   files of an update, for both architectures, and no image to install
   from yet.
-- **On an x86-64 PC**, the last image to install from is 0.4.0's live
-  image, which BuildStream built, with the desktop.  A system installed
-  from it stays on 0.4.0: it does not find the later releases
-  (`docs/release.md`).
+- **On an x86-64 PC**, from the live image of a release
+  (`bunix-x86-64-live.img`, since 0.5.1), written to a USB stick:
+  `sudo dd if=bunix-x86-64-live.img of=/dev/<the stick> bs=4M`, then
+  start the PC from it with Secure Boot off, and run what its console
+  says (`bunix-install /run/bunix/medium/install`).  It installs next to
+  Windows, or in place of an earlier bunix, 0.4.0's included.  Secure
+  Boot is to come: until then bunix starts with it off.  A system
+  installed from 0.4.0's live image stays on 0.4.0: it does not find
+  the later releases (`docs/release.md`).
 
 A system that Nix built updates itself from the latest release:
 

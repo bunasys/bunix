@@ -3,7 +3,8 @@
 # consoles; after its console-shell, with bash where that has fish):
 # root's shell straight away while nobody has a password yet -- a system
 # in memory, or a new disk, where nobody could log in otherwise -- and a
-# login prompt in every other case.
+# login prompt in every other case.  Started from the live stick, it
+# also says how to install from it.
 # "Nobody": not root, and no person's account either.  A person with a
 # password can log in; root's shell beside that would let anyone at the
 # keyboard past their locked screen (Ctrl+Alt+F2), on a machine whose
@@ -16,5 +17,13 @@
 accounts_with_a_password=$(awk -F: '$2 ~ /\$/ { print $1 }' /etc/shadow)
 if [ -n "$accounts_with_a_password" ]; then
     exec /usr/bin/login
+fi
+# Started from the live stick (images/live.nix), whose kernel image's
+# command line mounts it: where the person is to point the installer.
+# Said from the command line, not from the files being there: a slow
+# stick may be mounted only after this has started.
+live_files=/run/bunix/medium/install
+if grep -q -F /run/bunix/medium /proc/cmdline; then
+    echo "To install bunix on this machine:  bunix-install $live_files"
 fi
 exec /usr/bin/bash --login

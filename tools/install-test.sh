@@ -11,10 +11,13 @@
 # its boot loader loads from the ESP, and U-Boot.
 #
 # bunix is started in memory, as on a machine it is to be installed on,
-# with two disks, is handed firmware of the machine's own as a Mac is,
-# and is given the files of its own version (nix/images/update.nix), with
-# its desktop extension (nix/images/desktop.nix) as a release has it.  It
-# installs twice:
+# with two disks.  The Mac's machine is started as tools/boot-mac.sh
+# starts a Mac, handed firmware of its own as a Mac is, and given the
+# files of its version (nix/images/update.nix), with its desktop
+# extension (nix/images/desktop.nix) as a release has it.  The PC starts
+# from the live image (nix/images/live.nix), as a USB stick, which has
+# the same files; the stick is not to be offered as a disk.  It installs
+# twice:
 #
 #   1. onto a whole, empty disk, with the desktop; the machine's flash
 #      chip is not to be offered as one
@@ -41,12 +44,25 @@
 #   5. the second disk again, started by U-Boot: the EFI firmware a Mac
 #      is given (nix/boot.nix), here as built for this virtual machine;
 #      and Apple's partitions are still what they were (aarch64)
+#   6. from the live stick again, onto a third disk, laid out as a PC's
+#      with Windows and bunix 0.4.0 (the testbed's): an ESP of 100 MB
+#      with Windows' loader in the place firmware starts by default and
+#      0.4.0's shim in EFI/bunix, a firmware entry for that shim,
+#      Windows' reserved, data and recovery partitions, and 0.4.0's
+#      XBOOTLDR, /usr slots and root.  The installer replaces the earlier
+#      bunix: the kernel images get an XBOOTLDR partition again,
+#      systemd-boot goes in EFI/bunix in the shim's place, and one
+#      firmware entry for it comes first (x86_64)
+#   7. that disk starts bunix by the firmware's entry; and Windows'
+#      partitions, their lines in the partition table, and Windows'
+#      loader are what they were (x86_64)
 #
 # The person's way in is a key this test puts in their home after the
 # installer has finished: the installed system takes no password over
 # SSH, and root's account is locked.  NOT tested: a login at the console
-# with the password, a disk whose ESP has another system's loader, or
-# what another system on the Mac is started by (both are to be refused),
+# with the password, a Mac's ESP with another system's loader, or what
+# another system on the Mac is started by (both are to be refused), a
+# Windows that starts (its partitions hold nothing that would),
 # U-Boot as built for a Mac, on one, and a driver that gets its firmware
 # when it is asked again (no device here wants any).
 #
@@ -95,23 +111,21 @@ like_an_apple_silicon_mac=no
 if [ "$architecture" = aarch64 ]; then
     like_an_apple_silicon_mac=yes
 fi
+# How the system in memory is started: a Mac's as tools/boot-mac.sh
+# starts it, a PC's from the live image (images/live.nix), as a person
+# would start one
+starts_from_live_image=no
+if [ "$architecture" = x86_64 ]; then
+    starts_from_live_image=yes
+fi
+# What only a PC has is tested on the PC: Windows beside bunix, and the
+# firmware's boot entries
+like_a_windows_pc=no
+if [ "$architecture" = x86_64 ]; then
+    like_a_windows_pc=yes
+fi
 prepare_machine
-mkdir "$work/files"
-
-# ---- What is installed, and what installs it ------------------------------------
-
-echo "building the system, and the files of its version"
-image=$(build "$source/nix/images/system.nix")
-update=$(build "$source/nix/images/update.nix")
-# the kernel the system was built with: its modules are in the image
-copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
-copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
-copy_built_directory "$update" "$work/files"
 version=$(release_version)
-# named as a release names it (tools/publish.sh), which the installer
-# looks for
-desktop=$(build "$source/nix/images/desktop.nix" -A image)
-copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
 if [ $like_an_apple_silicon_mac = yes ]; then
     u_boot=$(build "$source/nix/boot.nix" -A u-boot-qemu)
     copy_built_file_to_machine "$u_boot/usr/lib/u-boot/qemu/u-boot-nodtb.bin" u-boot.bin
@@ -119,7 +133,7 @@ fi
 
 # Empty, and as large as they are only in name: what is written of them
 # is all that is kept.
-in_machine_directory "truncate -s 16G whole.raw && truncate -s 24G mac.raw"
+in_machine_directory "truncate -s 16G whole.raw && truncate -s 24G mac.raw && truncate -s 24G windows.raw"
 
 # ---- Machines --------------------------------------------------------------------
 
@@ -131,8 +145,12 @@ key_word="systemd.set_credential_binary=bunix.authorized_keys:$(base64 < "$publi
 # built for.
 machine_on_played_processor="-M virt -accel tcg,thread=multi -cpu max"
 # The second is given sectors of 4096 bytes, wherever it is attached.
-whole_disk="-drive file=$machine_directory/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole"
-mac_disk="-drive file=$machine_directory/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096"
+# Both are in QEMU's list of what to start (bootindex), after a PC's live
+# stick: the PC's firmware keeps only what that list names, from the
+# stick's start on, and would otherwise not try the disk it is started
+# with later.
+whole_disk="-drive file=$machine_directory/whole.raw,format=raw,if=none,id=whole -device virtio-blk-pci,drive=whole,bootindex=1"
+mac_disk="-drive file=$machine_directory/mac.raw,format=raw,if=none,id=mac -device virtio-blk-pci,drive=mac,logical_block_size=4096,physical_block_size=4096,bootindex=2"
 
 # as <user> <command>: on the machine, over SSH
 # (a name no other function has for a variable: sh has one of each name)
@@ -174,25 +192,64 @@ pull_the_plug() {
 
 # ---- Installing --------------------------------------------------------------------
 
-# The machine is handed firmware of its own, as tools/boot-mac.sh hands a
-# Mac its: an archive before the image, not compressed, and the kernel
-# told of its directory.  One file that no driver asks for; what is
-# tested is that the installed systems still have it, and look there.
-rm -rf "$work/firmware"
-mkdir -p "$work/firmware/vendorfw"
-echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
-(cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
-cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
-send_to_machine initramfs-with-firmware
+if [ $starts_from_live_image = no ]; then
+    echo "building the system, and the files of its version"
+    image=$(build "$source/nix/images/system.nix")
+    update=$(build "$source/nix/images/update.nix")
+    # the kernel the system was built with: its modules are in the image
+    copy_built_file_to_machine "$image/usr-partition/vmlinuz" vmlinuz
+    copy_built_file "$image/initramfs.cpio.gz" "$work/initramfs.cpio.gz"
+    mkdir "$work/files"
+    copy_built_directory "$update" "$work/files"
+    # named as a release names it (tools/publish.sh), which the installer
+    # looks for
+    desktop=$(build "$source/nix/images/desktop.nix" -A image)
+    copy_built_file "$desktop/desktop_*.raw" "$work/files/desktop_$version.$architecture_in_file_names.raw"
 
-echo "starting bunix in memory, with the two disks"
-# shellcheck disable=SC2086  # the disks' words are several each
-start_qemu $machine_on_real_processor -kernel "$machine_directory/vmlinuz" -initrd "$machine_directory/initramfs-with-firmware" \
-    -append "console=$console quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
-answers_within 90 root || fail "the system in memory did not answer on SSH"
-# (--no-xattrs: not what macOS notes about a file it copied)
-tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
-    || fail "could not give the machine the version's files"
+    # The machine is handed firmware of its own, as tools/boot-mac.sh
+    # hands a Mac its: an archive before the image, not compressed, and
+    # the kernel told of its directory.  One file that no driver asks
+    # for; what is tested is that the installed systems still have it,
+    # and look there.
+    rm -rf "$work/firmware"
+    mkdir -p "$work/firmware/vendorfw"
+    echo "a file of the machine's own" > "$work/firmware/vendorfw/install-test"
+    (cd "$work/firmware" && find vendorfw | cpio -o -H newc --quiet > "$work/firmware.cpio")
+    cat "$work/firmware.cpio" "$work/initramfs.cpio.gz" > "$work/initramfs-with-firmware"
+    send_to_machine initramfs-with-firmware
+
+    echo "starting bunix in memory, with the two disks"
+    # shellcheck disable=SC2086  # the disks' words are several each
+    start_qemu $machine_on_real_processor -kernel "$machine_directory/vmlinuz" -initrd "$machine_directory/initramfs-with-firmware" \
+        -append "console=$console quiet firmware_class.path=/vendorfw $key_word" $whole_disk $mac_disk
+    answers_within 90 root || fail "the system in memory did not answer on SSH"
+    # (--no-xattrs: not what macOS notes about a file it copied)
+    tar -C "$work/files" --no-xattrs -cf - . | as root 'mkdir -p /root/install && tar -xf - -C /root/install' \
+        || fail "could not give the machine the version's files"
+    files=/root/install
+else
+    echo "building the live image"
+    live=$(build "$source/nix/images/live.nix")
+    copy_built_file_to_machine "$live/bunix-$architecture_in_file_names-live.img" live.img
+    # as large as a stick is, so that the installer leaves it out for
+    # having its files on it, and not for being too small for bunix
+    in_machine_directory "truncate -s 16G live.img"
+
+    echo "starting bunix in memory from the live image, a USB stick, with the two disks"
+    # Started first (bootindex), read-only as a stick that is not written
+    # to.  The serial console and the key: words the firmware hands the
+    # kernel image's command line (SMBIOS), as tools/desktop-test.sh has
+    # them.
+    stick="-device qemu-xhci -drive file=$machine_directory/live.img,format=raw,if=none,id=stick,readonly=on -device usb-storage,drive=stick,bootindex=0"
+    smbios_words=$(printf 'console=%s %s' "$console" "$key_word" | sed 's/,/,,/g')
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $stick $whole_disk $mac_disk \
+        -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
+    answers_within 120 root || fail "the system in memory, from the live image, did not answer on SSH"
+    files=/run/bunix/medium/install
+    as root "ls $files/bunix_$version.$architecture_in_file_names.efi" > /dev/null \
+        || fail "the live image's files are not at $files"
+fi
 
 # The disks by what was asked of QEMU, not by the order Linux found them in
 disk_with_sectors_of() {
@@ -202,17 +259,18 @@ whole=$(disk_with_sectors_of 512)
 mac=$(disk_with_sectors_of 4096)
 [ -n "$whole" ] && [ -n "$mac" ] || fail "the machine does not have the two disks: '$whole' '$mac'"
 # The number the installer lists a disk under: it lists what lsblk does,
-# in that order, but for what is too small for bunix.  Here that is the
-# virtual machine's flash chip, and the swap in memory, which a PC's
-# kernel lists before its disks; the test's own two disks are not.
+# in that order, but for what is too small for bunix, and the disk its
+# files are on.  Here that is the virtual machine's flash chip, the swap
+# in memory, which a PC's kernel lists before its disks, and a PC's live
+# stick (sd*: the test's own two disks are vd*).
 number_of() {
-    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram/ { number++; if (\$1 == \"$1\") print number }'"
+    as root "lsblk -ndpo NAME,TYPE | awk '\$2 == \"disk\" && \$1 !~ /mtdblock|zram|^\\/dev\\/sd/ { number++; if (\$1 == \"$1\") print number }'"
 }
 
 # run_installer <name of the log> <answers, a line each>: fails the test
 # if the installer does
 run_installer() {
-    printf '%s\n' "$2" | as root 'bunix-install /root/install' > "$work/install-$1.log" 2>&1 \
+    printf '%s\n' "$2" | as root "bunix-install $files" > "$work/install-$1.log" 2>&1 \
         || fail "the installer failed; see $work/install-$1.log"
 }
 # The partition of a disk with this name, as a device
@@ -267,6 +325,9 @@ $whole"
 if grep -q mtdblock "$work/install-whole.log"; then
     fail "the machine's flash chip was offered as a disk to install to"
 fi
+if [ $starts_from_live_image = yes ] && grep -q "/dev/sd" "$work/install-whole.log"; then
+    fail "the live stick the files are on was offered as a disk to install to"
+fi
 expect_root_locked "$whole"
 give_key_to "$whole" sara
 partitions_of root "$whole" > "$work/whole-partitions"
@@ -307,18 +368,18 @@ as root "set -e
     sync
     udevadm settle" || fail "could not fill the Mac's disk"
 # Read from the disk's file, where it is: not what the machine says of it
-# checksums_of <stretches>
+# checksums_of <disk's file> <stretches>
 checksums_of() {
-    for stretch in $1; do
-        in_machine_directory "dd if=mac.raw bs=1048576 skip=${stretch%:*} count=${stretch#*:} 2> /dev/null | sha256sum"
+    for stretch in $2; do
+        in_machine_directory "dd if=$1 bs=1048576 skip=${stretch%:*} count=${stretch#*:} 2> /dev/null | sha256sum"
     done
 }
 # and their lines in the partition table: type, id, name, place
 table_lines_of_what_is_left_alone() {
     as root "sfdisk -d $mac | grep -i -e aa11-00306543ecac -e other-esp"
 }
-checksums_of "$left_alone" > "$work/left-alone-before"
-checksums_of "$apples_partitions" > "$work/apples-before"
+checksums_of mac.raw "$left_alone" > "$work/left-alone-before"
+checksums_of mac.raw "$apples_partitions" > "$work/apples-before"
 table_lines_of_what_is_left_alone > "$work/table-before"
 bunix_esp_id=$(as root "lsblk -ndo PARTUUID ${mac}5")
 
@@ -472,7 +533,7 @@ has_the_desktop=$(as adam "test -e /usr/lib/extension-release.d/extension-releas
 # docs/nix-usr-system.md, open questions.)
 as adam sync
 pull_the_plug
-checksums_of "$left_alone" > "$work/left-alone-after"
+checksums_of mac.raw "$left_alone" > "$work/left-alone-after"
 cmp -s "$work/left-alone-before" "$work/left-alone-after" \
     || fail "one of Apple's partitions, or the other system's ESP, is not what it was before the installer ran"
 echo "  Apple's partitions and the other system's ESP: as they were"
@@ -488,10 +549,121 @@ if [ $like_an_apple_silicon_mac = yes ]; then
     # which.  A Mac's is, by aura (the one written into its first stage,
     # bunix's).  So of what was to be left alone, Apple's partitions are
     # looked at once more, and that ESP is not.
-    checksums_of "$apples_partitions" > "$work/apples-after-u-boot"
+    checksums_of mac.raw "$apples_partitions" > "$work/apples-after-u-boot"
     cmp -s "$work/apples-before" "$work/apples-after-u-boot" \
         || fail "one of Apple's partitions is not what it was before U-Boot started the disk"
     echo "  Apple's partitions: as they were"
+fi
+
+if [ $like_a_windows_pc = yes ]; then
+    echo "6. from the live stick, onto a disk laid out as a PC's with Windows and bunix 0.4.0"
+    # Given no place in QEMU's list of what to start (bootindex), so that
+    # the firmware goes by its own boot entries when the disk is started
+    # alone (7); while the stick is in, the stick comes first.  An id it
+    # is found by in the system in memory.
+    windows_disk="-drive file=$machine_directory/windows.raw,format=raw,if=none,id=windows -device virtio-blk-pci,drive=windows,serial=windows"
+    start_from_the_stick_with_the_windows_disk() {
+        # shellcheck disable=SC2086
+        start_qemu $machine_on_real_processor $efi_firmware $stick $windows_disk \
+            -smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$smbios_words"
+        answers_within 120 root || fail "the system in memory, from the live image, did not answer on SSH"
+        windows=$(as root "readlink -f /dev/disk/by-id/virtio-windows")
+    }
+    start_from_the_stick_with_the_windows_disk
+    # As Windows' installer makes a disk -- its ESP of 100 MB, the
+    # reserved partition, its data, its recovery partition -- and then
+    # bunix 0.4.0's installer: an XBOOTLDR partition for its kernel
+    # images, its /usr slots, its root.  Windows' as "start:size" in MiB,
+    # for checksums (below): what bunix-install is to leave alone.
+    windows_partitions="101:16 117:8192 8309:600"
+    as root "sfdisk -q $windows" <<'END' || fail "could not lay the Windows PC's disk out"
+label: gpt
+start=1MiB, size=100MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="EFI system partition"
+start=101MiB, size=16MiB, type=E3C9E316-0B5C-4DB8-817D-F92DF00215AE, name="Microsoft reserved partition"
+start=117MiB, size=8192MiB, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="Basic data partition"
+start=8309MiB, size=600MiB, type=DE94BBA4-06D1-4D40-A16A-BFD50179D6AC
+start=8909MiB, size=1024MiB, type=BC13C2FF-59E6-4262-A352-B275FD6F7172, name="XBOOTLDR"
+start=9933MiB, size=2048MiB, type=8484680C-9521-48C6-9C11-B0720656F69E, name="bunix_0.4.0"
+start=11981MiB, size=32MiB, type=77FF5F63-E7B6-4633-ACF4-1565B864C0E6, name="bunix_0.4.0_verity"
+start=12013MiB, size=2048MiB, type=8484680C-9521-48C6-9C11-B0720656F69E, name="_empty"
+start=14061MiB, type=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709, name="root"
+END
+    # Something in each of Windows' partitions, to be found again; on its
+    # ESP its loader, where Windows puts it and in the place firmware
+    # starts by default, and 0.4.0's shim, with a firmware entry for it
+    as root "set -e
+        for number in 2 3 4; do
+            dd if=/dev/urandom of=${windows}\$number bs=1M count=8 status=none
+        done
+        mkfs.vfat -F 32 -n SYSTEM ${windows}1 > /dev/null
+        mkdir -p /run/windows-esp
+        mount ${windows}1 /run/windows-esp
+        mkdir -p /run/windows-esp/EFI/Microsoft/Boot /run/windows-esp/EFI/BOOT /run/windows-esp/EFI/bunix
+        head -c 1500000 /dev/urandom > /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi
+        cp /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi /run/windows-esp/EFI/BOOT/BOOTX64.EFI
+        head -c 900000 /dev/urandom > /run/windows-esp/EFI/bunix/shimx64.efi
+        head -c 100000 /dev/urandom > /run/windows-esp/EFI/bunix/grubx64.efi
+        umount /run/windows-esp
+        efibootmgr --quiet --create --disk $windows --part 1 --label bunix --loader '\\EFI\\bunix\\shimx64.efi'
+        sync
+        udevadm settle" || fail "could not fill the Windows PC's disk"
+    windows_checksums() {
+        checksums_of windows.raw "$windows_partitions"
+        as root "mkdir -p /run/windows-esp && mount -o ro ${windows}1 /run/windows-esp &&
+            sha256sum /run/windows-esp/EFI/Microsoft/Boot/bootmgfw.efi /run/windows-esp/EFI/BOOT/BOOTX64.EFI;
+            umount /run/windows-esp"
+        as root "sfdisk -d $windows | grep -i -e e3c9e316 -e ebd0a0a2 -e de94bba4 -e 'EFI system partition'"
+    }
+    windows_checksums > "$work/windows-before"
+    # Its places: each partition but the ESP (1-8), the earlier bunix 0.4.0
+    # (9), the whole disk (10).  The earlier bunix; the console (2); bash
+    # (1); the disk's name to go on.
+    run_installer windows "$(number_of "$windows")
+9
+2
+windows-pc
+Wendy of the PC
+wendy
+1
+the password of Wendy
+the password of Wendy
+$windows"
+    grep -q '9) replace the earlier bunix 0.4.0' "$work/install-windows.log" \
+        || fail "the ninth place offered was not the earlier bunix; see $work/install-windows.log"
+    [ -n "$(partition_named "$windows" bunix-boot)" ] \
+        || fail "the installer made no XBOOTLDR partition beside the ESP of 100 MB; see $work/install-windows.log"
+    as root "efibootmgr" > "$work/boot-entries" 2>&1
+    first_entry=$(sed -n 's/^BootOrder: \([0-9A-F]*\).*/\1/p' "$work/boot-entries")
+    grep -q -E "^Boot$first_entry\*? bunix" "$work/boot-entries" \
+        || fail "the firmware's first boot entry is not bunix's; see $work/boot-entries"
+    [ "$(grep -c -E '^Boot[0-9A-F]{4}[* ] bunix' "$work/boot-entries")" = 1 ] \
+        || fail "the firmware has more than one entry for bunix (0.4.0's is to go); see $work/boot-entries"
+    as root "mount -o ro ${windows}1 /run/windows-esp && ls /run/windows-esp/EFI/bunix; umount /run/windows-esp" > "$work/esp-bunix" 2>&1
+    [ "$(cat "$work/esp-bunix")" = "systemd-bootx64.efi" ] \
+        || fail "EFI/bunix is not bunix's systemd-boot alone (0.4.0's shim is to go): $(cat "$work/esp-bunix")"
+    expect_root_locked "$windows"
+    give_key_to "$windows" wendy
+    partitions_of root "$windows" > "$work/windows-partitions"
+    power_off
+
+    echo "7. the Windows PC's disk starts bunix, by the firmware's entry for it"
+    # shellcheck disable=SC2086
+    start_qemu $machine_on_real_processor $efi_firmware $windows_disk
+    expect_installed wendy "Wendy of the PC" /usr/bin/bash windows-pc "$work/windows-partitions"
+    # /boot is mounted when it is first looked at (an automount): looked at
+    # first, and then its partition asked for
+    boot_device=$(as wendy "ls /boot > /dev/null 2>&1; findmnt -n -o SOURCE /boot | tail -1")
+    [ "$boot_device" = "$(as wendy "readlink -f /dev/disk/by-partlabel/bunix-boot")" ] \
+        || fail "the XBOOTLDR partition is not the one at /boot, where updates put kernel images: $boot_device"
+    as wendy sync
+    pull_the_plug
+    # (the stick in again, for the system in memory to look with)
+    start_from_the_stick_with_the_windows_disk
+    windows_checksums > "$work/windows-after"
+    power_off
+    cmp -s "$work/windows-before" "$work/windows-after" \
+        || fail "Windows' partitions, their lines in the table, or its loader are not what they were before the installer ran"
+    echo "  Windows' partitions and loader: as they were"
 fi
 
 echo "install-test.sh: passed"
