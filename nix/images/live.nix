@@ -24,16 +24,26 @@
 #
 #   bunix-install /run/bunix/medium/install
 #
-# Not yet: Secure Boot (a machine starts it with Secure Boot off), and a
-# machine whose ESP has another system's loader in EFI/BOOT, as a PC
-# with Windows has (bunix-install refuses that ESP).  Its /usr is a test
-# system's, signed with the development key (images/update.nix without
-# a signature); a release's is to come.
+# Not yet: Secure Boot.  Nothing on the stick is signed for it, and a
+# machine starts it, and the bunix it installs, with Secure Boot off.
 #
+#   signature, desktopSignature
+#              a release's: the signatures of the system's hash and of
+#              the desktop extension's (tools/publish.sh makes both),
+#              as images/update.nix and images/desktop.nix take them.
+#              Without them, a test system's, signed with the
+#              development key: it takes updates signed with that key,
+#              which is not secret, and is never to be published.
 #   version    the system's, as images/system.nix takes it
-{ system ? builtins.currentSystem, version ? import ../release.nix }:
+{ system ? builtins.currentSystem, signature ? null, desktopSignature ? null
+, version ? import ../release.nix }:
+
+# Both, or neither: a release's system with a test system's desktop, or
+# the other way round, is no system anybody should install
+assert (signature == null) == (desktopSignature == null);
 
 let
+  signing = if signature == null then "development" else "release";
   tools = import ../tools.nix { inherit system; };
   base = import ../base.nix { inherit system; };
   boot = import ../boot.nix { inherit system; };
@@ -50,9 +60,11 @@ stagedBuild {
   buildDepends = [ base.systemd tools.python base.python-pefile base.dosfstools base.mtools
                    tools.bash tools.coreutils tools.findutils tools.grep tools.sed ];
   env = {
-    system_image = import ./system.nix { inherit system version; };
-    update = import ./update.nix { inherit system version; };
-    desktop = (import ./desktop.nix { inherit system version; }).image;
+    # the system in memory is the one installed: of a release, it takes
+    # only what the release key signed
+    system_image = import ./system.nix { inherit system signing version; };
+    update = import ./update.nix { inherit system signature version; };
+    desktop = (import ./desktop.nix { inherit system version; signature = desktopSignature; }).image;
     inherit version;
     partition_architecture = architecture.partitionArchitecture;
     # x86: the processor's microcode, as in images/uki.nix

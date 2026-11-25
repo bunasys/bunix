@@ -22,6 +22,14 @@
 #   desktop_<release>.<arch>.raw          the desktop extension
 #                                         (nix/images/desktop.nix)
 #
+# and for x86-64 alone
+#
+#   bunix-x86-64-live.img                 the live image, written to a USB
+#                                         stick to install from
+#                                         (nix/images/live.nix): this
+#                                         release's system and files, as
+#                                         signed here
+#
 # and, once, for all of them:
 #
 #   SHA256SUMS      their hashes, and a BEST-BEFORE-<date> entry: a
@@ -208,6 +216,20 @@ for architecture in $architectures; do
         extension_image=$(build "$architecture" $images/$extension.nix -A image $extension_signed)
         built_directories="$built_directories $extension_image"
     done
+    # The live image, of what was just signed: the system's and the
+    # desktop's signatures, which the builder has.  x86-64's: a Mac
+    # starts the system in memory otherwise (tools/boot-mac.sh).
+    has_live_image=no
+    if [ "$architecture" = x86_64 ]; then
+        has_live_image=yes
+        echo "$architecture: building the live image"
+        live_signed=
+        if [ $signed_by = release ]; then
+            live_signed="--arg signature ./$system_signature --arg desktopSignature ./bunix-release/desktop.signature"
+        fi
+        live_image=$(build "$architecture" $images/live.nix $live_signed)
+        built_directories="$built_directories $live_image"
+    fi
     received=$unfinished/from-$architecture
     mkdir "$received"
     for directory in $built_directories; do
@@ -237,6 +259,7 @@ for architecture in $architectures; do
             no:"bunix_$version.usr-$named."*.raw | no:"bunix_$version.usr-$named-verity."*.raw) ;;
             no:"bunix_$version.usr-$named-verity-sig."*.raw) ;;
             no:"bunix_$version.$named.efi") ;;
+            no:"bunix-$named-live.img") [ $has_live_image = yes ] || die "the $architecture builder sent a live image, which it has none of" ;;
             *) die "the $architecture builder sent ${file##*/}, which is no file of bunix $version for $named" ;;
         esac
         is_a_file=no
@@ -248,6 +271,9 @@ for architecture in $architectures; do
     number_received=$(ls "$received" | wc -l)
     number_of_extensions=$(echo $extensions | wc -w)
     number_expected=$((4 + number_of_extensions))
+    if [ $has_live_image = yes ]; then
+        number_expected=$((number_expected + 1))
+    fi
     [ "$number_received" -eq "$number_expected" ] \
         || die "the $architecture builder sent $number_received files, not $number_expected"
     # out of a store they come read-only

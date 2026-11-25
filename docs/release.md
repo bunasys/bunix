@@ -13,12 +13,14 @@ Installed systems fetch it with systemd-sysupdate from
 | `devtools_<version>.<arch>.raw` | the devtools extension (`nix/images/devtools.nix`) |
 | `llvm_<version>.<arch>.raw` | the llvm extension (`nix/images/llvm.nix`) |
 | `desktop_<version>.<arch>.raw` | the desktop extension (`nix/images/desktop.nix`) |
+| `bunix-x86-64-live.img` | x86-64 only: the live image, to write to a USB stick and install from (`nix/images/live.nix`) |
 
 and once, for all of them, `SHA256SUMS` and `SHA256SUMS.gpg`: the list of
 the files and its OpenPGP signature by the release key.
 
-Not in a release yet, which BuildStream's had (up to 0.4.0): the live
-image to install from, and the gcc, rust, swift and desktop extensions.
+Not in a release yet, which BuildStream's had (up to 0.4.0): the gcc,
+rust and swift extensions, and Secure Boot for the live image and what
+it installs (shim, and a signed systemd-boot).
 A machine installed from 0.4.0 or before should find no update in these
 releases: it asks for a kernel image named `bunix_<version>.efi`, and so
 reads the architecture in these names as part of the version, which no
