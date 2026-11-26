@@ -52,6 +52,21 @@ reviewed, as the desktop's were (`docs/desktop.md`):
    compiled.
 4. **0.5.3**, with the Mac's sound card, Neovim and `which` (#33).
 
+## The compiler cache
+
+A change to anything Chromium is built from makes Nix build it again
+from nothing: hours (half a day on arm64).  So its builds use ccache,
+on the builders that give them a cache directory: `/var/cache/ccache`,
+in their nix.conf's sandbox-paths (tools/nix-builder/nix.conf, on the
+Fly machine tools/fly/nix.conf, the cache on its volume).  A build
+again after a small change compiles what changed, and links.
+
+ccache keys each compile by the compiler's content, its arguments and
+the preprocessed source, so it hands back only what the compiler would
+make.  But the build then reads something that is not among its inputs:
+for a release's own build, the path can be left out of nix.conf, and
+Chromium is compiled whole, with the same result.
+
 ## The goal
 
 Chromium, built here from source like every other package, with Brave's

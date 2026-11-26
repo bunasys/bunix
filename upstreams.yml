@@ -96,6 +96,11 @@ cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
 cargo-x86_64-linux:
   part-of: rustc-x86_64-linux
+ccache:
+  anitya: 257
+  cpe: 'a:ccache:ccache'
+  debian: ccache
+  alpine: ccache
 chromium:
   anitya: 13344
   cpe: 'a:google:chrome'
@@ -833,6 +838,10 @@ xkeyboard-config:
   anitya: 5191
   debian: xkeyboard-config
   alpine: xkeyboard-config
+xxhash:
+  anitya: 17583
+  debian: xxhash
+  alpine: xxhash
 xz:
   anitya: 5277
   cpe: 'a:tukaani:xz'

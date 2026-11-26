@@ -79,7 +79,7 @@ if ! $FLY_SSH test -x /data/nix-tool/nix; then
   ssh "$X86" cat nix-tool/nix | $FLY_SSH 'cat > /data/nix-tool/nix && chmod 755 /data/nix-tool/nix'
   $FLY_SSH 'cd /data/nix-tool/bin && for tool in nix-build nix-store nix-instantiate nix-hash; do ln -sf ../nix $tool; done'
 fi
-$FLY_SSH 'cat > /data/nix-tool/nix.conf' < tools/fly/nix.conf
+$FLY_SSH 'cat > /data/nix-tool/nix.conf && mkdir -p /data/ccache' < tools/fly/nix.conf
 
 # The repository as it is here, committed or not, as on the x86 builder
 copy_repository() {

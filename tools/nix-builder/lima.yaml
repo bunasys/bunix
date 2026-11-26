@@ -64,6 +64,9 @@ provision:
         DEBIAN_FRONTEND=noninteractive apt-get install -y nix-setup-systemd
     }
     install -m 644 /bunix/tools/nix-builder/nix.conf /etc/nix/nix.conf
+    # the compiler cache Chromium's builds use (nix.conf), shared by the
+    # build users
+    install -d -m 2775 -g nixbld /var/cache/ccache
     # nix.conf's build-dir
     mkdir -p /nix/var/nix/builds
     usermod -aG nix-users "{{.User}}"

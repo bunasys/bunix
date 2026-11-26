@@ -1109,5 +1109,16 @@
     "url": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.2.tgz",
     "sha256": "a96dbfa41d3ef5dbd1ef22b1c10d5187be9267e86093a870f06402a7ec931596",
     "name": "esbuild-linux-arm64-0.28.2.tgz"
+  },
+  "ccache": {
+    "version": "4.14.3",
+    "url": "https://github.com/ccache/ccache/releases/download/v4.14.3/ccache-4.14.3.tar.xz",
+    "sha256": "e1999132cf7dbce48de7d946b767f3e26ea09adcb5daa4a7103a8fa09ee0637d"
+  },
+  "xxhash": {
+    "version": "0.8.4",
+    "url": "https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.4.tar.gz",
+    "sha256": "5738270935e7c3d38a79b3adf7c9692566ce7895a25f67de43ad52ab504acd32",
+    "name": "xxhash-0.8.4.tar.gz"
   }
 }

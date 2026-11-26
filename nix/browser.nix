@@ -219,6 +219,32 @@ let
     };
   };
 
+  # ---- A compiler cache, for Chromium's builds ---------------------------------
+
+  # xxHash: the fast hash ccache keys its cache with
+  xxhash = mkSystemPackage {
+    name = "xxhash";
+    source = sources.xxhash;
+    script = ./browser/xxhash.sh;
+    depends = [ glibc ];
+  };
+
+  # ccache: keeps what the compiler made, keyed by the compiler, its
+  # arguments and the preprocessed source, so that a build that changes
+  # one file of Chromium compiles that file and not the other fifty
+  # thousand.  Only for Chromium's build (browser/chromium.sh), and only
+  # on a builder that gives builds a cache directory (docs/browser.md,
+  # "The compiler cache").  Its own libraries (BLAKE3, fmt) are the copies
+  # in its source; no remote storage.
+  ccache = mkSystemPackage {
+    name = "ccache";
+    source = sources.ccache;
+    script = ./cmake.sh;
+    depends = [ glibc toolchain.gccLibraries base.zstd xxhash ];
+    buildDepends = [ base.cmake ninja pkgconf ];
+    env = { cmake_arguments = "-DDEPS=LOCAL -DREDIS_STORAGE_BACKEND=OFF -DHTTP_STORAGE_BACKEND=OFF -DENABLE_TESTING=OFF -DENABLE_DOCUMENTATION=OFF"; };
+  };
+
   # ---- The browser -----------------------------------------------------------------
 
   # A directory of files/hudhud, as it is in git: without what Python
@@ -255,7 +281,7 @@ let
       desktop.pipewire base.systemd desktop.wayland base.expat base.zlib
     ];
     buildDepends = [
-      base.llvm compiler-rt chromium-rust crubit base.bindgen base.nodejs desktop.go
+      base.llvm compiler-rt chromium-rust crubit base.bindgen base.nodejs desktop.go ccache
       base.gperf ninja pkgconf desktop.wayland-protocols base.python-zlib base.python-bz2
     ];
     env = {
@@ -271,7 +297,7 @@ let
   };
 in
 {
-  inherit chromium;
+  inherit chromium ccache xxhash;
   inherit compiler-rt chromium-rust-stage0 chromium-rust crubit;
   inherit nspr nss;
   inherit libxml2 at-spi2-core pciutils libepoxy graphene libtiff gdk-pixbuf gtk4;
