@@ -44,6 +44,7 @@ sed -i "s/^NODE_VERSION=.*/NODE_VERSION=\"$(node --version)\"/" third_party/node
 case $triplet in
     x86_64-*) cipd_platform=linux-amd64 ;;
     aarch64-*) cipd_platform=linux-arm64 ;;
+    *) echo "chromium.sh: no Go platform for $triplet" >&2; exit 1 ;;
 esac
 mkdir -p third_party/dawn/tools/golang
 ln -sfn /usr/lib/go third_party/dawn/tools/golang/$cipd_platform
@@ -91,18 +92,26 @@ export PKG_CONFIG_PATH=$PWD/pkgconfig-shims
 # ---- The compiler cache, where the builder gives one ------------------------
 # A builder that keeps a cache of compiles gives builds this directory
 # (docs/browser.md, "The compiler cache"); without it, everything is
-# compiled, and the result is the same.  Under /dev: the one directory
-# stage.sh takes whole, with what is mounted in it, into the root the
-# build runs in.  Keyed by the compiler's content
-# (its files' times are all the store's), shared by the builder's build
-# users (umask), and never by the include files' times: a generated
-# header made the second a compile starts would otherwise not be cached.
+# compiled.  Under /dev: the one directory stage.sh takes whole, with what
+# is mounted in it, into the root the build runs in.
 compiler_cache=/dev/ccache
-cc_wrapper=
+use_ccache=no
 if [ -w $compiler_cache ]; then
-    export CCACHE_DIR=$compiler_cache CCACHE_UMASK=002 CCACHE_MAXSIZE=30G \
-        CCACHE_COMPILERCHECK=content CCACHE_SLOPPINESS=include_file_mtime,include_file_ctime,time_macros
-    cc_wrapper='cc_wrapper = "ccache"'
+    use_ccache=yes
+fi
+if [ $use_ccache = yes ]; then
+    export CCACHE_DIR=$compiler_cache
+    # The compiler is LLVM's libraries more than /usr/bin/clang, a small
+    # driver: compiles are keyed by the store path of LLVM's package,
+    # which any change to how LLVM is built changes
+    export CCACHE_COMPILERCHECK=string:$llvm_package
+    # Shared by the builder's build users
+    export CCACHE_UMASK=002
+    # A whole build's compiles are about 4 GB: room for two versions
+    export CCACHE_MAXSIZE=10G
+    # Every file's time in a build is the unpacking's: never part of a key,
+    # or a header generated the second a compile starts is never cached
+    export CCACHE_SLOPPINESS=include_file_mtime,include_file_ctime,time_macros
     ccache --zero-stats > /dev/null
 fi
 
@@ -167,8 +176,10 @@ enable_openxr = false
 
 proprietary_codecs = true
 ffmpeg_branding = "Chrome"
-$cc_wrapper
 ARGS
+if [ $use_ccache = yes ]; then
+    echo 'cc_wrapper = "ccache"' >> $out_dir/hudhud-args.gn
+fi
 sh hudhud/scripts/merge-gn-args.sh ungoogled/flags.gn $out_dir/hudhud-args.gn > $out_dir/args.gn
 cat $out_dir/args.gn
 $out_dir/gn gen $out_dir --fail-on-unused-args
@@ -176,7 +187,7 @@ $out_dir/gn gen $out_dir --fail-on-unused-args
 # -k 0: on an error, everything that does not need what failed is built
 # still, so that one build of hours shows all of its errors, not the first
 ninja -C $out_dir -j$jobs -k 0 chrome
-[ -z "$cc_wrapper" ] || ccache --show-stats
+[ $use_ccache = no ] || ccache --show-stats
 
 # ---- Install: /usr/lib/hudhud ------------------------------------------------------
 
