@@ -113,6 +113,11 @@ rm -f /tmp/nix-fly-*.$$
 
 # ---- The build, detached ----------------------------------------------------------
 
+# A build started before runs on when the session that started it is gone
+# (stopped here, or this Mac asleep): it is stopped first, whole, rather
+# than racing this one for the machine and the log.
+$FLY_SSH 'for pid in $(pgrep -x nix-build); do kill -9 -- -$(ps -o sid= -p $pid | tr -d " ") 2> /dev/null || true; done'
+
 echo "Building $attribute on the machine (log: /data/builds/$name.log)"
 $FLY_SSH "mkdir -p /data/builds && rm -f /data/builds/$name.log /data/builds/$name.exit /data/builds/$name.out
   cd /data/bunix && $FLY_NIX && setsid nohup bash -c 'nix-build $file -A $attribute --no-out-link > /data/builds/$name.out 2> /data/builds/$name.log; echo \$? > /data/builds/$name.exit' < /dev/null > /dev/null 2>&1 &"
