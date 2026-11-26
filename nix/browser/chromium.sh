@@ -91,11 +91,13 @@ export PKG_CONFIG_PATH=$PWD/pkgconfig-shims
 # ---- The compiler cache, where the builder gives one ------------------------
 # A builder that keeps a cache of compiles gives builds this directory
 # (docs/browser.md, "The compiler cache"); without it, everything is
-# compiled, and the result is the same.  Keyed by the compiler's content
+# compiled, and the result is the same.  Under /dev: the one directory
+# stage.sh takes whole, with what is mounted in it, into the root the
+# build runs in.  Keyed by the compiler's content
 # (its files' times are all the store's), shared by the builder's build
 # users (umask), and never by the include files' times: a generated
 # header made the second a compile starts would otherwise not be cached.
-compiler_cache=/var/cache/ccache
+compiler_cache=/dev/ccache
 cc_wrapper=
 if [ -w $compiler_cache ]; then
     export CCACHE_DIR=$compiler_cache CCACHE_UMASK=002 CCACHE_MAXSIZE=30G \
