@@ -56,8 +56,9 @@ reviewed, as the desktop's were (`docs/desktop.md`):
 
 A change to anything Chromium is built from makes Nix build it again
 from nothing: hours (half a day on arm64).  So its builds use ccache,
-on the builders that give them a cache directory: `/var/cache/ccache`,
-in their nix.conf's sandbox-paths (tools/nix-builder/nix.conf, on the
+on the builders that give them a cache directory: as `/dev/ccache`
+(the one directory nix/stage.sh takes whole into a build's root), in
+their nix.conf's sandbox-paths (tools/nix-builder/nix.conf, on the
 Fly machine tools/fly/nix.conf, the cache on its volume).  A build
 again after a small change compiles what changed, and links.
 
