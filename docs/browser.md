@@ -62,11 +62,14 @@ their nix.conf's sandbox-paths (tools/nix-builder/nix.conf, on the
 Fly machine tools/fly/nix.conf, the cache on its volume).  A build
 again after a small change compiles what changed, and links.
 
-ccache keys each compile by the compiler's content, its arguments and
-the preprocessed source, so it hands back only what the compiler would
-make.  But the build then reads something that is not among its inputs:
-for a release's own build, the path can be left out of nix.conf, and
-Chromium is compiled whole, with the same result.
+ccache keys each compile by the compiler (the store path of LLVM's
+package: clang is mostly its libraries), its arguments and the source
+with the headers it read.  But the build then reads something that is not
+among its inputs, and that every build on the builder can write to: a
+release's Chromium is compiled whole.  Its store path is the same with the
+cache or without, so the one in the store is deleted first
+(`nix-store --delete` of that path only), and built again with the cache's
+path left out of the builder's nix.conf.
 
 ## The goal
 

@@ -57,6 +57,7 @@ flyctl volumes create data --app bunix-build --region fra --size 150 --scheduled
 flyctl machine run registry.fly.io/bunix-build:nix --app bunix-build --region fra \
   --vm-size performance-16x --volume data:/data --restart no \
   --env AUTHORIZED_KEYS="$(cat ~/.ssh/id_ed25519.pub)"
+ssh-keygen -R bunix-fly     # a new volume, a new host key
 ```
 
 And when the round of builds is done:

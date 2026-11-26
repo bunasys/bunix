@@ -293,6 +293,8 @@ let
       hudhud_patches = hudhudFiles "patches";
       hudhud_ungoogled = hudhudFiles "ungoogled";
       hudhud_shields_include = hudhudFiles "shields/include";
+      # what the compiler cache keys compiles by (browser/chromium.sh)
+      llvm_package = base.llvm;
     };
   };
 in
