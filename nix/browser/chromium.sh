@@ -88,6 +88,22 @@ Cflags:
 PC
 export PKG_CONFIG_PATH=$PWD/pkgconfig-shims
 
+# ---- The compiler cache, where the builder gives one ------------------------
+# A builder that keeps a cache of compiles gives builds this directory
+# (docs/browser.md, "The compiler cache"); without it, everything is
+# compiled, and the result is the same.  Keyed by the compiler's content
+# (its files' times are all the store's), shared by the builder's build
+# users (umask), and never by the include files' times: a generated
+# header made the second a compile starts would otherwise not be cached.
+compiler_cache=/var/cache/ccache
+cc_wrapper=
+if [ -w $compiler_cache ]; then
+    export CCACHE_DIR=$compiler_cache CCACHE_UMASK=002 CCACHE_MAXSIZE=30G \
+        CCACHE_COMPILERCHECK=content CCACHE_SLOPPINESS=include_file_mtime,include_file_ctime,time_macros
+    cc_wrapper='cc_wrapper = "ccache"'
+    ccache --zero-stats > /dev/null
+fi
+
 # ---- Configure and build ---------------------------------------------------------
 
 # gn, Chromium's build file generator, from its own source in the tarball
@@ -149,6 +165,7 @@ enable_openxr = false
 
 proprietary_codecs = true
 ffmpeg_branding = "Chrome"
+$cc_wrapper
 ARGS
 sh hudhud/scripts/merge-gn-args.sh ungoogled/flags.gn $out_dir/hudhud-args.gn > $out_dir/args.gn
 cat $out_dir/args.gn
@@ -157,6 +174,7 @@ $out_dir/gn gen $out_dir --fail-on-unused-args
 # -k 0: on an error, everything that does not need what failed is built
 # still, so that one build of hours shows all of its errors, not the first
 ninja -C $out_dir -j$jobs -k 0 chrome
+[ -z "$cc_wrapper" ] || ccache --show-stats
 
 # ---- Install: /usr/lib/hudhud ------------------------------------------------------
 
