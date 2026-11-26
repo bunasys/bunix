@@ -267,7 +267,7 @@ class ChoiceHandler : public content::WebUIMessageHandler,
     // reachable from other pages (they are not "web accessible").
     web_ui()->GetWebContents()->OpenURL(
         content::OpenURLParams(url, content::Referrer(),
-                               WindowOpenDisposition::NEW_FOREGROUND_TAB,
+                               WindowOpenDisposition::kNewForegroundTab,
                                ui::PAGE_TRANSITION_AUTO_TOPLEVEL,
                                /*is_renderer_initiated=*/false),
         /*navigation_handle_callback=*/{});
