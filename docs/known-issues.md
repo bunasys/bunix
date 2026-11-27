@@ -3,6 +3,24 @@
 Small problems seen on real installs, to fix when there is time.  Newest
 first; remove an entry when it is fixed.
 
+## A Mac's microphones, on mbp20 (2026-11-27, test version 0.5.3.2)
+
+- **The J293's internal microphones record silence**, though they work in
+  macOS and the lid is open (logind's LidClosed is false).  The PipeWire
+  side is right: the "MacBook Pro J293 Microphone" source (asahi-audio's
+  mic.json) is the default, and is linked to RawMics.  Below it, the AOP
+  card gives nothing: `arecord -D hw:AppleJ293HPAI,0 -f FLOAT_LE -c 3
+  -r 48000` reads zeros and denormals (the same peak, 0.000714, in every
+  try, with a tone playing on the speakers or not), and `hw:AppleJ293HPAI,1`
+  (the low-power mics, S16_LE, 3 channels, 16 kHz) one constant value,
+  31585, on every channel.  That is what Aurora's driver
+  (sound/soc/apple/aop_lid.rs) says the mics read when the lid closes and
+  they are cut off in hardware.  "Internal Mic Jack" reads on, and the
+  kernel logs no error.  Not the AOP's sensors: with them built in
+  (0.5.3.2), nothing changed; a J293 has no lid angle sensor.  Asked of
+  Aurora Silicon, whose kernel (linux 9125b31) bunix builds:
+  https://github.com/aurora-silicon/linux/issues/3378.
+
 ## DMS on niri, first tests in QEMU (2026-11-09, 0.3.0)
 
 - **No usable GPU, no desktop.**  niri renders only through a GPU with a
