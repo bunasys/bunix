@@ -1,8 +1,7 @@
 # What makes Chromium Hudhud on the desktop (files/hudhud/install): the
-# launcher, the desktop entry and icons, and the privacy defaults --
-# recommended policies, which the person can change, and first-run
-# preferences.  Small on purpose: a change to a default or an icon builds
-# this again, not Chromium.
+# launcher, the desktop entry and icons, and the first-run preferences.
+# Small on purpose: a change to a preference or an icon builds this again,
+# not Chromium.
 cd $install
 
 install -D -m 755 hudhud.sh $out/usr/bin/hudhud
@@ -16,9 +15,7 @@ for png in icons/*.png; do
 done
 install -D -m 644 icons/hudhud.svg $out/usr/share/icons/hicolor/scalable/apps/hudhud.svg
 
-# Recommended policies, read from here (files/hudhud/patches/
-# 05-policy-path.patch); first-run preferences, from the browser's own
-# directory
-mkdir -p $out/usr/share/hudhud
-cp -r policies $out/usr/share/hudhud/
+# First-run preferences, from the browser's own directory.  No policies:
+# Hudhud's defaults are built in (docs/browser.md, "Defaults"), and any
+# policy would show the browser as managed by an organization.
 install -D -m 644 initial_preferences $out/usr/lib/hudhud/initial_preferences

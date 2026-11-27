@@ -8,9 +8,10 @@ Chromium's engines, so it only moves to the front of every list (and joins the
 lists it is not on).  Done on the data, not as a patch, so that it keeps
 working when Chromium edits the lists.
 
-The default is also a recommended policy (files/hudhud/install/policies/
-recommended/hudhud.json), with this engine's URLs and keyword: a change of
-engine is made in both.
+Chromium falls back to Google's place before the first of the list, and
+ungoogled-chromium's "No Search" has it: the brave-search-default patch
+(make-patches.py) makes the fallback Brave.  A change of engine is made in
+both.
 
     brave-search-first.py <chromium source directory>
 """

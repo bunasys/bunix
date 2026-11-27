@@ -481,9 +481,8 @@ printf '%s\n' '<!doctype html><title>Hudhud start</title>' \
 # first page's requests are set up, and lets them through until it has
 # it.  The test's page comes after, through the debugging port.
 #   Its own profile, which remote debugging takes (Chromium refuses it in
-# the default one); the port answers on the machine only.  The
-# recommended policies are the system's whatever the profile.  The
-# network log's flag has Hudhud show a bar that warns of it, in the
+# the default one); the port answers on the machine only.  Its defaults
+# are built in, the same whatever the profile.  The network log's flag has Hudhud show a bar that warns of it, in the
 # pictures.  On sara's session bus, as anything sara starts in their
 # session is.
 debugging_port=9222
