@@ -33,8 +33,7 @@
 #      pictured; Ctrl+O shows GTK 4's file dialog; words typed in the
 #      address bar go to Brave Search; and Shields blocked the page's
 #      advertisement and let its image through.  Not tested: Shields on
-#      a page of a web site (the machine has none to serve one), and that
-#      Brave is listed once among the search engines
+#      a page of a web site (the machine has none to serve one)
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
@@ -481,9 +480,9 @@ printf '%s\n' '<!doctype html><title>Hudhud start</title>' \
 # first page's requests are set up, and lets them through until it has
 # it.  The test's page comes after, through the debugging port.
 #   Its own profile, which remote debugging takes (Chromium refuses it in
-# the default one); the port answers on the machine only.  Its defaults
-# are built in, the same whatever the profile.  The network log's flag has Hudhud show a bar that warns of it, in the
-# pictures.  On sara's session bus, as anything sara starts in their
+# the default one); the port answers on the machine only.  A new profile
+# has the same defaults: they are built in.  The network log's flag has
+# Hudhud show a bar that warns of it, in the pictures.  On sara's session bus, as anything sara starts in their
 # session is.
 debugging_port=9222
 in_guest "setsid -f $as_sara WAYLAND_DISPLAY=$wayland_display \
@@ -542,7 +541,8 @@ press_on_keyboard esc
 sleep 2
 press_on_keyboard ctrl-l
 type_on_keyboard hudhud
-search="https://search.brave.com/search?q=hudhud"
+# The whole address: nothing added to the words (no "source=csChrome")
+search="https://search.brave.com/search?q=hudhud\""
 searched_with_brave() {
     in_guest "curl -s http://127.0.0.1:$debugging_port/json/list" > "$work/hudhud-pages.json" 2>&1 || true
     grep -q -F "\"url\": \"$search" "$work/hudhud-pages.json"

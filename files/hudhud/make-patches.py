@@ -82,7 +82,9 @@ PATCHES = [
     ]),
     ("policy-path", "components/policy/core/common/policy_paths.cc", [
       ('const char kPolicyPath[] = "/etc/chromium/policies";\n',
-       '// Hudhud: its defaults are part of the signed /usr\n'
+       '// Hudhud: not /etc/chromium/policies, which another Chromium\'s\n'
+       '// administrator may fill: a policy there would show Hudhud as managed\n'
+       '// and turn its secure DNS off.  Hudhud ships none.\n'
        'const char kPolicyPath[] = "/usr/share/hudhud/policies";\n'),
     ]),
     ("profile-directory", "chrome/common/chrome_paths_linux.cc", [
@@ -357,20 +359,44 @@ PATCHES = [
        '  static constexpr char kKeyName[] = "Hudhud Safe Storage";\n'
        '  static constexpr char kAppName[] = "hudhud";\n'),
     ]),
-    # Brave Search the default without a policy: Chromium falls back to the
-    # engine with Google's id before the first of the country's list
-    # (brave-search-first.py puts Brave there), and ungoogled-chromium's
-    # "No Search" has Google's id, so typed words went nowhere.
+    # --- Brave Search the default engine -----------------------------------
+    # Chromium's default is the engine with Google's id when the country's
+    # list has one, else the first of the list.  ungoogled-chromium's "No
+    # Search" has Google's id, so typed words went nowhere.  The default is
+    # Brave's id instead; brave-search-first.py puts Brave in every
+    # country's list, first, so it is found and listed first in settings.
     ("brave-search-default",
      "components/search_engines/template_url_prepopulate_data.cc", [
       ('  return FindPrepopulatedEngineInternal(prefs, regional_prepopulated_engines,\n'
        '                                        google.id,\n'
        '                                        /*use_first_as_fallback=*/true);\n',
-       '  // Hudhud: Brave Search, not Google\'s place ("No Search" in\n'
-       '  // ungoogled-chromium)\n'
+       '  // Hudhud: Brave Search, not the engine with Google\'s id\n'
+       '  // (ungoogled-chromium\'s "No Search")\n'
        '  return FindPrepopulatedEngineInternal(prefs, regional_prepopulated_engines,\n'
        '                                        brave.id,\n'
        '                                        /*use_first_as_fallback=*/true);\n'),
+    ]),
+    # Searches without "source=csChrome": Brave's built-in entry tells
+    # Brave a search came from Chrome's choice screen.  Hudhud has no choice
+    # screen, and 0.5.3's engine did not send it.
+    ("brave-search-no-chrome-source",
+     "third_party/search_engines_data/resources/definitions/prepopulated_engines.json", [
+      ('      "type": "SEARCH_ENGINE_BRAVE",\n'
+       '      "id": 109,\n'
+       '      "regulatory_extensions": [\n'
+       '        {\n'
+       '          "variant": "RegulatoryExtensionType::kDefault",\n'
+       '          "search_params": "source=csChrome"\n'
+       '        },\n'
+       '        {\n'
+       '          "variant": "RegulatoryExtensionType::kAndroidEEA",\n'
+       '          "search_params": "source=csAndroid"\n'
+       '        }\n'
+       '      ]\n'
+       '    },\n',
+       '      "type": "SEARCH_ENGINE_BRAVE",\n'
+       '      "id": 109\n'
+       '    },\n'),
     ]),
 ]
 

@@ -318,23 +318,24 @@ build has not.  Until then passkeys come from the extensions above.
   turns it back on (files/hudhud/ungoogled/patches/03-secure-dns.patch).
   Settings offer Cloudflare, Quad9, OpenDNS, CleanBrowsing or any other
   provider.
-- **Search**: Chromium lists its search engines per country in a data
-  file; files/hudhud/scripts/brave-search-first.py moves Brave to
-  the front of every country's list (the first is the default) when
-  Chromium is built.  Done on the data, not as a patch, so it keeps
-  working as Google edits the lists.  That alone was not enough: 0.4.0's
-  build started with no default engine at all.  Chromium's default is
-  the engine in Google's place, before the first of the list, and
-  ungoogled-chromium puts "No Search" there; the brave-search-default
-  patch makes it Brave, whatever country Chromium thinks it is in.  The
-  desktop test checks it.
+- **Search**: Chromium's default engine is the one with Google's id
+  when the country's list has it, else the first of the list.
+  ungoogled-chromium's "No Search" has Google's id (why 0.4.0 had no
+  engine at all), so the brave-search-default patch looks for Brave's id
+  instead, whatever country Chromium thinks it is in.
+  files/hudhud/scripts/brave-search-first.py puts Brave in every
+  country's list, first, so it is found and listed first in settings:
+  done on the data, so it keeps working as Google edits the lists.
+  Searches are Brave's plain address, without the "source=csChrome"
+  Chromium's entry adds (the brave-search-no-chrome-source patch).  The
+  desktop test checks the address.
 - **Built in, not policies**: third-party cookies blocked
-  (ungoogled-chromium's default), HTTPS-First balanced (Chromium's, for
-  anyone who has not changed it), no usage reports (ungoogled-chromium
-  has none to send).  The person can change each.  Hudhud ships no
+  (ungoogled-chromium's default), HTTPS-First balanced (Chromium 158's
+  default), no usage reports (ungoogled-chromium has none to send).  The person can change each.  Hudhud ships no
   policies: Chromium shows any policy as "Managed by your organization",
   and turns automatic secure DNS off, as on a managed machine.  (0.5.3
-  had these defaults as recommended policies, and showed both.)
+  had these defaults as recommended policies, so it showed "Managed by
+  your organization" and had secure DNS off.)
 - **First-run preferences** (/usr/lib/hudhud/initial_preferences):
   no sign-in, WebRTC shows only the public address, no first-run screens.
 - No "Google API keys are missing" bar: ungoogled-chromium already has
@@ -371,8 +372,9 @@ place in the generator's list; the docs name patches by name.
 | shields-build, shields-tab-helper-build | Shields' own target in the browser's build |
 | shields-page-info-switch | the per-site switch in page info on every site |
 | shields-button, shields-button-build | the Shields button in the toolbar |
-| policy-path | policies only from /usr/share/hudhud/policies, which Hudhud leaves empty, not Chromium's /etc/chromium/policies (Linux) |
-| brave-search-default | Brave Search the default engine, not ungoogled-chromium's "No Search" in Google's place |
+| policy-path | not Chromium's /etc/chromium/policies, which another Chromium's administrator may fill, but /usr/share/hudhud/policies, which Hudhud does not create (Linux) |
+| brave-search-default | Brave Search the default engine, not the engine with Google's id (ungoogled-chromium's "No Search") |
+| brave-search-no-chrome-source | Brave searches without "source=csChrome" |
 | profile-directory | ~/.config/hudhud (Linux) |
 | no-web-store-tile | no Web Store tile on the start page |
 | password-manager-choice-* | the password manager choice: the gate, the pref, the page and their builds |
