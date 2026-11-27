@@ -357,6 +357,40 @@ PATCHES = [
        '  static constexpr char kKeyName[] = "Hudhud Safe Storage";\n'
        '  static constexpr char kAppName[] = "hudhud";\n'),
     ]),
+    # Recommended policies alone made Chromium say it is managed by an
+    # organization, and turn off its automatic secure DNS, as on a managed
+    # machine: it counted any policy.
+    ("policy-recommended-not-managed",
+     "chrome/browser/policy/chrome_browser_policy_connector.cc", [
+      ('namespace {\n'
+       'bool g_command_line_enabled_for_testing = false;\n'
+       '}  // namespace\n',
+       'namespace {\n'
+       'bool g_command_line_enabled_for_testing = false;\n'
+       '\n'
+       '// Hudhud: its defaults are recommended policies (files/hudhud/install/\n'
+       '// policies), which the person can change.  Only a mandatory policy\n'
+       '// takes a choice away, so only one makes the machine managed.\n'
+       'bool ProviderHasMandatoryPolicies(\n'
+       '    const ConfigurationPolicyProvider* provider) {\n'
+       '  if (!provider || !provider->is_active()) {\n'
+       '    return false;\n'
+       '  }\n'
+       '  for (const auto& [policy_namespace, policies] : provider->policies()) {\n'
+       '    for (const auto& [name, entry] : policies) {\n'
+       '      if (entry.level == POLICY_LEVEL_MANDATORY) {\n'
+       '        return true;\n'
+       '      }\n'
+       '    }\n'
+       '  }\n'
+       '  return false;\n'
+       '}\n'
+       '}  // namespace\n'),
+      ('bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
+       '  if (ProviderHasPolicies(GetPlatformProvider())) {\n',
+       'bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
+       '  if (ProviderHasMandatoryPolicies(GetPlatformProvider())) {\n'),
+    ]),
 ]
 
 os.makedirs(out, exist_ok=True)
