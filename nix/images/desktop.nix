@@ -4,7 +4,8 @@
 # seatd -- the text stack and its fonts, niri, the compositor, and the
 # shell: DMS on Quickshell and Qt 6, with its login screen under greetd,
 # the list of people (accountsservice) and each one's session bus; the
-# battery (upower); sound: PipeWire, WirePlumber and alsa-utils; the
+# battery (upower); sound: PipeWire, WirePlumber and alsa-utils, and the
+# LV2 plugins a Mac's speakers are tuned with (docs/mac-speakers.md); the
 # terminal, Alacritty; FUSE's libraries and fusermount, with which an
 # AppImage runs; and the browser, Hudhud (docs/browser.md).  It needs no
 # other extension.
@@ -28,6 +29,7 @@ extension {
     desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.fonts desktop.niri
     desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.upower desktop.dbus-user-session
     desktop.wireplumber desktop.alsa-utils
+    desktop.lsp-plugins desktop.bankstown desktop.triforce
     desktop.alacritty desktop.libfuse3 desktop.libfuse2
     browser.hudhud
   ];

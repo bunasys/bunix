@@ -2,6 +2,9 @@
 # (auto_features); the ones named below are what the desktop uses.
 # Options whose default is "enabled", not "auto", are turned off by name.
 unpack $src
+for fix in $patches; do
+    patch --fuzz=0 -p1 -i $fix
+done
 meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet \
     --libexecdir=lib --sysconfdir=/etc --localstatedir=/var --buildtype=release \
     --wrap-mode=nodownload \
@@ -10,7 +13,7 @@ meson setup build --prefix=/usr --bindir=bin --sbindir=bin --libdir=lib/$triplet
     -Ddbus=enabled -Dreadline=enabled \
     -Dspa-plugins=enabled -Dalsa=enabled -Dpipewire-alsa=enabled \
     -Daudiomixer=enabled -Daudioconvert=enabled -Dsupport=enabled -Dcontrol=enabled \
-    -Dvideoconvert=enabled \
+    -Dvideoconvert=enabled -Dlv2=enabled -Dsndfile=enabled \
     -Dpipewire-jack=disabled -Dpipewire-v4l2=disabled -Dflatpak=disabled \
     -Daudiotestsrc=disabled -Dvideotestsrc=disabled \
     -Dexamples=disabled -Dtests=disabled -Ddocs=disabled -Dman=disabled \

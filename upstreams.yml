@@ -53,6 +53,8 @@ automake:
   cpe: 'a:gnu:automake'
   debian: automake
   alpine: automake
+bankstown:
+  untracked: at Aurora Silicon's pin (alarm-aurora, packages/bankstown), which its asahi-audio is tuned with
 bash:
   anitya: 166
   cpe: 'a:gnu:bash'
@@ -461,6 +463,11 @@ libslirp:
   cpe: 'a:libslirp_project:libslirp'
   debian: libslirp
   alpine: libslirp
+libsndfile:
+  anitya: 13277
+  cpe: 'a:libsndfile_project:libsndfile'
+  debian: libsndfile
+  alpine: libsndfile
 libtiff:
   anitya: 1738
   cpe: 'a:libtiff:libtiff'
@@ -486,6 +493,10 @@ libxml2:
   cpe: 'a:xmlsoft:libxml2'
   debian: libxml2
   alpine: libxml2
+lilv:
+  anitya: 1818
+  debian: lilv
+  alpine: lilv
 linux:
   follows: aurora-silicon/linux@integration/aurora
   version-regex: '([\d.]+)-aurora'
@@ -505,10 +516,15 @@ llvm:
   cpe: 'a:llvm:llvm'
   debian: llvm-toolchain-23
   alpine: llvm23
+lsp-plugins:
+  anitya: 242897
+  debian: lsp-plugins
 lua:
   anitya: 1847
   cpe: 'a:lua:lua'
   alpine: lua5.5
+lv2:
+  anitya: 230934
 lz4:
   anitya: 1865
   cpe: 'a:lz4_project:lz4'
@@ -764,6 +780,10 @@ sed:
   cpe: 'a:gnu:sed'
   debian: sed
   alpine: sed
+serd:
+  anitya: 230531
+  debian: serd
+  alpine: serd
 shadow:
   anitya: 4802
   cpe: 'a:shadow_project:shadow'
@@ -776,6 +796,10 @@ shim-signed:
   anitya: 10719
   cpe: 'a:redhat:shim'
   debian: shim-signed
+sord:
+  anitya: 230536
+  debian: sord
+  alpine: sord
 spirv-headers:
   pinned-by: spirv-llvm-translator
 spirv-llvm-translator:
@@ -788,6 +812,10 @@ sqv:
   anitya: 191618
   debian: rust-sequoia-sqv
   alpine: sequoia-sqv
+sratom:
+  anitya: 14903
+  debian: sratom
+  alpine: sratom
 strace:
   anitya: 4897
   cpe: 'a:strace_project:strace'
@@ -802,6 +830,8 @@ tar:
   cpe: 'a:gnu:tar'
   debian: tar
   alpine: tar
+triforce:
+  untracked: at Aurora Silicon's pin (alarm-aurora, packages/triforce-lv2), which its asahi-audio is tuned with
 u-boot:
   follows: aurora-silicon/u-boot@aurora-wip
   version-regex: '([\d.]+)-aurora'
@@ -853,6 +883,8 @@ xz:
   cpe: 'a:tukaani:xz'
   debian: xz-utils
   alpine: xz
+zix:
+  anitya: 370005
 zlib:
   anitya: 5303
   cpe: 'a:zlib:zlib'

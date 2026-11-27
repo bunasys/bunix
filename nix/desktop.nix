@@ -562,6 +562,127 @@ let
     buildDepends = [ base.bzip2 ];
   };
 
+  # ---- LV2: the audio plugins a Mac's speakers are tuned with ------------------
+  # (docs/mac-speakers.md).  PipeWire's filter chains load them with lilv;
+  # serd, sord, sratom and zix are what lilv reads plugins' descriptions
+  # (Turtle) with.  Without their programs, documentation and tests: what
+  # is built is what a filter chain needs.  Plugins go into
+  # /usr/lib/<triplet>/lv2, where lilv looks.
+
+  # LV2's headers, and its own descriptions of the standard, which every
+  # plugin's description refers to
+  lv2 = mkSystemPackage {
+    name = "lv2";
+    source = sources.lv2;
+    script = ./desktop/lv2.sh;
+    buildDepends = [ meson ninja pkgconf ];
+  };
+  # Without its threads and semaphores (`threads`, a feature, off with the
+  # rest): their headers are installed all the same, and a package that
+  # calls them would fail to link.  Nothing here does; one that does turns
+  # them on.
+  zix = mkSystemPackage {
+    name = "zix";
+    source = sources.zix;
+    script = ./meson.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dauto_features=disabled"; };
+  };
+  serd = mkSystemPackage {
+    name = "serd";
+    source = sources.serd;
+    script = ./meson.sh;
+    depends = [ glibc ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dauto_features=disabled"; };
+  };
+  sord = mkSystemPackage {
+    name = "sord";
+    source = sources.sord;
+    script = ./meson.sh;
+    depends = [ glibc serd zix ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dauto_features=disabled"; };
+  };
+  sratom = mkSystemPackage {
+    name = "sratom";
+    source = sources.sratom;
+    script = ./meson.sh;
+    depends = [ glibc serd sord lv2 ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dauto_features=disabled"; };
+  };
+  lilv = mkSystemPackage {
+    name = "lilv";
+    source = sources.lilv;
+    script = ./meson.sh;
+    depends = [ glibc serd sord sratom zix lv2 ];
+    buildDepends = [ meson ninja pkgconf ];
+    env = { meson_arguments = "-Dauto_features=disabled"; };
+  };
+
+  # libsndfile: sound files, read by PipeWire's convolver (asahi-audio's
+  # filters for each Mac's speakers are WAV files) and by lsp-plugins.
+  # WAV and the other uncompressed formats only: no FLAC, Ogg, Opus or
+  # MP3 libraries, and none of its programs.  Its CMakeLists asks for a
+  # CMake older than 3.5, which CMake 4 refuses unless told the policies
+  # to take.
+  libsndfile = mkSystemPackage {
+    name = "libsndfile";
+    source = sources.libsndfile;
+    script = ./cmake.sh;
+    depends = [ glibc ];
+    buildDepends = [ base.cmake ninja pkgconf ];
+    env = { cmake_arguments = "-DBUILD_SHARED_LIBS=ON -DENABLE_EXTERNAL_LIBS=OFF -DENABLE_MPEG=OFF -DBUILD_PROGRAMS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DENABLE_CPACK=OFF -DINSTALL_MANPAGES=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5"; };
+  };
+
+  # lsp-plugins: the compressors, limiter and loudness compensation of
+  # asahi-audio's speaker chains, as LV2 plugins without their windows
+  # (desktop/lsp-plugins.sh)
+  lsp-plugins = mkSystemPackage {
+    name = "lsp-plugins";
+    source = sources.lsp-plugins;
+    script = ./desktop/lsp-plugins.sh;
+    # cairo, fontconfig, freetype: the small picture of a plugin's state
+    # that an LV2 host may ask for (inline display), built with the LV2
+    # wrapper whatever the features
+    depends = [ glibc toolchain.gccLibraries libsndfile cairo fontconfig freetype ];
+    buildDepends = [ pkgconf lv2 ];
+  };
+
+  # bankstown (bass that small speakers cannot play, heard through its
+  # harmonics) and triforce (the microphones' beamforming): Rust LV2
+  # plugins by asahi-audio's author (desktop/rust-lv2-plugin.sh)
+  bankstown = mkSystemPackage {
+    name = "bankstown";
+    source = sources.bankstown;
+    script = ./desktop/rust-lv2-plugin.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ base.rust ];
+    env = {
+      plugin = "bankstown";
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/bankstown-crates.json));
+    };
+  };
+  triforce = mkSystemPackage {
+    name = "triforce";
+    source = sources.triforce;
+    script = ./desktop/rust-lv2-plugin.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ base.rust ];
+    env = {
+      plugin = "triforce";
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/triforce-crates.json));
+    };
+  };
+
   # PipeWire: the desktop's sound server.  It mixes every program's sound
   # onto the card, with a PulseAudio server (pipewire-pulse) for programs
   # written for PulseAudio, and an ALSA plugin that makes it ALSA's
@@ -576,8 +697,23 @@ let
     name = "pipewire";
     source = sources.pipewire;
     script = ./desktop/pipewire.sh;
-    depends = [ glibc alsa-lib base.dbus base.readline base.systemd ];
+    # lilv: filter chains of LV2 plugins (a Mac's speakers)
+    # libsndfile: the convolver's filters, which are WAV files
+    depends = [ glibc alsa-lib base.dbus base.readline base.systemd lilv libsndfile ];
     buildDepends = [ meson ninja pkgconf base.gettext base.bzip2 ];
+    # Aurora Silicon's fixes for a Mac's speakers (alarm-aurora,
+    # packages/pipewire, at bf8e872): a filter chain's latency and
+    # software volume, and the speakers' PCM, which the driver refuses to
+    # start until speaker protection runs
+    env = {
+      patches = [
+        ../files/pipewire/1005-filter-graph-follow-plugin-latency-after-activation.patch
+        ../files/pipewire/1006-filter-graph-keep-the-software-volume-at-unity-on-ev.patch
+        ../files/pipewire/1007-alsa-back-off-a-refused-snd_pcm_start-and-rate-limit.patch
+        ../files/pipewire/1008-alsa-a-start-on-a-suspended-PCM-is-expected-not-an-error.patch
+        ../files/pipewire/1010-alsa-prepare-a-stream-again-after-its-start-failed.patch
+      ];
+    };
   };
 
   # Lua 5.5: WirePlumber's policy is written in it.  A shared library and
@@ -751,5 +887,6 @@ in
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
   inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice libgudev upower dbus-user-session;
   inherit alsa-lib pipewire lua wireplumber alsa-utils;
+  inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce;
   inherit alacritty libfuse3 libfuse2 fuse-hello;
 }
