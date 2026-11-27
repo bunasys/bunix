@@ -84,7 +84,8 @@ PATCHES = [
       ('const char kPolicyPath[] = "/etc/chromium/policies";\n',
        '// Hudhud: not /etc/chromium/policies, which another Chromium\'s\n'
        '// administrator may fill: a policy there would show Hudhud as managed\n'
-       '// and turn its secure DNS off.  Hudhud ships none.\n'
+       '// and turn its secure DNS off.  Hudhud ships none: nothing may be put\n'
+       '// here (docs/browser.md, "Defaults").\n'
        'const char kPolicyPath[] = "/usr/share/hudhud/policies";\n'),
     ]),
     ("profile-directory", "chrome/common/chrome_paths_linux.cc", [
@@ -360,11 +361,8 @@ PATCHES = [
        '  static constexpr char kAppName[] = "hudhud";\n'),
     ]),
     # --- Brave Search the default engine -----------------------------------
-    # Chromium's default is the engine with Google's id when the country's
-    # list has one, else the first of the list.  ungoogled-chromium's "No
-    # Search" has Google's id, so typed words went nowhere.  The default is
-    # Brave's id instead; brave-search-first.py puts Brave in every
-    # country's list, first, so it is found and listed first in settings.
+    # Why: docs/browser.md, "Defaults".  Brave's id is found only because
+    # brave-search-first.py puts Brave in every country's list.
     ("brave-search-default",
      "components/search_engines/template_url_prepopulate_data.cc", [
       ('  return FindPrepopulatedEngineInternal(prefs, regional_prepopulated_engines,\n'

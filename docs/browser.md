@@ -324,15 +324,17 @@ build has not.  Until then passkeys come from the extensions above.
   engine at all), so the brave-search-default patch looks for Brave's id
   instead, whatever country Chromium thinks it is in.
   files/hudhud/scripts/brave-search-first.py puts Brave in every
-  country's list, first, so it is found and listed first in settings:
-  done on the data, so it keeps working as Google edits the lists.
+  country's list, first, so it is found and, outside the EEA (where
+  Chromium shuffles the list), listed first in settings: done on the
+  data, so it keeps working as Google edits the lists.
   Searches are Brave's plain address, without the "source=csChrome"
   Chromium's entry adds (the brave-search-no-chrome-source patch).  The
   desktop test checks the address.
 - **Built in, not policies**: third-party cookies blocked
   (ungoogled-chromium's default), HTTPS-First balanced (Chromium 158's
-  default), no usage reports (ungoogled-chromium has none to send).  The person can change each.  Hudhud ships no
-  policies: Chromium shows any policy as "Managed by your organization",
+  default), no usage reports (ungoogled-chromium has none to send).
+  The person can change each.  Hudhud ships no policies: Chromium shows
+  any policy as "Managed by your organization",
   and turns automatic secure DNS off, as on a managed machine.  (0.5.3
   had these defaults as recommended policies, so it showed "Managed by
   your organization" and had secure DNS off.)
