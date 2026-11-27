@@ -514,7 +514,10 @@ let
     buildDepends = [ go ];
     env = {
       release = sources.dms.version;
-      patches = [ ../files/dms/store-text-at-run-time.patch ];
+      patches = [
+        ../files/dms/store-text-at-run-time.patch
+        ../files/dms/backlights-by-type.patch
+      ];
       # a git submodule, so not in the release's archive: the commit the
       # release names
       qml_common = fetch sources.dms-qml-common;
@@ -939,6 +942,90 @@ let
     env = { libfuse2_source = fetch sources.libfuse2; };
   };
 
+  # ---- The Touch Bar -------------------------------------------------------------
+
+  # libxml2: XML, which librsvg reads SVG with, and the browser's
+  # accessibility (at-spi2-core) its interfaces' descriptions
+  libxml2 = mkSystemPackage {
+    name = "libxml2";
+    source = sources.libxml2;
+    script = ./desktop/libxml2.sh;
+    depends = [ glibc base.zlib ];
+    buildDepends = [ pkgconf ];
+  };
+
+  # cargo-c: builds a Rust library as a C library (`cargo cbuild`), with
+  # its header, its soname and its pkg-config file.  librsvg's build runs
+  # it.  For that build alone.  The C libraries cargo itself is built
+  # with that the system has no other use for (libgit2, libssh2, nghttp2,
+  # SQLite) come in their crates, and are linked into it.
+  cargo-c = mkSystemPackage {
+    name = "cargo-c";
+    source = sources.cargo-c;
+    script = ./cargo.sh;
+    depends = [ glibc toolchain.gccLibraries base.curl base.openssl base.zlib ];
+    buildDepends = [ base.rust pkgconf ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/cargo-c-crates.json));
+    };
+  };
+
+  # gdk-pixbuf: pictures, PNG, JPEG and GIF: icons in the browser's
+  # dialogs, and what librsvg's API hands a picture back as
+  gdk-pixbuf = mkSystemPackage {
+    name = "gdk-pixbuf";
+    source = sources.gdk-pixbuf;
+    script = ./meson.sh;
+    depends = [ glibc base.glib libjpeg-turbo libpng ];
+    buildDepends = [ meson ninja pkgconf ];
+    # the loaders built in: as modules they would need a loaders.cache,
+    # which gdk-pixbuf makes only when installed on a running system
+    env = { meson_arguments = "-Dbuiltin_loaders=png,jpeg,gif -Dpng=enabled -Djpeg=enabled -Dtiff=disabled -Dgif=enabled -Dglycin=disabled -Dothers=disabled -Dthumbnailer=disabled -Dgio_sniffing=false -Dintrospection=disabled -Dman=false -Ddocumentation=false -Dtests=false -Dinstalled_tests=false"; };
+  };
+
+  # librsvg: draws SVG pictures with cairo; tiny-dfr's icons are SVG.  Its
+  # C library only (desktop/librsvg.sh): no rsvg-convert, no gdk-pixbuf
+  # loader, no AVIF.  With its functions that hand back a gdk-pixbuf
+  # picture: tiny-dfr's Rust binding of librsvg has them, and links
+  # gdk-pixbuf whether it calls them or not.
+  librsvg = mkSystemPackage {
+    name = "librsvg";
+    source = sources.librsvg;
+    script = ./desktop/librsvg.sh;
+    depends = [ glibc toolchain.gccLibraries cairo fontconfig freetype gdk-pixbuf base.glib harfbuzz libxml2 pango ];
+    buildDepends = [ meson ninja pkgconf base.rust cargo-c ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/librsvg-crates.json));
+    };
+  };
+
+  # tiny-dfr: draws the Touch Bar's keys (Escape, the function keys, or
+  # brightness, volume and media) and sends them as a keyboard does,
+  # through uinput.  With its udev rules: the bar's display and touch
+  # screen on a seat of their own, so that the compositor leaves them to
+  # tiny-dfr, and tiny-dfr started when the bar shows up.  A 13-inch
+  # MacBook Pro's (M1 J293, M2 J493); nothing starts it on another machine
+  # (desktop/tiny-dfr.sh).
+  tiny-dfr = mkSystemPackage {
+    name = "tiny-dfr";
+    source = sources.tiny-dfr;
+    script = ./desktop/tiny-dfr.sh;
+    depends = [ glibc toolchain.gccLibraries cairo fontconfig freetype gdk-pixbuf base.glib libinput librsvg base.systemd ];
+    buildDepends = [ base.rust pkgconf ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/tiny-dfr-crates.json));
+    };
+  };
+
 in
 {
   inherit libdrm wayland wayland-protocols python-mako python-pyyaml spirv-headers spirv-tools spirv-llvm-translator mesa;
@@ -950,4 +1037,5 @@ in
   inherit alsa-lib alsa-ucm-conf alsa-ucm-conf-asahi pipewire lua wireplumber alsa-utils;
   inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce speakersafetyd asahi-audio;
   inherit alacritty libfuse3 libfuse2 fuse-hello;
+  inherit libxml2 gdk-pixbuf cargo-c librsvg tiny-dfr;
 }

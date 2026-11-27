@@ -2,10 +2,12 @@ unpack $src
 # its widget library, a git submodule, where the release's archive has an
 # empty directory for it
 unpack $qml_common dux-qml-common
-# The patch (files/dms/): the text "/nix/store", which DMS looks for in
+# The patches (files/dms/): the text "/nix/store", which DMS looks for in
 # programs' paths, is put together when it runs, so that the package
-# check, which refuses a package that names the store, takes it.  The
-# interface's tests name the store too, and are not run here: removed.
+# check, which refuses a package that names the store, takes it (the
+# interface's tests name the store too, and are not run here: removed);
+# and backlights in the order of their type, so that a MacBook Pro's
+# screen, and not its Touch Bar, is the one the brightness slider moves.
 for fix in $patches; do
     patch --fuzz=0 -p1 -i $fix
 done
