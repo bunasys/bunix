@@ -359,7 +359,9 @@ PATCHES = [
     ]),
     # Recommended policies alone made Chromium say it is managed by an
     # organization, and turn off its automatic secure DNS, as on a managed
-    # machine: it counted any policy.
+    # machine: it counted any policy.  On Linux only: macOS reads
+    # recommended policies from the app's own defaults, which any program
+    # of the person's can write, and the warning is all that shows it.
     ("policy-recommended-not-managed",
      "chrome/browser/policy/chrome_browser_policy_connector.cc", [
       ('namespace {\n'
@@ -368,9 +370,11 @@ PATCHES = [
        'namespace {\n'
        'bool g_command_line_enabled_for_testing = false;\n'
        '\n'
-       '// Hudhud: its defaults are recommended policies (files/hudhud/install/\n'
-       '// policies), which the person can change.  Only a mandatory policy\n'
-       '// takes a choice away, so only one makes the machine managed.\n'
+       '#if !BUILDFLAG(IS_MAC)\n'
+       '// Hudhud: its defaults are recommended policies\n'
+       '// (files/hudhud/install/policies), which the person can change.  Only a\n'
+       '// mandatory policy takes a choice away, so only one makes the machine\n'
+       '// managed.\n'
        'bool ProviderHasMandatoryPolicies(\n'
        '    const ConfigurationPolicyProvider* provider) {\n'
        '  if (!provider || !provider->is_active()) {\n'
@@ -385,11 +389,24 @@ PATCHES = [
        '  }\n'
        '  return false;\n'
        '}\n'
+       '#endif  // !BUILDFLAG(IS_MAC)\n'
        '}  // namespace\n'),
       ('bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
-       '  if (ProviderHasPolicies(GetPlatformProvider())) {\n',
+       '  if (ProviderHasPolicies(GetPlatformProvider())) {\n'
+       '    return true;\n'
+       '  }\n',
        'bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
-       '  if (ProviderHasMandatoryPolicies(GetPlatformProvider())) {\n'),
+       '  // Hudhud: on macOS any program of the person\'s can write recommended\n'
+       '  // policies (the app\'s defaults), so they still show as management\n'
+       '#if BUILDFLAG(IS_MAC)\n'
+       '  bool has_platform_policies = ProviderHasPolicies(GetPlatformProvider());\n'
+       '#else\n'
+       '  bool has_platform_policies =\n'
+       '      ProviderHasMandatoryPolicies(GetPlatformProvider());\n'
+       '#endif\n'
+       '  if (has_platform_policies) {\n'
+       '    return true;\n'
+       '  }\n'),
     ]),
 ]
 

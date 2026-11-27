@@ -374,6 +374,7 @@ place in the generator's list; the docs name patches by name.
 | shields-page-info-switch | the per-site switch in page info on every site |
 | shields-button, shields-button-build | the Shields button in the toolbar |
 | policy-path | policies from /usr/share/hudhud/policies (Linux) |
+| policy-recommended-not-managed | only a mandatory policy makes the browser "managed", so the recommended defaults leave secure DNS automatic (Linux: on macOS any program can write recommended policies) |
 | profile-directory | ~/.config/hudhud (Linux) |
 | no-web-store-tile | no Web Store tile on the start page |
 | password-manager-choice-* | the password manager choice: the gate, the pref, the page and their builds |
@@ -396,8 +397,8 @@ without its report.
 ## macOS
 
 Hudhud for Apple Silicon Macs, built on a Mac by tools/build-macos.sh
-(decided 2026-11-11), not by Nix: Nix builds in a Linux sandbox, and a
-macOS app needs Apple's SDK from the Xcode installed there.  The sources
+(decided 2026-11-11), not by Nix: bunix's Nix build runs in a Linux
+sandbox, and a macOS app needs Apple's SDK from the Xcode installed there.  The sources
 stay pinned: Chromium's tarball, ungoogled-chromium, Rust's library
 source, Crubit, bindgen's version and the filter lists come from
 nix/sources.json, which Linux builds with, so both build the same

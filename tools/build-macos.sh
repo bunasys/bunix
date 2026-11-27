@@ -21,11 +21,12 @@
 #   security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
 #     -k <login password> ~/Library/Keychains/login.keychain-db
 #
-# Not Nix: it builds in a Linux sandbox, and a macOS app needs Apple's SDK
-# from the Xcode installed here.  The sources are pinned all the same:
-# Chromium's tarball, ungoogled-chromium, Rust's library source, Crubit,
-# bindgen's version and the filter lists are read from nix/sources.json,
-# which Linux builds with; everything else is pinned below.
+# Not Nix: bunix's Nix build runs in a Linux sandbox, and a macOS app
+# needs Apple's SDK from the Xcode installed here.  The sources are pinned
+# all the same: Chromium's tarball, ungoogled-chromium, Rust's library
+# source, Crubit, bindgen's version and the filter lists are read from
+# nix/sources.json, which Linux builds with; everything else is pinned
+# below.
 #
 # Needs: Xcode with its Metal toolchain, and from Homebrew: python@3.13,
 # ninja, go, esbuild, node, coreutils (`brew install ...`).
@@ -71,6 +72,28 @@ out=$src/out/Default
 
 sources=$repo/nix/sources.json
 
+# One field of a source in nix/sources.json:  pinned <source> url|sha256|version
+pinned() {
+  python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]][sys.argv[3]])' \
+    "$sources" "$1" "$2"
+}
+
+# The sources Linux builds with, and where each is kept in the download
+# cache.  Read once, here: a source sources.json no longer has stops the
+# script before any step starts.
+chromium_version=$(pinned chromium version)
+ungoogled_version=$(pinned ungoogled-chromium version)
+rust_source_version=$(pinned chromium-rust version)
+bindgen_version=$(pinned bindgen version)
+chromium_tarball=$cache/chromium-$chromium_version-lite.tar.xz
+ungoogled_tarball=$cache/ungoogled-chromium-$ungoogled_version.tar.gz
+rust_source_tarball=$cache/rustc-$rust_source_version-src.tar.xz
+crubit_tarball=$cache/crubit-$(pinned crubit version).tar.gz
+ublock_tarball=$cache/uAssets-$(pinned ublock-assets version).tar.gz
+liste_ar_tarball=$cache/listear-$(pinned liste-ar version).tar.gz
+# ungoogled-chromium for that Chromium, unpacked by the fetch step
+ungoogled=$work/ungoogled-$ungoogled_version
+
 # ungoogled-chromium's macOS packaging.  At 157, a release behind the
 # Chromium Linux builds (it has none for 158): what 158 needs is in
 # files/hudhud/macos/patches and files/hudhud/ungoogled/patches, and the
@@ -111,13 +134,19 @@ TSGO_SHA256=902e2fe1cf0799198ef902c6b8c310a450fef629a6baba41d45641ef75c04ebd
 
 # The Rust nightly whose source Linux builds Chromium's Rust from
 # (chromium-rust in sources.json), prebuilt for macOS, and its rustc's own
-# crates (rustc-dev), for Crubit.  The fetch step checks the date is still
-# Linux's.
+# crates (rustc-dev), for Crubit.  Pinned by hand: Linux builds from source,
+# so sources.json has no hashes for these.
 RUST_NIGHTLY=2026-10-16
 RUST_URL=https://static.rust-lang.org/dist/$RUST_NIGHTLY/rust-nightly-aarch64-apple-darwin.tar.xz
 RUST_SHA256=0ce659d65f86e85f2722e489a9625a6a7af9c7981cc3c099398c8d34ea7c2526
 RUSTC_DEV_URL=https://static.rust-lang.org/dist/$RUST_NIGHTLY/rustc-dev-nightly-aarch64-apple-darwin.tar.xz
 RUSTC_DEV_SHA256=c0103c37c625b7f96314349ad89112b3b977e56b48b12bf5ce98751cd3023ddc
+rust_nightly_tarball=$cache/rust-nightly-$RUST_NIGHTLY.tar.xz
+rustc_dev_tarball=$cache/rustc-dev-nightly-$RUST_NIGHTLY.tar.xz
+if [ "nightly-$RUST_NIGHTLY" != "$rust_source_version" ]; then
+  echo "RUST_NIGHTLY is $RUST_NIGHTLY, Linux builds $rust_source_version: update RUST_NIGHTLY and the RUST_* sha256s" >&2
+  exit 1
+fi
 
 # ungoogled-chromium's tools want Python 3.13 or older; so do Chromium's
 # build scripts, which run as python3 from PATH
@@ -132,20 +161,17 @@ use_python313() {
   export PATH="$work/bin:$PATH"
 }
 
-# One field of a source in nix/sources.json:  pinned <source> url|sha256|version
-pinned() {
-  python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]][sys.argv[3]])' \
-    "$sources" "$1" "$2"
-}
-
-# Download a source as sources.json pins it, into the cache as <file>
+# Download a source as sources.json pins it, to <file> in the cache
 download_pinned() {
-  download "$(pinned "$1" url)" "$(pinned "$1" sha256)" "$2"
+  local url sha256
+  url=$(pinned "$1" url)
+  sha256=$(pinned "$1" sha256)
+  download "$url" "$sha256" "$2"
 }
 
 # Download once into the cache, and check the file every time
 download() {
-  local url=$1 sha256=$2 file=$cache/$3
+  local url=$1 sha256=$2 file=$3
   if [ ! -f "$file" ]; then
     curl -fL --retry 3 -o "$file.part" "$url"
     mv "$file.part" "$file"
@@ -168,13 +194,18 @@ clone_pinned() {
   fi
 }
 
-chromium_version() {
-  pinned chromium version
-}
-
-# ungoogled-chromium for that Chromium, unpacked by the fetch step
-ungoogled_dir() {
-  echo "$work/ungoogled-$(pinned ungoogled-chromium version)"
+# The steps after fetch use what it fetched.  When sources.json has moved
+# since, they stop here, before removing anything.
+check_fetched() {
+  local file
+  for file in "$chromium_tarball" "$rust_source_tarball" "$crubit_tarball" \
+      "$ublock_tarball" "$liste_ar_tarball" "$rust_nightly_tarball" "$rustc_dev_tarball" \
+      "$ungoogled"; do
+    if [ ! -e "$file" ]; then
+      echo "$file: not fetched yet: run $0 fetch" >&2
+      exit 1
+    fi
+  done
 }
 
 step_fetch() {
@@ -182,41 +213,28 @@ step_fetch() {
   clone_pinned https://github.com/ungoogled-software/ungoogled-chromium-macos.git \
     "$UNGOOGLED_MACOS_TAG" "$UNGOOGLED_MACOS_COMMIT" "$(basename "$ungoogled_macos")"
 
-  local version
-  version=$(chromium_version)
   # ungoogled-chromium may be a release behind Chromium: Hudhud moves to a
   # Chromium only once tools/chromium-update.py's report on it is reviewed
-  if [ ! -f "$repo/docs/chromium/$version.md" ]; then
-    echo "No reviewed report for Chromium $version: run tools/chromium-update.py into docs/chromium/$version.md" >&2
-    exit 1
-  fi
-  # The prebuilt nightly is pinned here by hand: it must be the one whose
-  # source Linux builds
-  local linux_nightly
-  linux_nightly=$(pinned chromium-rust version)
-  if [ "nightly-$RUST_NIGHTLY" != "$linux_nightly" ]; then
-    echo "RUST_NIGHTLY is $RUST_NIGHTLY, Linux builds $linux_nightly: update RUST_* to its date" >&2
+  if [ ! -f "$repo/docs/chromium/$chromium_version.md" ]; then
+    echo "No reviewed report for Chromium $chromium_version: run tools/chromium-update.py into docs/chromium/$chromium_version.md" >&2
     exit 1
   fi
 
-  download_pinned chromium "chromium-$version-lite.tar.xz"
-  download_pinned ungoogled-chromium "ungoogled-chromium-$(pinned ungoogled-chromium version).tar.gz"
-  download_pinned chromium-rust "rustc-$linux_nightly-src.tar.xz"
-  download_pinned crubit "crubit-$(pinned crubit version).tar.gz"
-  download_pinned ublock-assets "uAssets-$(pinned ublock-assets version).tar.gz"
-  download_pinned liste-ar "listear-$(pinned liste-ar version).tar.gz"
-  download "$TSGO_URL" "$TSGO_SHA256" tsgo.tgz
-  download "$RUST_URL" "$RUST_SHA256" "rust-nightly-$RUST_NIGHTLY.tar.xz"
-  download "$RUSTC_DEV_URL" "$RUSTC_DEV_SHA256" "rustc-dev-nightly-$RUST_NIGHTLY.tar.xz"
+  download_pinned chromium "$chromium_tarball"
+  download_pinned ungoogled-chromium "$ungoogled_tarball"
+  download_pinned chromium-rust "$rust_source_tarball"
+  download_pinned crubit "$crubit_tarball"
+  download_pinned ublock-assets "$ublock_tarball"
+  download_pinned liste-ar "$liste_ar_tarball"
+  download "$TSGO_URL" "$TSGO_SHA256" "$cache/tsgo.tgz"
+  download "$RUST_URL" "$RUST_SHA256" "$rust_nightly_tarball"
+  download "$RUSTC_DEV_URL" "$RUSTC_DEV_SHA256" "$rustc_dev_tarball"
 
-  local ungoogled
-  ungoogled=$(ungoogled_dir)
   # Unpacked beside it first, so a stopped unpacking is not taken for one
   if [ ! -d "$ungoogled" ]; then
     rm -rf "$ungoogled.part"
     mkdir -p "$ungoogled.part"
-    tar -xzf "$cache/ungoogled-chromium-$(pinned ungoogled-chromium version).tar.gz" \
-      -C "$ungoogled.part" --strip-components 1
+    tar -xzf "$ungoogled_tarball" -C "$ungoogled.part" --strip-components 1
     mv "$ungoogled.part" "$ungoogled"
   fi
 
@@ -226,13 +244,11 @@ step_fetch() {
 }
 
 step_source() {
-  local version ungoogled
-  version=$(chromium_version)
-  ungoogled=$(ungoogled_dir)
+  check_fetched
   rm -rf "$src"
   mkdir -p "$src"
-  echo "Unpacking Chromium $version ..."
-  tar -xJf "$cache/chromium-$version-lite.tar.xz" -C "$src" --strip-components 1
+  echo "Unpacking Chromium $chromium_version ..."
+  tar -xJf "$chromium_tarball" -C "$src" --strip-components 1
 
   # The platform's patches go in after ungoogled-chromium's and before
   # Hudhud's (prepare-source.sh): ungoogled-chromium-macos's, but those this
@@ -259,9 +275,9 @@ step_source() {
 }
 
 step_toolchain() {
+  check_fetched
   cd "$src"
-  local ungoogled ini=$ungoogled_macos/downloads-arm64.ini
-  ungoogled=$(ungoogled_dir)
+  local ini=$ungoogled_macos/downloads-arm64.ini
   local llvm=third_party/llvm-build/Release+Asserts
   local rust=$src/third_party/rust-toolchain
   rm -rf "$llvm" "$rust" third_party/node/mac_arm64 bindgen-root
@@ -281,15 +297,14 @@ step_toolchain() {
   local unpack=$work/rust-unpack
   rm -rf "$unpack"
   mkdir -p "$unpack"
-  tar -xJf "$cache/rust-nightly-$RUST_NIGHTLY.tar.xz" -C "$unpack"
-  tar -xJf "$cache/rustc-dev-nightly-$RUST_NIGHTLY.tar.xz" -C "$unpack"
+  tar -xJf "$rust_nightly_tarball" -C "$unpack"
+  tar -xJf "$rustc_dev_tarball" -C "$unpack"
   "$unpack"/rust-nightly-aarch64-apple-darwin/install.sh --prefix="$rust" --disable-ldconfig \
     --components=rustc,cargo,rustfmt-preview,rust-std-aarch64-apple-darwin > /dev/null
   "$unpack"/rustc-dev-nightly-aarch64-apple-darwin/install.sh --prefix="$rust" --disable-ldconfig > /dev/null
   "$rust/bin/rustc" --version > "$rust/VERSION"
   mkdir -p "$rust/lib/rustlib/src/rust"
-  tar -xJf "$cache/rustc-$(pinned chromium-rust version)-src.tar.xz" -C "$unpack" \
-    rustc-nightly-src/library
+  tar -xJf "$rust_source_tarball" -C "$unpack" rustc-nightly-src/library
   mv "$unpack/rustc-nightly-src/library" "$rust/lib/rustlib/src/rust/"
   rm -rf "$unpack"
   test -d "$rust/lib/rustlib/src/rust/library/vendor"
@@ -301,7 +316,7 @@ step_toolchain() {
   local crubit=$work/crubit
   rm -rf "$crubit"
   mkdir -p "$crubit"
-  tar -xzf "$cache/crubit-$(pinned crubit version).tar.gz" -C "$crubit" --strip-components 1
+  tar -xzf "$crubit_tarball" -C "$crubit" --strip-components 1
   (
     cd "$crubit"
     RUSTC="$rust/bin/rustc" RUSTFLAGS="-L native=$rust/lib -Clink-args=-Wl,-rpath,@loader_path/../lib" \
@@ -314,7 +329,7 @@ step_toolchain() {
 
   # bindgen, with LLVM's libclang and the nightly's rustfmt beside it, where
   # rust_bindgen_root (configure) points
-  cargo install --quiet --locked --root "$src/bindgen-root" bindgen-cli --version "$(pinned bindgen version)"
+  cargo install --quiet --locked --root "$src/bindgen-root" bindgen-cli --version "$bindgen_version"
   ln -s "$src/$llvm/lib" bindgen-root/lib
   ln -s "$rust/bin/rustfmt" bindgen-root/bin/rustfmt
 
@@ -346,6 +361,7 @@ step_toolchain() {
 }
 
 step_configure() {
+  check_fetched
   cd "$src"
   if [ ! -f "$sdk/SDKSettings.json" ]; then
     echo "$sdk: not a macOS SDK (set HUDHUD_MACOS_SDK)" >&2
@@ -354,8 +370,6 @@ step_configure() {
   # Chromium wants its SDK inside the output directory, to track it
   mkdir -p "$out/sdk"
   ln -sfn "$sdk" "$out/sdk/selected_macos_sdk"
-  local ungoogled
-  ungoogled=$(ungoogled_dir)
   # ungoogled-chromium's arguments, its macOS ones, then Hudhud's, which
   # win.  Not the macOS ones' Crubit directory: the toolchain step puts
   # Crubit inside Rust's, where Chromium looks by default.
@@ -406,13 +420,12 @@ step_build() {
 # put into the framework, where the browser loads them from
 # (shields_engine.cc)
 step_shields() {
+  check_fetched
   local lists=$work/lists
   rm -rf "$lists"
   mkdir -p "$lists/uAssets" "$lists/listear"
-  tar -xzf "$cache/uAssets-$(pinned ublock-assets version).tar.gz" -C "$lists/uAssets" \
-    --strip-components 1
-  tar -xzf "$cache/listear-$(pinned liste-ar version).tar.gz" -C "$lists/listear" \
-    --strip-components 1
+  tar -xzf "$ublock_tarball" -C "$lists/uAssets" --strip-components 1
+  tar -xzf "$liste_ar_tarball" -C "$lists/listear" --strip-components 1
   local engine=$work/shields-target/release
   CARGO_TARGET_DIR=$work/shields-target cargo build --release --locked \
     --manifest-path "$repo/files/hudhud/shields/Cargo.toml"
@@ -432,12 +445,11 @@ step_shields() {
 }
 
 step_package() {
-  local version app=$out/Hudhud.app
-  version=$(chromium_version)
+  local app=$out/Hudhud.app
 
   sign_app "$app"
 
-  local dmg=$work/hudhud-$version-macos-arm64.dmg
+  local dmg=$work/hudhud-$chromium_version-macos-arm64.dmg
   "$src/chrome/installer/mac/pkg-dmg" --sourcefile --source "$app" --target "$dmg" \
     --volname Hudhud --symlink /Applications:/Applications --format UDBZ --verbosity 0
   # The disk image is signed too, so macOS can check it before opening it
