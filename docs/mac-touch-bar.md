@@ -3,8 +3,9 @@
 The 13-inch MacBook Pro with an M1 (J293, mbp20) or M2 (J493) has a
 Touch Bar where other laptops have Escape and the function keys: the only
 Escape it has.  Until bunix drives it, the bar is dark, and there is no
-Escape key.  Begun 2026-11-27, on the `touch-bar` branch; not yet tried
-on the Mac.
+Escape key.  Begun 2026-11-27, on the `touch-bar` branch; on mbp20 with
+test version 0.5.3.3 the same day, the bar draws its keys and takes
+touches.
 
 ## What the bar is
 
@@ -29,6 +30,17 @@ on the Mac.
    firmware the Mac's installer collects (`all_firmware.tar.gz`).  On an
    installed Mac, `vendor-firmware` has the touch screen tried again once
    `/var/lib/vendorfw` can be read, as it has Wi-Fi.
+
+   mbp20's archive had the Wi-Fi files only, and the bar drew its keys
+   but took no touch ("Direct firmware load for apple/dfrmtfw-j293.bin
+   failed").  The file was made by hand: `Firmware/J293_Multitouch.im4p`
+   alone, read out of Apple's restore image of the macOS the Mac runs
+   (27.2.1, `UniversalMac_27.2.1_26B131_Restore.ipsw`) with ranged HTTP
+   requests, converted by `asahi_firmware.multitouch` from
+   `aurora-silicon/aurora-installer`, and put in
+   `/var/lib/vendorfw/apple/`.  Then, as root, `echo spi0.0 >
+   /sys/bus/spi/drivers_probe` and `systemctl restart tiny-dfr`, or a
+   reboot.  An installed Mac made this way keeps it.
 3. **tiny-dfr** in arm64's desktop extension (`nix/desktop.nix`, "The
    Touch Bar"), with librsvg, which it draws its icons with.  Its udev
    rules put the bar's display and touch screen on a seat of their own
@@ -51,11 +63,12 @@ and that it does not run on a machine with no bar.
 
 ## Not yet known or done
 
-- Tried on mbp20: the bar lights up, its keys type, Fn switches its
-  layer, the screen's brightness slider moves the screen, and nothing
-  pops up when the bar dims.
-- Whether mbp20's archive of firmware has `dfrmtfw-j293.bin`; a way to
-  make one that does (`tools/boot-mac.sh`'s `BUNIX_FIRMWARE`).
+- Tried on mbp20: its keys type, Fn switches its layer, the screen's
+  brightness slider moves the screen, and nothing pops up when the bar
+  dims.
+- A way for bunix to make the firmware file itself, so that no one does
+  the steps above by hand: in the archive `BUNIX_FIRMWARE` names
+  (`tools/boot-mac.sh`), or by the installer.
 - If `systemd-sysext` is restarted while the bar dims or wakes, the bar's
   devices lose their names for a moment, tiny-dfr stops with them, and
   nothing starts it again until the next boot.  A narrow window; at boot
