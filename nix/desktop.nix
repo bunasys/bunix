@@ -562,6 +562,22 @@ let
     buildDepends = [ base.bzip2 ];
   };
 
+  # ALSA's profiles of sound cards (desktop/alsa-ucm-conf.sh): upstream's,
+  # and Aurora Silicon's of Apple's cards (a Mac's speakers, headphone
+  # jack and microphones; docs/mac-speakers.md)
+  alsa-ucm-conf = mkSystemPackage {
+    name = "alsa-ucm-conf";
+    source = sources.alsa-ucm-conf;
+    script = ./desktop/alsa-ucm-conf.sh;
+    # its archive is bzip2's
+    buildDepends = [ base.bzip2 ];
+  };
+  alsa-ucm-conf-asahi = mkSystemPackage {
+    name = "alsa-ucm-conf-asahi";
+    source = sources.alsa-ucm-conf-asahi;
+    script = ./desktop/alsa-ucm-conf.sh;
+  };
+
   # ---- LV2: the audio plugins a Mac's speakers are tuned with ------------------
   # (docs/mac-speakers.md).  PipeWire's filter chains load them with lilv;
   # serd, sord, sratom and zix are what lilv reads plugins' descriptions
@@ -680,6 +696,34 @@ let
         url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
         inherit (crate) sha256;
       }) (builtins.fromJSON (builtins.readFile ./desktop/triforce-crates.json));
+    };
+  };
+
+  # speakersafetyd: a Mac's speakers' protection, without which the driver
+  # keeps them silent (desktop/speakersafetyd.sh; docs/mac-speakers.md).
+  # alsa-lib: it reads the amplifiers' sense PCM.  bash, coreutils:
+  # Aurora's warm restart (files/speakersafetyd) runs sh and touch.
+  speakersafetyd = mkSystemPackage {
+    name = "speakersafetyd";
+    source = sources.speakersafetyd;
+    script = ./desktop/speakersafetyd.sh;
+    depends = [ glibc toolchain.gccLibraries alsa-lib tools.bash tools.coreutils ];
+    buildDepends = [ base.rust pkgconf ];
+    env = {
+      # Aurora Silicon's fixes (alarm-aurora, packages/speakersafetyd, at
+      # bf8e872): a sense period read after a probe closed the speakers,
+      # a machine's own profile before its family's, and the J504's
+      patches = [
+        ../files/speakersafetyd/0001-j504-Write-the-full-speaker-names-in-conf.patch
+        ../files/speakersafetyd/0002-skip-a-sense-period-read-after-a-probe-closed-the-speakers.patch
+        ../files/speakersafetyd/0003-try-the-machine-s-own-config-before-its-family-s.patch
+      ];
+      # and Aurora's profiles, udev rule and warm restart
+      aurora = ../files/speakersafetyd/aurora;
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/speakersafetyd-crates.json));
     };
   };
 
@@ -886,7 +930,7 @@ in
   inherit hwdata niri;
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
   inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice libgudev upower dbus-user-session;
-  inherit alsa-lib pipewire lua wireplumber alsa-utils;
-  inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce;
+  inherit alsa-lib alsa-ucm-conf alsa-ucm-conf-asahi pipewire lua wireplumber alsa-utils;
+  inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce speakersafetyd;
   inherit alacritty libfuse3 libfuse2 fuse-hello;
 }

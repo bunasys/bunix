@@ -167,18 +167,21 @@ start:
   (`multi-user.target.d/<unit>.conf`): systemd starts an upheld unit
   whenever it is not running, including when it first appears.  An upheld
   unit must not fail at boot (prefix its command with `-`), or systemd
-  keeps restarting it.
+  keeps restarting it.  A service for a device only is asked for by the
+  extension's udev rule instead (`SYSTEMD_WANTS`), when the device shows:
+  speakersafetyd, for a Mac's speakers (docs/mac-speakers.md).
 
 An extension's build refuses a service that nothing starts: no target
-upholds it, and it has no socket of its own (`extension-parts.sh`; a
-socket, as devtools' Nix daemon has, is started by `sockets.target`,
-which the same drop-in asks again).  `tools/desktop-test.sh` checks that
+upholds it, it has no socket of its own, and no udev rule of the
+extension's asks for it (`extension-parts.sh`; a socket, as devtools'
+Nix daemon has, is started by `sockets.target`, which the same drop-in
+asks again).  `tools/desktop-test.sh` checks that
 the desktop's units run.
 
 udev's rules and the system bus's policies are the same: each is read
 before the merge.  After it, `systemd-sysext.service.d/bunix.conf` has
-udev read its rules again and go over the input devices once more, for
-libinput's rules; and has the bus read its policies again, without which
+udev read its rules again and go over the input and sound devices once
+more, for libinput's rules and speakersafetyd's; and has the bus read its policies again, without which
 accountsservice cannot take its name on the bus.
 
 ## Phases
@@ -350,12 +353,10 @@ installed system.
 - Headers for building against the desktop libraries (GTK apps) belong
   with `gcc` or in a `desktop-devel` extension: not decided.
 - An on-screen keyboard that handles Arabic.
-- A Mac's speakers at full volume: macaudio keeps them at a safe level
-  until a speaker safety daemon (speakersafetyd, or Aurora's
-  speakerguardd) takes them, and Asahi's DSP for them (asahi-audio, its
-  LV2 plugins) is not there either.  Nor UCM profiles (alsa-ucm-conf),
-  which some cards need to route their outputs.  None of a Mac's sound
-  has been tried: only the virtual machines' cards.
+- A Mac's speakers: macaudio leaves them off until a speaker safety
+  daemon (speakersafetyd, or Aurora's speakerguardd) runs, and Asahi's
+  processing for them (asahi-audio) is not there yet.  Under way:
+  docs/mac-speakers.md.
 - The cards' volumes are restored once, as the extension is merged
   (`alsa-restore.service`): a card that appears later, a USB headset,
   starts at its driver's levels, until PipeWire sets its own.  A restore
