@@ -1,0 +1,1917 @@
+[
+ {
+  "name": "aho-corasick",
+  "version": "1.1.5",
+  "sha256": "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba"
+ },
+ {
+  "name": "allocator-api2",
+  "version": "0.2.21",
+  "sha256": "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+ },
+ {
+  "name": "android_system_properties",
+  "version": "0.1.6",
+  "sha256": "ae221649c9976a6f6c56ae1facf410f3ddb33cc661c4b7b61020a912d4237fbc"
+ },
+ {
+  "name": "annotate-snippets",
+  "version": "0.12.18",
+  "sha256": "0258346f92c78dbc5b336b9a5b27c64447aa10643bc64e651db2edb145361564"
+ },
+ {
+  "name": "anstream",
+  "version": "1.0.0",
+  "sha256": "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
+ },
+ {
+  "name": "anstyle",
+  "version": "1.0.14",
+  "sha256": "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
+ },
+ {
+  "name": "anstyle-hyperlink",
+  "version": "1.0.2",
+  "sha256": "7a14cad0fa1d1fb02de486a95ea7fd8dd28567b82f65b4ca34bffa7da81823e4"
+ },
+ {
+  "name": "anstyle-parse",
+  "version": "1.0.0",
+  "sha256": "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+ },
+ {
+  "name": "anstyle-progress",
+  "version": "0.1.6",
+  "sha256": "31c8de128a34de5ee1f96b96403c74611081e68100aa50368a2bf1d1a8e7d3f9"
+ },
+ {
+  "name": "anstyle-query",
+  "version": "1.1.5",
+  "sha256": "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
+ },
+ {
+  "name": "anstyle-wincon",
+  "version": "3.0.11",
+  "sha256": "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
+ },
+ {
+  "name": "anyhow",
+  "version": "1.0.105",
+  "sha256": "2cb931c189b85683d69a5cfad41d4d418671e1ac413dd209f3f2fc31e3cfd902"
+ },
+ {
+  "name": "ar_archive_writer",
+  "version": "0.5.5",
+  "sha256": "523e5e187fff36fcb8d1d19ccf0ca4ca43ec3d158316057f66dc6f72716bc5ec"
+ },
+ {
+  "name": "arc-swap",
+  "version": "1.9.5",
+  "sha256": "84a22b5d51209f6de83d37a0b33d320acb8da88823e42a94c075140708f032a5"
+ },
+ {
+  "name": "arrayvec",
+  "version": "0.7.8",
+  "sha256": "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+ },
+ {
+  "name": "async-trait",
+  "version": "0.1.92",
+  "sha256": "82f6aeea286b8eb4dd3431a1be1b59d290ace00f5bfd8e2a159bc2a05e2c1667"
+ },
+ {
+  "name": "autocfg",
+  "version": "1.5.1",
+  "sha256": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+ },
+ {
+  "name": "base64",
+  "version": "0.22.1",
+  "sha256": "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+ },
+ {
+  "name": "base64",
+  "version": "0.23.1",
+  "sha256": "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
+ },
+ {
+  "name": "bitflags",
+  "version": "1.3.2",
+  "sha256": "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+ },
+ {
+  "name": "bitflags",
+  "version": "2.13.2",
+  "sha256": "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+ },
+ {
+  "name": "bitmaps",
+  "version": "2.1.0",
+  "sha256": "031043d04099746d8db04daf1fa424b2bc8bd69d92b25962dcde24da39ab64a2"
+ },
+ {
+  "name": "blake3",
+  "version": "1.8.7",
+  "sha256": "6d9e454fc11f76977dc803893aff6304ed33d6a26efae8696573bea74baa27ae"
+ },
+ {
+  "name": "block-buffer",
+  "version": "0.10.4",
+  "sha256": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
+ },
+ {
+  "name": "block-buffer",
+  "version": "0.12.1",
+  "sha256": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
+ },
+ {
+  "name": "block2",
+  "version": "0.6.2",
+  "sha256": "cdeb9d870516001442e364c5220d3574d2da8dc765554b4a617230d33fa58ef5"
+ },
+ {
+  "name": "bstr",
+  "version": "1.14.0",
+  "sha256": "a680398c10c7bc0488067c4612226ea905a85f607134b69f3068d505d58c4214"
+ },
+ {
+  "name": "bumpalo",
+  "version": "3.20.4",
+  "sha256": "87a0cf66fd1eb2fb7b822cb78370d82303750809bc6ba855f3f58e517d3238db"
+ },
+ {
+  "name": "byteorder",
+  "version": "1.5.0",
+  "sha256": "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
+ },
+ {
+  "name": "bytes",
+  "version": "1.12.2",
+  "sha256": "776dfebd015e2d8732c684a2c71003674ccb49457b539b9e82151ba38e96dd7c"
+ },
+ {
+  "name": "camino",
+  "version": "1.2.6",
+  "sha256": "bbbad30e4b4c14a39e3cc8aed085a12a327257c316619c93581e017bc52be591"
+ },
+ {
+  "name": "cargo",
+  "version": "0.101.0",
+  "sha256": "c6c1327f8e79d54291c59972479bbe14f0ff6ddf72dff2b6d5501affb5061ffa"
+ },
+ {
+  "name": "cargo-credential",
+  "version": "0.4.11",
+  "sha256": "5de74202293b2bc090da20d0b475aa74821caf0e901f29ba97003353886a5b42"
+ },
+ {
+  "name": "cargo-credential-libsecret",
+  "version": "0.5.11",
+  "sha256": "8db81e53925d0c8b7d1728fc884518d35e0b292873ef4c52447a3e807fade873"
+ },
+ {
+  "name": "cargo-credential-macos-keychain",
+  "version": "0.4.26",
+  "sha256": "daf279a812ba09450e150152a6cfdff65431a7b8692ea90167e30fd03a35ba70"
+ },
+ {
+  "name": "cargo-credential-wincred",
+  "version": "0.4.26",
+  "sha256": "ef800e2427d5ae8180407a95c31eac5f242a13065a0e95ee9cfa2f42550a1466"
+ },
+ {
+  "name": "cargo-platform",
+  "version": "0.3.3",
+  "sha256": "dd0061da739915fae12ea00e16397555ed4371a6bb285431aab930f61b0aa4ba"
+ },
+ {
+  "name": "cargo-util",
+  "version": "0.2.33",
+  "sha256": "33ab36e328ebd4ef4b7cf9a4532018012caf9facfd28426a0d5683dce92aeb46"
+ },
+ {
+  "name": "cargo-util-schemas",
+  "version": "0.15.0",
+  "sha256": "5f6852a6fffb5443e5c26155532745f3db7eec431e31581da2f844c0a437c8ff"
+ },
+ {
+  "name": "cargo-util-terminal",
+  "version": "0.1.3",
+  "sha256": "2f9e4b9b1629251f42ca7774d39a94486e575bf6629cfc20d5e99a04663fb7bd"
+ },
+ {
+  "name": "cbindgen",
+  "version": "0.29.4",
+  "sha256": "2ecb53484c9c167ba674026b656d8a27d7657a58e6066aa902bfb1a4aa00ae20"
+ },
+ {
+  "name": "cc",
+  "version": "1.11.3",
+  "sha256": "02f0e023adb368345ce0ca6cdfc0f24a06554468d0e8503e14a0841de79bfa69"
+ },
+ {
+  "name": "cfg-if",
+  "version": "1.0.5",
+  "sha256": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
+ },
+ {
+  "name": "cfg_aliases",
+  "version": "0.2.2",
+  "sha256": "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
+ },
+ {
+  "name": "chacha20",
+  "version": "0.10.2",
+  "sha256": "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
+ },
+ {
+  "name": "clap",
+  "version": "4.6.9",
+  "sha256": "844c5c0b65be192cb68d570cca1b21a6444431d24e39c084dc0336177015337c"
+ },
+ {
+  "name": "clap_builder",
+  "version": "4.6.7",
+  "sha256": "ec0797fb7aeb1406c84efac526901f7ec3ead2124f946b494e72879d4b54704d"
+ },
+ {
+  "name": "clap_complete",
+  "version": "4.6.12",
+  "sha256": "6a35200383f20018d41c14d1ab19c1727c697f544492143f7d93aa39f0187848"
+ },
+ {
+  "name": "clap_derive",
+  "version": "4.6.9",
+  "sha256": "b4c174f11f949b9ca8c60580925e282b9cbd5454750e506f08648b2038080cd7"
+ },
+ {
+  "name": "clap_lex",
+  "version": "1.1.2",
+  "sha256": "e0921b3876b3a1df8a1c9f912e7f94342458022c2e84288015893d83c4d62a79"
+ },
+ {
+  "name": "clru",
+  "version": "0.6.3",
+  "sha256": "197fd99cb113a8d5d9b6376f3aa817f32c1078f2343b714fff7d2ca44fdf67d5"
+ },
+ {
+  "name": "cmov",
+  "version": "0.5.4",
+  "sha256": "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
+ },
+ {
+  "name": "color-print",
+  "version": "0.3.7",
+  "sha256": "3aa954171903797d5623e047d9ab69d91b493657917bdfb8c2c80ecaf9cdb6f4"
+ },
+ {
+  "name": "color-print-proc-macro",
+  "version": "0.3.7",
+  "sha256": "692186b5ebe54007e45a59aea47ece9eb4108e141326c304cdc91699a7118a22"
+ },
+ {
+  "name": "colorchoice",
+  "version": "1.0.5",
+  "sha256": "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
+ },
+ {
+  "name": "const-oid",
+  "version": "0.10.3",
+  "sha256": "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
+ },
+ {
+  "name": "constant_time_eq",
+  "version": "0.4.2",
+  "sha256": "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+ },
+ {
+  "name": "core-foundation",
+  "version": "0.10.1",
+  "sha256": "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6"
+ },
+ {
+  "name": "core-foundation-sys",
+  "version": "0.8.7",
+  "sha256": "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+ },
+ {
+  "name": "core_detect",
+  "version": "1.0.0",
+  "sha256": "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
+ },
+ {
+  "name": "cpufeatures",
+  "version": "0.2.17",
+  "sha256": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
+ },
+ {
+  "name": "cpufeatures",
+  "version": "0.3.1",
+  "sha256": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
+ },
+ {
+  "name": "crates-io",
+  "version": "0.41.3",
+  "sha256": "54c254dab5d7e143a186ed2797d71c2c5a8f54ed0f492c9b33b4eb49208248cb"
+ },
+ {
+  "name": "crc32fast",
+  "version": "1.5.5",
+  "sha256": "2b929dd2a135771f40afabd1073f85eed59c800b7c61901e5c254270497dad64"
+ },
+ {
+  "name": "crossbeam-channel",
+  "version": "0.5.17",
+  "sha256": "98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1"
+ },
+ {
+  "name": "crossbeam-deque",
+  "version": "0.8.8",
+  "sha256": "622f3fc73690be383c7214310406f28a90e6edeadc3cea882f9d71e495b9711a"
+ },
+ {
+  "name": "crossbeam-epoch",
+  "version": "0.9.21",
+  "sha256": "dc74980687109a3b14c72fd458107bf0baa1da1a1a805e178d15501ba9b86d9d"
+ },
+ {
+  "name": "crossbeam-utils",
+  "version": "0.8.23",
+  "sha256": "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
+ },
+ {
+  "name": "crypto-common",
+  "version": "0.1.7",
+  "sha256": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
+ },
+ {
+  "name": "crypto-common",
+  "version": "0.2.2",
+  "sha256": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
+ },
+ {
+  "name": "ctutils",
+  "version": "0.4.8",
+  "sha256": "261af4dc7a06ea8a527a8717d8cbba3417530d6ea14e1edb3de6b67806be474f"
+ },
+ {
+  "name": "curl",
+  "version": "0.4.51",
+  "sha256": "ef3ce06df3ac230a4f5c91bfd3e3961cd66f177bd9964c87deb3cce59a54fb7b"
+ },
+ {
+  "name": "curl-sys",
+  "version": "0.4.91+curl-8.22.0",
+  "sha256": "cd39579123e45bf762716bb893d43886ed1cabe6289455be29a4f1d4e37afb06"
+ },
+ {
+  "name": "dashmap",
+  "version": "6.2.1",
+  "sha256": "e6361d5c062261c78a176addb82d4c821ae42bed6089de0e12603cd25de2059c"
+ },
+ {
+  "name": "defmt",
+  "version": "0.3.101",
+  "sha256": "4deef977660e373c458df605a913d4ab121db0ccd18d1ad6976dff7d37cddb53"
+ },
+ {
+  "name": "defmt",
+  "version": "1.2.0",
+  "sha256": "e4a0795ac740cb54d7b3775c9c17345f6aaecf884c01733b39d6017738e0e3e1"
+ },
+ {
+  "name": "defmt-macros",
+  "version": "1.2.0",
+  "sha256": "840bb056bd99c495c9188198a258ab787c79f306d864db3e6e8451442d6d8366"
+ },
+ {
+  "name": "defmt-parser",
+  "version": "1.1.0",
+  "sha256": "71958f69fb2de856c5dd51ac9377e986ca1aa5919f931bf5395a807277f889a0"
+ },
+ {
+  "name": "deranged",
+  "version": "0.5.9",
+  "sha256": "9e9de72ce2ad1f90dc62fa25f0f430ef85eb4b0d8fa0be4f30373bc40a21d28e"
+ },
+ {
+  "name": "digest",
+  "version": "0.10.7",
+  "sha256": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
+ },
+ {
+  "name": "digest",
+  "version": "0.11.3",
+  "sha256": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+ },
+ {
+  "name": "dispatch2",
+  "version": "0.3.1",
+  "sha256": "1e0e367e4e7da84520dedcac1901e4da967309406d1e51017ae1abfb97adbd38"
+ },
+ {
+  "name": "displaydoc",
+  "version": "0.2.7",
+  "sha256": "c6232dd377dcc64799954cbd3a9bb882e9cdc1308ccd87b1c098f1fb2eaf82a8"
+ },
+ {
+  "name": "dunce",
+  "version": "1.0.5",
+  "sha256": "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+ },
+ {
+  "name": "either",
+  "version": "1.19.0",
+  "sha256": "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
+ },
+ {
+  "name": "encoding_rs",
+  "version": "0.8.44",
+  "sha256": "89253175e704ab869b04f9db224d38630e0211a53841a79181deae0889e169f5"
+ },
+ {
+  "name": "equivalent",
+  "version": "1.0.3",
+  "sha256": "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
+ },
+ {
+  "name": "erased-serde",
+  "version": "0.4.11",
+  "sha256": "1e59b668157f32d3459d4bd634861a06ffa2503a461ca5f0916b9f0252605e66"
+ },
+ {
+  "name": "errno",
+  "version": "0.3.15",
+  "sha256": "e35d6e78f4cebb90e51d543db8fe41528851d6deeef6ef21ebd4bfdc1e784776"
+ },
+ {
+  "name": "fallible-iterator",
+  "version": "0.3.0",
+  "sha256": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
+ },
+ {
+  "name": "fallible-streaming-iterator",
+  "version": "0.1.9",
+  "sha256": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
+ },
+ {
+  "name": "faster-hex",
+  "version": "0.10.1",
+  "sha256": "04839bdf9d8c10f66806fad16b852fc72aab80873aebc3cb69d85b4fa41543ed"
+ },
+ {
+  "name": "fastrand",
+  "version": "2.5.0",
+  "sha256": "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
+ },
+ {
+  "name": "filetime",
+  "version": "0.2.30",
+  "sha256": "e1255e7a9f1902190d4c10a75f2f7f495d3d3ce13e9ba26e6c48683a0f4dbed7"
+ },
+ {
+  "name": "find-msvc-tools",
+  "version": "0.1.15",
+  "sha256": "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
+ },
+ {
+  "name": "flate2",
+  "version": "1.1.11",
+  "sha256": "626d4928326b646e70f65ed36fc7cf9f206bdb68a0019ee7c6b4709da4e084c4"
+ },
+ {
+  "name": "fnv",
+  "version": "1.0.7",
+  "sha256": "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+ },
+ {
+  "name": "foldhash",
+  "version": "0.2.0",
+  "sha256": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+ },
+ {
+  "name": "foreign-types",
+  "version": "0.3.2",
+  "sha256": "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
+ },
+ {
+  "name": "foreign-types-shared",
+  "version": "0.1.1",
+  "sha256": "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
+ },
+ {
+  "name": "form_urlencoded",
+  "version": "1.2.3",
+  "sha256": "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
+ },
+ {
+  "name": "futures",
+  "version": "0.3.34",
+  "sha256": "9a31d2a3fbaaeb2af2368bbdd904aa8e812d3c04a1ee10d3171f52d556e5d0a3"
+ },
+ {
+  "name": "futures-channel",
+  "version": "0.3.34",
+  "sha256": "b1f9e3d69d39e4862ffed03ed071a76f9a13ba1d9109d355b0f0aa6b15e393c4"
+ },
+ {
+  "name": "futures-core",
+  "version": "0.3.34",
+  "sha256": "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e"
+ },
+ {
+  "name": "futures-executor",
+  "version": "0.3.34",
+  "sha256": "031b47cf1a3c6cc8bc2fc76cd437f521619387907d469316e7c0bc278f1f5432"
+ },
+ {
+  "name": "futures-io",
+  "version": "0.3.34",
+  "sha256": "53c0fa8157de1303bfffdaa1cc2a673bfffb60102f76b0ef4441659124373fed"
+ },
+ {
+  "name": "futures-macro",
+  "version": "0.3.34",
+  "sha256": "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44"
+ },
+ {
+  "name": "futures-sink",
+  "version": "0.3.34",
+  "sha256": "1944426bf7d03f1d14f708785e4b33efd750b36d48a157b836b3efc15ede8e1d"
+ },
+ {
+  "name": "futures-task",
+  "version": "0.3.34",
+  "sha256": "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd"
+ },
+ {
+  "name": "futures-timer",
+  "version": "3.0.4",
+  "sha256": "af43fadb8a98512d547e37b4e92e0ced13e205c061b87b4623eff01d918d6968"
+ },
+ {
+  "name": "futures-util",
+  "version": "0.3.34",
+  "sha256": "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc"
+ },
+ {
+  "name": "generic-array",
+  "version": "0.14.7",
+  "sha256": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
+ },
+ {
+  "name": "getrandom",
+  "version": "0.4.3",
+  "sha256": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
+ },
+ {
+  "name": "git2",
+  "version": "0.21.0",
+  "sha256": "ddddbf932745a6be37109b6112d3ee09696106f848449069d3a57bba937ab82e"
+ },
+ {
+  "name": "git2-curl",
+  "version": "0.22.0",
+  "sha256": "1f1f6fe01327a2f7a1d6ee519c14651f79530aa4d64e870f4cf672efe697bea5"
+ },
+ {
+  "name": "gix",
+  "version": "0.85.0",
+  "sha256": "fa8b2e38ebfc4484dfef8580ddcaf8abb7285e6f3eb6413ff6775d104ae96ca6"
+ },
+ {
+  "name": "gix-actor",
+  "version": "0.41.2",
+  "sha256": "33f9308ad6fd35b2a865cbe4117ac61b2be59e4a9ef1621c7a9794f7c8e52c5b"
+ },
+ {
+  "name": "gix-attributes",
+  "version": "0.33.2",
+  "sha256": "39b40888d0ed415c0744a6cdc61eebf0304c9d26ab726725b718443c322e5ba4"
+ },
+ {
+  "name": "gix-bitmap",
+  "version": "0.3.3",
+  "sha256": "7cd1d118d0f5d88b96e6f6e13b566475fef4797ead4a02c26fed36c1375066f7"
+ },
+ {
+  "name": "gix-chunk",
+  "version": "0.7.3",
+  "sha256": "b2a871e5cab12ba568845714473505deefffb3c04eb47f4708ce344cd459c1cc"
+ },
+ {
+  "name": "gix-command",
+  "version": "0.9.2",
+  "sha256": "cf4363accdf6ef7ba861871d2d521ab7418a04aaaed919fadb022af71d379b12"
+ },
+ {
+  "name": "gix-commitgraph",
+  "version": "0.37.1",
+  "sha256": "7f675d0df484a7f6a47e64bd6f311af489d947c0323b0564f36d14f3d7762abb"
+ },
+ {
+  "name": "gix-config",
+  "version": "0.58.0",
+  "sha256": "a29bf266c4cdaf759e535c24ad4ce655b987aeb6911075643403cc7cc5ade583"
+ },
+ {
+  "name": "gix-config-value",
+  "version": "0.18.1",
+  "sha256": "ed42168329552f6c2e5df09665c104199d45d84bedb53683738a49b57fe1baab"
+ },
+ {
+  "name": "gix-credentials",
+  "version": "0.38.2",
+  "sha256": "e8a0fcfcd73229d1a9c34e04edd05dbcb80364ec6f3788d24c546de2916671eb"
+ },
+ {
+  "name": "gix-date",
+  "version": "0.15.6",
+  "sha256": "7e47b9e8cdc688296609b706428de570f88b1e0eed7156dde7b4a89d26fa4567"
+ },
+ {
+  "name": "gix-diff",
+  "version": "0.65.0",
+  "sha256": "92c6d56c94edf92d78203a1cd416f770e35e10b6955ede6b9d7d0c22ff88a5f3"
+ },
+ {
+  "name": "gix-dir",
+  "version": "0.27.0",
+  "sha256": "20098fba2b9c6e29361ccb4c0379d42dfb81fc7f86f7ab11f2dff4528c0bf01f"
+ },
+ {
+  "name": "gix-discover",
+  "version": "0.53.0",
+  "sha256": "d624d5b23b10c1d85337645227abe353ac95ab8ff66a7bdd5ce689b2db33a722"
+ },
+ {
+  "name": "gix-error",
+  "version": "0.2.5",
+  "sha256": "4a9292309fd944e71b2a3c96d3c03a6feb8852db646febdde7cbb9f79cb5f329"
+ },
+ {
+  "name": "gix-features",
+  "version": "0.48.1",
+  "sha256": "1849ae154d38bc403185be14fa871e38e3c93ee606875d94e207fdb9fba52dbc"
+ },
+ {
+  "name": "gix-filter",
+  "version": "0.32.0",
+  "sha256": "6644fb2ef97928c278675b239f366b457103d7e436f811d27331a8daf212759c"
+ },
+ {
+  "name": "gix-fs",
+  "version": "0.21.2",
+  "sha256": "6cdff46db8798e47e2f727d84b9379aac5add3dd3d9d0b07bb4d7d5d640771fe"
+ },
+ {
+  "name": "gix-glob",
+  "version": "0.26.1",
+  "sha256": "d1fcb8ef5b16bcf874abe9b68d8abb3c0493c876d367ab824151f30a0f3f3756"
+ },
+ {
+  "name": "gix-hash",
+  "version": "0.25.1",
+  "sha256": "cb0926d3819c837750b4e03c7754901e73f68b8c9b690753a6372a1bed4eedce"
+ },
+ {
+  "name": "gix-hashtable",
+  "version": "0.15.2",
+  "sha256": "7e261d54091f0d1c729bc83f54548c071bdec60a697de1e58e88bdfd7a99d24e"
+ },
+ {
+  "name": "gix-ignore",
+  "version": "0.21.1",
+  "sha256": "d491bab9bf2c9f341dc754f425c31d5d3f63aca615312167b82e1deeaca97d8d"
+ },
+ {
+  "name": "gix-imara-diff",
+  "version": "0.2.5",
+  "sha256": "1c91d8cffac8849493a82233811bd02b2b183b8cf39bf704de0fa0841b737595"
+ },
+ {
+  "name": "gix-index",
+  "version": "0.53.0",
+  "sha256": "36d45f82ec5a4d7542ea595e9ad16e03e26c8cb4f221e5bc9fcdcf469f63a681"
+ },
+ {
+  "name": "gix-lock",
+  "version": "23.0.1",
+  "sha256": "65c9dedd9e90b0d47624d2ed241d394e09294118364e87b9b7e5f1fe755f3c2c"
+ },
+ {
+  "name": "gix-negotiate",
+  "version": "0.33.0",
+  "sha256": "63d6081882a5f575ace9f53924a7c85f69bbd0f96071b982df12f258ab338cc9"
+ },
+ {
+  "name": "gix-object",
+  "version": "0.62.0",
+  "sha256": "019b38afc3eac1e41f9fe09a327664b313ba4a120fa5f40e3678795d0e42783e"
+ },
+ {
+  "name": "gix-odb",
+  "version": "0.82.0",
+  "sha256": "7fadc59f6fa0f9dd445eceee61060a2b59ca557f48da9fc677f567db535b782a"
+ },
+ {
+  "name": "gix-pack",
+  "version": "0.72.0",
+  "sha256": "ca3e7f1726cd2c0cd1cf1fc20be8a8e623f0b163f1f8d6fc836cfb9bc8cd758b"
+ },
+ {
+  "name": "gix-packetline",
+  "version": "0.21.5",
+  "sha256": "b217dd0ee0c4021ecf169a4a519b1b4f80d15e3f3765f3dc466223dc0ac891d7"
+ },
+ {
+  "name": "gix-path",
+  "version": "0.12.6",
+  "sha256": "38fc6f029ea67de83cbcbd33fd98c05a48360d2932b39d9fdacbc6eae802d475"
+ },
+ {
+  "name": "gix-pathspec",
+  "version": "0.18.1",
+  "sha256": "3050783b41ee11511e1e8fb35623df81806194f4030395f14f48ea37c2798c9f"
+ },
+ {
+  "name": "gix-prompt",
+  "version": "0.15.1",
+  "sha256": "3ee604d7746080ae7e1023bf47204bcc2c5f307bfbe2306a3c90b1bfd1a2c6d8"
+ },
+ {
+  "name": "gix-protocol",
+  "version": "0.63.0",
+  "sha256": "978468bae4ea2df20c72db3b20d0bdb548a0c1090b85a83643b553e6e0e041f2"
+ },
+ {
+  "name": "gix-quote",
+  "version": "0.7.2",
+  "sha256": "a6e541fc33cc2b783b7979040d445a0c86a2eca747c8faea4ca84230d06ae6ef"
+ },
+ {
+  "name": "gix-ref",
+  "version": "0.65.0",
+  "sha256": "9bbfbce1dfd7d7f8469ddef6d3518376aff664348f153cbe0fc3e58ef993d24e"
+ },
+ {
+  "name": "gix-refspec",
+  "version": "0.43.0",
+  "sha256": "7bc36a4fb1a1540b59cf2da498783080743fa274b02a3f19ca444fc4015a9d4f"
+ },
+ {
+  "name": "gix-revision",
+  "version": "0.47.0",
+  "sha256": "885075c3c21eb9c06e0be3b3728ba5932c04e1c1011dcee7c81801980e3e986f"
+ },
+ {
+  "name": "gix-revwalk",
+  "version": "0.33.0",
+  "sha256": "8f11fe7ca2585193d3d70bbe0be175a2008d883a704cc7a55e454e113e689455"
+ },
+ {
+  "name": "gix-sec",
+  "version": "0.14.2",
+  "sha256": "af4fe6c152c1d50aea36f299825702cd37e303307832fec1d0fdd5844e47ce2f"
+ },
+ {
+  "name": "gix-shallow",
+  "version": "0.12.1",
+  "sha256": "a292fc2fe548c5dfa575479d16b445b0ddf1dd2f56f1fec6aed386f82553cd97"
+ },
+ {
+  "name": "gix-status",
+  "version": "0.32.0",
+  "sha256": "aec3293f75db1212f99217832cbc70c30faeb95cefc97c7f1a17fd3bcf13a72e"
+ },
+ {
+  "name": "gix-submodule",
+  "version": "0.32.0",
+  "sha256": "a7f9f594f7cbda0b38ba6b633b3e9a7b7901acdc5d27bc186a16633800cd1ac8"
+ },
+ {
+  "name": "gix-tempfile",
+  "version": "23.0.2",
+  "sha256": "6ef60812443484e67bf84e444cc71b4c78ae62deb822221774a4fa0c57fdb17f"
+ },
+ {
+  "name": "gix-trace",
+  "version": "0.1.21",
+  "sha256": "be3eb81d9dc914335923e50d52829c551feefd6a72d176c4130c546b67a60814"
+ },
+ {
+  "name": "gix-transport",
+  "version": "0.57.2",
+  "sha256": "186874f7ad1fb2f9a2f2aa9c2dabc7f9dd087bef74c1a0eee2b4a9cf0248fcb3"
+ },
+ {
+  "name": "gix-traverse",
+  "version": "0.59.0",
+  "sha256": "5062cca8f2977565bbaf666ec31dbdb9bc9d9293beb65f9bec52e6c1121b62a1"
+ },
+ {
+  "name": "gix-url",
+  "version": "0.36.2",
+  "sha256": "57d68e70e96da0e5f9c871f1566349e0fd0e1a20bb483c7f54af1dd0b85b4b29"
+ },
+ {
+  "name": "gix-utils",
+  "version": "0.3.6",
+  "sha256": "0da1c46491b49458a446cc76f0085860f8164c2290742e0aa8c653ce67240a97"
+ },
+ {
+  "name": "gix-validate",
+  "version": "0.11.4",
+  "sha256": "4dae8780f63ed8a803b8bdabbd7aa5f5c5d74592c8b50eed875c1bb4f6545a6a"
+ },
+ {
+  "name": "gix-worktree",
+  "version": "0.54.0",
+  "sha256": "92399ed66f259592050c6ed9dc80105e095a2f8e87e6b83d98aa2e21d8e27036"
+ },
+ {
+  "name": "gix-worktree-stream",
+  "version": "0.34.0",
+  "sha256": "55f3a878c89a05470ad98c644b0015777c530da24854dd29e41fe4f41176840f"
+ },
+ {
+  "name": "glob",
+  "version": "0.3.4",
+  "sha256": "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
+ },
+ {
+  "name": "globset",
+  "version": "0.4.22",
+  "sha256": "71217a07f20b48b4938c14203b77b610f8a7fa6762c3f75394a10c5f31e5aee0"
+ },
+ {
+  "name": "hash32",
+  "version": "0.3.1",
+  "sha256": "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606"
+ },
+ {
+  "name": "hashbrown",
+  "version": "0.14.5",
+  "sha256": "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
+ },
+ {
+  "name": "hashbrown",
+  "version": "0.16.1",
+  "sha256": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+ },
+ {
+  "name": "hashbrown",
+  "version": "0.17.2",
+  "sha256": "735eaa21a6a5ffb2e84362faaeb90c05ba8e19797ca30428478cb6ea3a4921bc"
+ },
+ {
+  "name": "hashlink",
+  "version": "0.12.2",
+  "sha256": "a596f1b20ed2cc5ecac41a164aaebc7258057060f06c0cf7a2ba3991ee7990fb"
+ },
+ {
+  "name": "heapless",
+  "version": "0.8.0",
+  "sha256": "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
+ },
+ {
+  "name": "heck",
+  "version": "0.5.0",
+  "sha256": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+ },
+ {
+  "name": "hex",
+  "version": "0.4.3",
+  "sha256": "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+ },
+ {
+  "name": "hmac",
+  "version": "0.13.0",
+  "sha256": "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f"
+ },
+ {
+  "name": "home",
+  "version": "0.5.12",
+  "sha256": "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
+ },
+ {
+  "name": "http",
+  "version": "1.5.0",
+  "sha256": "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
+ },
+ {
+  "name": "http-auth",
+  "version": "0.1.10",
+  "sha256": "150fa4a9462ef926824cf4519c84ed652ca8f4fbae34cb8af045b5cbcaf98822"
+ },
+ {
+  "name": "hybrid-array",
+  "version": "0.4.15",
+  "sha256": "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17"
+ },
+ {
+  "name": "icu_collections",
+  "version": "2.4.0",
+  "sha256": "fe090a42a0d3140fed8c63263ed1fecc02422cb2f4bfe55cd8de2de1b8e105dd"
+ },
+ {
+  "name": "icu_locale_core",
+  "version": "2.4.0",
+  "sha256": "25d29b57c17c6528d0dc4c2141cfa2d08200465acb537a3909c8b9b8a4a984c0"
+ },
+ {
+  "name": "icu_normalizer",
+  "version": "2.4.0",
+  "sha256": "404a3b8c486f205c87fe7f23ab6894d84a4ad76d6e4671ae1981ba7def87c599"
+ },
+ {
+  "name": "icu_normalizer_data",
+  "version": "2.4.0",
+  "sha256": "20f0088bfb7441f7a37fa0c9e20cb1e9cba1cac6b9ce8cd2a6dc44294f8e8cbc"
+ },
+ {
+  "name": "icu_properties",
+  "version": "2.4.0",
+  "sha256": "2ea83d991c56158f7cf898bf86436c1dfe7c07ee82fe88951f2695c9f37a379f"
+ },
+ {
+  "name": "icu_properties_data",
+  "version": "2.4.0",
+  "sha256": "b98f29af82d02b163fe50161388350e743bb3107cc8e8c2f7314cb505faddfcf"
+ },
+ {
+  "name": "icu_provider",
+  "version": "2.4.0",
+  "sha256": "413099315636c588ee8f011190b329b971a09a8fae9d157e01dcae8379468514"
+ },
+ {
+  "name": "idna",
+  "version": "1.1.0",
+  "sha256": "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de"
+ },
+ {
+  "name": "idna_adapter",
+  "version": "1.2.2",
+  "sha256": "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714"
+ },
+ {
+  "name": "ignore",
+  "version": "0.4.35",
+  "sha256": "df0a7d5f105e76bda602bed0a44af048542d3c9af12ec35aaf16f106c6f34270"
+ },
+ {
+  "name": "im-rc",
+  "version": "15.1.0",
+  "sha256": "af1955a75fa080c677d3972822ec4bad316169ab1cfc6c257a942c2265dbe5fe"
+ },
+ {
+  "name": "implib",
+  "version": "0.6.0",
+  "sha256": "96e1090e37c7188a99a2353115083505ff6a489e86637dc41e1671457b1259d3"
+ },
+ {
+  "name": "indexmap",
+  "version": "2.14.2",
+  "sha256": "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
+ },
+ {
+  "name": "is_executable",
+  "version": "1.0.6",
+  "sha256": "82cb6a9f675da968c63b6208c641b9dca58fc0133ae53375736b1767b0cab8bd"
+ },
+ {
+  "name": "is_terminal_polyfill",
+  "version": "1.70.2",
+  "sha256": "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+ },
+ {
+  "name": "itertools",
+  "version": "0.15.0",
+  "sha256": "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+ },
+ {
+  "name": "itoa",
+  "version": "1.0.19",
+  "sha256": "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
+ },
+ {
+  "name": "jiff",
+  "version": "0.2.46",
+  "sha256": "175dc66334db3b9ab9985bf8b61cfed50dc16d20964bb47f9e479adcae984a7f"
+ },
+ {
+  "name": "jiff-core",
+  "version": "0.1.8",
+  "sha256": "e599b80292e597019b8b3e392de3f4bea2959ddfb8c7dff60e035e9e311a2c1b"
+ },
+ {
+  "name": "jiff-static",
+  "version": "0.2.46",
+  "sha256": "c7b1af7547d47354bc438d797e3854601bde8f8d185780c5ba4ab27afa54f1ba"
+ },
+ {
+  "name": "jiff-tzdb",
+  "version": "0.1.10",
+  "sha256": "0980fca2cc272465bd60e82397607ba9f33add9e48defd77923301bbd03808f2"
+ },
+ {
+  "name": "jiff-tzdb-platform",
+  "version": "0.1.3",
+  "sha256": "875a5a69ac2bab1a891711cf5eccbec1ce0341ea805560dcd90b7a2e925132e8"
+ },
+ {
+  "name": "jobserver",
+  "version": "0.1.35",
+  "sha256": "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
+ },
+ {
+  "name": "js-sys",
+  "version": "0.3.107",
+  "sha256": "8dc09d2154098bbf4ef54eab6b117a3c24cbbffe94046b16ee6d6d4510584d3a"
+ },
+ {
+  "name": "kstring",
+  "version": "2.0.5",
+  "sha256": "7a09b82a7f771ed02dc0dd9b27130a0fa5499fa15ed3027116c1e5e4e591bd9e"
+ },
+ {
+  "name": "lazy_static",
+  "version": "1.5.1",
+  "sha256": "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
+ },
+ {
+  "name": "libc",
+  "version": "0.2.191",
+  "sha256": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
+ },
+ {
+  "name": "libgit2-sys",
+  "version": "0.18.8+1.9.7",
+  "sha256": "7f7c568b25d7489bc3fb2988ed69ab111d2944d2f5fec3d5c987fe545ea97b50"
+ },
+ {
+  "name": "libloading",
+  "version": "0.9.1",
+  "sha256": "a1832accd5a4ca2795ace4d05d15c4039be15b62d3b950eff99746a990e3cc10"
+ },
+ {
+  "name": "libnghttp2-sys",
+  "version": "0.1.13+1.68.1",
+  "sha256": "492e00167f1418c15648144f42bbfc63099806ecee9bf8d09a6353d6b4856b3c"
+ },
+ {
+  "name": "libsqlite3-sys",
+  "version": "0.38.2",
+  "sha256": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8"
+ },
+ {
+  "name": "libssh2-sys",
+  "version": "0.3.4",
+  "sha256": "fce5a0b125f6aeac93b304b35f7f1e9f054aad29ddac57091928e41df3ccd233"
+ },
+ {
+  "name": "libz-sys",
+  "version": "1.1.33",
+  "sha256": "fee3f59f4321dab0c78d828942e7aa09d0bd8ad6e78a501977e6bf3d02938045"
+ },
+ {
+  "name": "linux-raw-sys",
+  "version": "0.12.1",
+  "sha256": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+ },
+ {
+  "name": "litemap",
+  "version": "0.8.3",
+  "sha256": "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
+ },
+ {
+  "name": "lock_api",
+  "version": "0.4.14",
+  "sha256": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965"
+ },
+ {
+  "name": "log",
+  "version": "0.4.35",
+  "sha256": "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
+ },
+ {
+  "name": "matchers",
+  "version": "0.2.0",
+  "sha256": "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
+ },
+ {
+  "name": "maybe-async",
+  "version": "0.2.11",
+  "sha256": "746873a384ad60adc5db74471dfaba74bd278afbdcfd81db93fafcdfc8b5ca0c"
+ },
+ {
+  "name": "memchr",
+  "version": "2.8.3",
+  "sha256": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+ },
+ {
+  "name": "memmap2",
+  "version": "0.9.12",
+  "sha256": "6b0ca1155a9ecc25aa12e8313a119f32edf0255fea2f44839c4ac0a12b2ac157"
+ },
+ {
+  "name": "memoffset",
+  "version": "0.9.1",
+  "sha256": "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+ },
+ {
+  "name": "minimal-lexical",
+  "version": "0.2.1",
+  "sha256": "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
+ },
+ {
+  "name": "miow",
+  "version": "0.6.1",
+  "sha256": "536bfad37a309d62069485248eeaba1e8d9853aaf951caaeaed0585a95346f08"
+ },
+ {
+  "name": "multiversion_no_op",
+  "version": "1.0.0",
+  "sha256": "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
+ },
+ {
+  "name": "nix",
+  "version": "0.31.4",
+  "sha256": "2bc81ce8148d3b4f3274da811f11cdd824ae661ee4ef732cdb229825cf5be7f7"
+ },
+ {
+  "name": "nom",
+  "version": "7.1.3",
+  "sha256": "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
+ },
+ {
+  "name": "nonempty",
+  "version": "0.12.0",
+  "sha256": "9737e026353e5cd0736f98eddae28665118eb6f6600902a7f50db585621fecb6"
+ },
+ {
+  "name": "normpath",
+  "version": "1.5.2",
+  "sha256": "b11ce00d2594068e8a27c9146fdc5cf9f3ac38eb42c7cd34d05fea618873ac9f"
+ },
+ {
+  "name": "nu-ansi-term",
+  "version": "0.50.3",
+  "sha256": "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
+ },
+ {
+  "name": "num-conv",
+  "version": "0.2.2",
+  "sha256": "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441"
+ },
+ {
+  "name": "num-traits",
+  "version": "0.2.19",
+  "sha256": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+ },
+ {
+  "name": "objc2",
+  "version": "0.6.5",
+  "sha256": "08849bbd4767dfae9457696856ae1c84fe4e0281bbe4a7abff2d0e06fb7981f8"
+ },
+ {
+  "name": "objc2-cloud-kit",
+  "version": "0.3.2",
+  "sha256": "73ad74d880bb43877038da939b7427bba67e9dd42004a18b809ba7d87cee241c"
+ },
+ {
+  "name": "objc2-core-data",
+  "version": "0.3.2",
+  "sha256": "0b402a653efbb5e82ce4df10683b6b28027616a2715e90009947d50b8dd298fa"
+ },
+ {
+  "name": "objc2-core-foundation",
+  "version": "0.3.2",
+  "sha256": "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
+ },
+ {
+  "name": "objc2-core-graphics",
+  "version": "0.3.2",
+  "sha256": "e022c9d066895efa1345f8e33e584b9f958da2fd4cd116792e15e07e4720a807"
+ },
+ {
+  "name": "objc2-core-image",
+  "version": "0.3.2",
+  "sha256": "e5d563b38d2b97209f8e861173de434bd0214cf020e3423a52624cd1d989f006"
+ },
+ {
+  "name": "objc2-core-location",
+  "version": "0.3.2",
+  "sha256": "ca347214e24bc973fc025fd0d36ebb179ff30536ed1f80252706db19ee452009"
+ },
+ {
+  "name": "objc2-core-text",
+  "version": "0.3.2",
+  "sha256": "0cde0dfb48d25d2b4862161a4d5fcc0e3c24367869ad306b0c9ec0073bfed92d"
+ },
+ {
+  "name": "objc2-encode",
+  "version": "4.1.0",
+  "sha256": "ef25abbcd74fb2609453eb695bd2f860d389e457f67dc17cafc8b8cbc89d0c33"
+ },
+ {
+  "name": "objc2-foundation",
+  "version": "0.3.2",
+  "sha256": "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
+ },
+ {
+  "name": "objc2-io-surface",
+  "version": "0.3.2",
+  "sha256": "180788110936d59bab6bd83b6060ffdfffb3b922ba1396b312ae795e1de9d81d"
+ },
+ {
+  "name": "objc2-quartz-core",
+  "version": "0.3.2",
+  "sha256": "96c1358452b371bf9f104e21ec536d37a650eb10f7ee379fff67d2e08d537f1f"
+ },
+ {
+  "name": "objc2-ui-kit",
+  "version": "0.3.2",
+  "sha256": "d87d638e33c06f577498cbcc50491496a3ed4246998a7fbba7ccb98b1e7eab22"
+ },
+ {
+  "name": "objc2-user-notifications",
+  "version": "0.3.2",
+  "sha256": "9df9128cbbfef73cda168416ccf7f837b62737d748333bfe9ab71c245d76613e"
+ },
+ {
+  "name": "object",
+  "version": "0.39.1",
+  "sha256": "2e5a6c098c7a3b6547378093f5cc30bc54fd361ce711e05293a5cc589562739b"
+ },
+ {
+  "name": "object",
+  "version": "0.41.0",
+  "sha256": "11dbdb66876026054e4ffc8d757d862bdf5df5aebd5c0b95a41f17832a94f7d2"
+ },
+ {
+  "name": "once_cell",
+  "version": "1.21.4",
+  "sha256": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+ },
+ {
+  "name": "once_cell_polyfill",
+  "version": "1.70.2",
+  "sha256": "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+ },
+ {
+  "name": "opener",
+  "version": "0.8.5",
+  "sha256": "b2b03ff07a220d0d0ec9a1f0f238951b7967a5a2e96aefcd21a117b1083415e9"
+ },
+ {
+  "name": "openssl",
+  "version": "0.10.82",
+  "sha256": "4de8111e94a56adca7ebfe6c365b6d42f99deb69b74b6becacd4204e2f193aa2"
+ },
+ {
+  "name": "openssl-macros",
+  "version": "0.1.1",
+  "sha256": "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
+ },
+ {
+  "name": "openssl-probe",
+  "version": "0.1.6",
+  "sha256": "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
+ },
+ {
+  "name": "openssl-src",
+  "version": "300.6.1+3.6.3",
+  "sha256": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846"
+ },
+ {
+  "name": "openssl-sys",
+  "version": "0.9.118",
+  "sha256": "19c413d6ec9ebaf5e1c829d355cb3e9f783778d700f135be0921d52fce3c60ae"
+ },
+ {
+  "name": "ordered-float",
+  "version": "2.10.1",
+  "sha256": "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
+ },
+ {
+  "name": "os_info",
+  "version": "3.15.0",
+  "sha256": "9cf20a545b305cf1da722b236b5155c9bb35f1d5ceb28c048bd96ca842f41b5b"
+ },
+ {
+  "name": "parking_lot",
+  "version": "0.12.5",
+  "sha256": "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
+ },
+ {
+  "name": "parking_lot_core",
+  "version": "0.9.12",
+  "sha256": "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+ },
+ {
+  "name": "pathdiff",
+  "version": "0.2.3",
+  "sha256": "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
+ },
+ {
+  "name": "percent-encoding",
+  "version": "2.3.2",
+  "sha256": "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+ },
+ {
+  "name": "pin-project-lite",
+  "version": "0.2.18",
+  "sha256": "c938015719552d665fd0553b90d96cd7ff58e83e4c061ca99e6bb78865a72752"
+ },
+ {
+  "name": "pkg-config",
+  "version": "0.3.34",
+  "sha256": "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
+ },
+ {
+  "name": "portable-atomic",
+  "version": "1.15.0",
+  "sha256": "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85"
+ },
+ {
+  "name": "portable-atomic-util",
+  "version": "0.2.8",
+  "sha256": "10ab3eb7f3becc3a1cbc4f2c6f20267996cfc1a6467a873763411b136a122715"
+ },
+ {
+  "name": "potential_utf",
+  "version": "0.1.6",
+  "sha256": "d83eb9bc6d8e5cf568e7a1101d60ee05e81ed50ea106026f3d18deeb046d7661"
+ },
+ {
+  "name": "powerfmt",
+  "version": "0.2.1",
+  "sha256": "4a6394b9e965e73d0a289ee54f589087e2c676aedf60885baf52c76b771e4958"
+ },
+ {
+  "name": "proc-macro2",
+  "version": "1.0.107",
+  "sha256": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
+ },
+ {
+  "name": "prodash",
+  "version": "31.0.1",
+  "sha256": "cf52d87428247c5aa3760ac8e7d8b13ec7b3579b955a8c3f311668b6860acba5"
+ },
+ {
+  "name": "quote",
+  "version": "1.0.47",
+  "sha256": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
+ },
+ {
+  "name": "r-efi",
+  "version": "6.0.0",
+  "sha256": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+ },
+ {
+  "name": "rand",
+  "version": "0.10.4",
+  "sha256": "8f6fa277c67e6ea590466f04c3fe82cb509f0864fe470643e5570de9514a9b11"
+ },
+ {
+  "name": "rand_core",
+  "version": "0.6.4",
+  "sha256": "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+ },
+ {
+  "name": "rand_core",
+  "version": "0.10.1",
+  "sha256": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+ },
+ {
+  "name": "rand_xoshiro",
+  "version": "0.6.0",
+  "sha256": "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa"
+ },
+ {
+  "name": "redox_syscall",
+  "version": "0.5.18",
+  "sha256": "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+ },
+ {
+  "name": "regex",
+  "version": "1.13.2",
+  "sha256": "9807af0e638c12e753aa1b4e601791bf2a8f71274023c8bbeec12fc149950857"
+ },
+ {
+  "name": "regex-automata",
+  "version": "0.4.19",
+  "sha256": "41d60ef07df457506a0a1a2073112eb4aae5733dbd2813c3da77d1b0fd441158"
+ },
+ {
+  "name": "regex-syntax",
+  "version": "0.8.12",
+  "sha256": "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
+ },
+ {
+  "name": "rsqlite-vfs",
+  "version": "0.1.1",
+  "sha256": "c51c9ae4df8a7fba42103df5c621fa3c37eccf3a3c650879e90fc48b11cc192c"
+ },
+ {
+  "name": "rusqlite",
+  "version": "0.40.2",
+  "sha256": "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3"
+ },
+ {
+  "name": "rustc-hash",
+  "version": "2.1.3",
+  "sha256": "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
+ },
+ {
+  "name": "rustc-stable-hash",
+  "version": "0.1.2",
+  "sha256": "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08"
+ },
+ {
+  "name": "rustfix",
+  "version": "0.9.8",
+  "sha256": "c614151d9f1b1e1f23041dacbf5f8dfab85687455b9e553f19f3d70275d1fe1c"
+ },
+ {
+  "name": "rustix",
+  "version": "1.1.6",
+  "sha256": "e5e76742e5294153d4dde1207dbec5bdd81eef6fabdc0d2118babadabfd858aa"
+ },
+ {
+  "name": "rustversion",
+  "version": "1.0.23",
+  "sha256": "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
+ },
+ {
+  "name": "same-file",
+  "version": "1.0.6",
+  "sha256": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+ },
+ {
+  "name": "schannel",
+  "version": "0.1.30",
+  "sha256": "9cb23c424d8ee841bb4d813677ca237e2a610067d594fec130f87d6093495ab5"
+ },
+ {
+  "name": "scopeguard",
+  "version": "1.2.0",
+  "sha256": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+ },
+ {
+  "name": "security-framework",
+  "version": "3.7.0",
+  "sha256": "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d"
+ },
+ {
+  "name": "security-framework-sys",
+  "version": "2.17.0",
+  "sha256": "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3"
+ },
+ {
+  "name": "semver",
+  "version": "1.0.28",
+  "sha256": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
+ },
+ {
+  "name": "serde",
+  "version": "1.0.229",
+  "sha256": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
+ },
+ {
+  "name": "serde-untagged",
+  "version": "0.1.9",
+  "sha256": "f9faf48a4a2d2693be24c6289dbe26552776eb7737074e6722891fadbe6c5058"
+ },
+ {
+  "name": "serde-value",
+  "version": "0.7.0",
+  "sha256": "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
+ },
+ {
+  "name": "serde_core",
+  "version": "1.0.229",
+  "sha256": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48"
+ },
+ {
+  "name": "serde_derive",
+  "version": "1.0.229",
+  "sha256": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
+ },
+ {
+  "name": "serde_ignored",
+  "version": "0.1.14",
+  "sha256": "115dffd5f3853e06e746965a20dcbae6ee747ae30b543d91b0e089668bb07798"
+ },
+ {
+  "name": "serde_json",
+  "version": "1.0.154",
+  "sha256": "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
+ },
+ {
+  "name": "serde_spanned",
+  "version": "1.1.3",
+  "sha256": "9c187e0a369471c550af028cba56d4f4fa2a489ad28151ae95a4d340a2a8b782"
+ },
+ {
+  "name": "sha1",
+  "version": "0.10.7",
+  "sha256": "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
+ },
+ {
+  "name": "sha1",
+  "version": "0.11.0",
+  "sha256": "aacc4cc499359472b4abe1bf11d0b12e688af9a805fa5e3016f9a386dc2d0214"
+ },
+ {
+  "name": "sha1-checked",
+  "version": "0.10.0",
+  "sha256": "89f599ac0c323ebb1c6082821a54962b839832b03984598375bff3975b804423"
+ },
+ {
+  "name": "sha2",
+  "version": "0.11.1",
+  "sha256": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+ },
+ {
+  "name": "sharded-slab",
+  "version": "0.1.7",
+  "sha256": "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
+ },
+ {
+  "name": "shell-escape",
+  "version": "0.1.5",
+  "sha256": "45bb67a18fa91266cc7807181f62f9178a6873bfad7dc788c42e6430db40184f"
+ },
+ {
+  "name": "shell-words",
+  "version": "1.1.1",
+  "sha256": "dc6fe69c597f9c37bfeeeeeb33da3530379845f10be461a66d16d03eca2ded77"
+ },
+ {
+  "name": "shlex",
+  "version": "2.0.1",
+  "sha256": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+ },
+ {
+  "name": "simdutf8",
+  "version": "0.1.5",
+  "sha256": "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+ },
+ {
+  "name": "sized-chunks",
+  "version": "0.6.5",
+  "sha256": "16d69225bde7a69b235da73377861095455d298f2b970996eec25ddbb42b3d1e"
+ },
+ {
+  "name": "slab",
+  "version": "0.4.12",
+  "sha256": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
+ },
+ {
+  "name": "smallvec",
+  "version": "1.16.6",
+  "sha256": "3244542535d5de959d90ec55d1b5ff0fd2bb7b1310223907d5f11932847f7b59"
+ },
+ {
+  "name": "socket2",
+  "version": "0.6.5",
+  "sha256": "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
+ },
+ {
+  "name": "sqlite-wasm-rs",
+  "version": "0.5.5",
+  "sha256": "dc3efc0da82635d7e1ced0053bbbfa8c7ab9645d0bf36ceb4f7127bb85315d75"
+ },
+ {
+  "name": "stable_deref_trait",
+  "version": "1.2.1",
+  "sha256": "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
+ },
+ {
+  "name": "static_assertions",
+  "version": "1.1.0",
+  "sha256": "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+ },
+ {
+  "name": "strsim",
+  "version": "0.11.1",
+  "sha256": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+ },
+ {
+  "name": "supports-hyperlinks",
+  "version": "3.2.0",
+  "sha256": "e396b6523b11ccb83120b115a0b7366de372751aa6edf19844dfb13a6af97e91"
+ },
+ {
+  "name": "supports-unicode",
+  "version": "3.0.0",
+  "sha256": "b7401a30af6cb5818bb64852270bb722533397edcfc7344954a38f420819ece2"
+ },
+ {
+  "name": "syn",
+  "version": "2.0.119",
+  "sha256": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+ },
+ {
+  "name": "syn",
+  "version": "3.0.10",
+  "sha256": "4ae9ccbea3a7b0b09443036490c8f34a8b1b760fd345e5c0dae0aac718faea79"
+ },
+ {
+  "name": "synstructure",
+  "version": "0.14.0",
+  "sha256": "901704edd0dfe137f1987838ee4f259e4e063c31371bdb423f7ae38ec6f77f02"
+ },
+ {
+  "name": "tar",
+  "version": "0.4.46",
+  "sha256": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
+ },
+ {
+  "name": "tempfile",
+  "version": "3.27.0",
+  "sha256": "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
+ },
+ {
+  "name": "terminal_size",
+  "version": "0.4.4",
+  "sha256": "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
+ },
+ {
+  "name": "thiserror",
+  "version": "2.0.21",
+  "sha256": "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
+ },
+ {
+  "name": "thiserror-impl",
+  "version": "2.0.21",
+  "sha256": "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
+ },
+ {
+  "name": "thread_local",
+  "version": "1.1.10",
+  "sha256": "1ad99c4c6d32803332c548b1af0540b357b3f5fc0be8f6c6bfe8b2e6ae784070"
+ },
+ {
+  "name": "time",
+  "version": "0.3.55",
+  "sha256": "cdb87b95ec50ddfa440816d227a17b2ccbdda963a316a727fda0fc4334f7d134"
+ },
+ {
+  "name": "time-core",
+  "version": "0.1.9",
+  "sha256": "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
+ },
+ {
+  "name": "time-macros",
+  "version": "0.2.32",
+  "sha256": "7e689342a48d2ea927c87ea50cabf8594854bf940e9310208848d680d668ed85"
+ },
+ {
+  "name": "tinystr",
+  "version": "0.8.5",
+  "sha256": "abc840c238154d58f9e86b2792261edfde565a17696e1cda1a449de27979801a"
+ },
+ {
+  "name": "tinyvec",
+  "version": "1.13.3",
+  "sha256": "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
+ },
+ {
+  "name": "toml",
+  "version": "0.9.12+spec-1.1.0",
+  "sha256": "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
+ },
+ {
+  "name": "toml",
+  "version": "1.2.2+spec-1.1.0",
+  "sha256": "5426cb1b964690d913f6c5c1a1ae0b42f428ec506bb4d452876d7a209c9bca3b"
+ },
+ {
+  "name": "toml_datetime",
+  "version": "0.7.5+spec-1.1.0",
+  "sha256": "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
+ },
+ {
+  "name": "toml_datetime",
+  "version": "1.1.3+spec-1.1.0",
+  "sha256": "173f25c883cd2176a2d8212155638c0a60d484a9d84546d270866f40f56b6e49"
+ },
+ {
+  "name": "toml_edit",
+  "version": "0.25.20+spec-1.1.0",
+  "sha256": "e76360e201d6dbd6583e17795ba71a88f47365a9139c8450a7979c32303b8e73"
+ },
+ {
+  "name": "toml_parser",
+  "version": "1.1.6+spec-1.1.0",
+  "sha256": "e6769c452d71ba30696c6b37770c439a9cc9110f47f7d5cdbeda79840ef5ea31"
+ },
+ {
+  "name": "toml_writer",
+  "version": "1.2.0+spec-1.1.0",
+  "sha256": "009dbb7700f11c55ef83aebbe4c0e9cf1f1ac0844bd8d6f00dc38f302026e13a"
+ },
+ {
+  "name": "tracing",
+  "version": "0.1.44",
+  "sha256": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
+ },
+ {
+  "name": "tracing-attributes",
+  "version": "0.1.31",
+  "sha256": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
+ },
+ {
+  "name": "tracing-chrome",
+  "version": "0.7.2",
+  "sha256": "bf0a738ed5d6450a9fb96e86a23ad808de2b727fd1394585da5cdd6788ffe724"
+ },
+ {
+  "name": "tracing-core",
+  "version": "0.1.36",
+  "sha256": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
+ },
+ {
+  "name": "tracing-log",
+  "version": "0.2.0",
+  "sha256": "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+ },
+ {
+  "name": "tracing-subscriber",
+  "version": "0.3.23",
+  "sha256": "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
+ },
+ {
+  "name": "typeid",
+  "version": "1.0.3",
+  "sha256": "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
+ },
+ {
+  "name": "typenum",
+  "version": "1.20.1",
+  "sha256": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+ },
+ {
+  "name": "unicase",
+  "version": "2.10.0",
+  "sha256": "357cc3acc6a036009fd6c973ed009037c732d60d0b4f6c673e9041497482a28f"
+ },
+ {
+  "name": "unicode-bom",
+  "version": "2.0.3",
+  "sha256": "7eec5d1121208364f6793f7d2e222bf75a915c19557537745b195b253dd64217"
+ },
+ {
+  "name": "unicode-ident",
+  "version": "1.0.27",
+  "sha256": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
+ },
+ {
+  "name": "unicode-normalization",
+  "version": "0.1.26",
+  "sha256": "75cd3fb03d5288b3ba9a1ee103ac7e9cbb59f0b03d64f8ddfcc04dd42758a85d"
+ },
+ {
+  "name": "unicode-width",
+  "version": "0.2.3",
+  "sha256": "ca718471876992059f251e33aafc334346ada08042b7661dd1fe313a9bced557"
+ },
+ {
+  "name": "url",
+  "version": "2.5.9",
+  "sha256": "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
+ },
+ {
+  "name": "utf8_iter",
+  "version": "1.1.0",
+  "sha256": "af3bd9d3e571c26fcce9d033b87ea5ab061b8d2ffe9b7a5675d810d68f03edf0"
+ },
+ {
+  "name": "utf8parse",
+  "version": "0.2.2",
+  "sha256": "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
+ },
+ {
+  "name": "utf_types",
+  "version": "1.0.0",
+  "sha256": "3a3b425286980a367278453f3b6d28cdcb134b574e5a35824a6ff5eebad50bb6"
+ },
+ {
+  "name": "valuable",
+  "version": "0.1.1",
+  "sha256": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+ },
+ {
+  "name": "vcpkg",
+  "version": "0.2.15",
+  "sha256": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+ },
+ {
+  "name": "version_check",
+  "version": "0.9.5",
+  "sha256": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+ },
+ {
+  "name": "walkdir",
+  "version": "2.5.1",
+  "sha256": "b42e295b7452c4604982280d8586001fcad9b8b201cac67bca9771e7a7475403"
+ },
+ {
+  "name": "wasm-bindgen",
+  "version": "0.2.130",
+  "sha256": "a0181c14ddd6c7b8b0b0132a5f1ea2f32be0d893cd3ea97b6e3b28886b8a3d1c"
+ },
+ {
+  "name": "wasm-bindgen-macro",
+  "version": "0.2.130",
+  "sha256": "6e931a02a39abdbf66966fc35902b5ed58344750a70885bed4ebb3d8eaf28ed9"
+ },
+ {
+  "name": "wasm-bindgen-macro-support",
+  "version": "0.2.130",
+  "sha256": "2ca4b54280e455bd831e33a6b8e734baf432fe63fbc35c42ac14ce67a043a53a"
+ },
+ {
+  "name": "wasm-bindgen-shared",
+  "version": "0.2.130",
+  "sha256": "3b1f9c3798725016c6ee5f2f57869ec0831e8bbc0ab0310a86e787e97f41389e"
+ },
+ {
+  "name": "winapi-util",
+  "version": "0.1.11",
+  "sha256": "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+ },
+ {
+  "name": "windows-link",
+  "version": "0.2.1",
+  "sha256": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+ },
+ {
+  "name": "windows-sys",
+  "version": "0.61.2",
+  "sha256": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+ },
+ {
+  "name": "winnow",
+  "version": "0.7.15",
+  "sha256": "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
+ },
+ {
+  "name": "winnow",
+  "version": "1.0.5",
+  "sha256": "8c3b93199df0ab874cdf0c6a94f0a0dc3423fe41f1cafb62b8bd7b1deb277aef"
+ },
+ {
+  "name": "writeable",
+  "version": "0.6.4",
+  "sha256": "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
+ },
+ {
+  "name": "yoke",
+  "version": "0.8.4",
+  "sha256": "417ef3fcf6c300b7dbd25c85531a746931c02ad536f3cf4786ed1e88223340b3"
+ },
+ {
+  "name": "yoke-derive",
+  "version": "0.8.4",
+  "sha256": "ec8ebde2db3681e8c9980cc27822030e68752690ddfa9473e739aeb4dbde6d71"
+ },
+ {
+  "name": "zerofrom",
+  "version": "0.1.8",
+  "sha256": "0ec05a11813ea801ff6d75110ad09cd0824ddba17dfe17128ea0d5f68e6c5272"
+ },
+ {
+  "name": "zerofrom-derive",
+  "version": "0.1.8",
+  "sha256": "f75b4683f6c7f45248d4d64056a24298c6281e0993356d7d1b4a1a962ef10d4a"
+ },
+ {
+  "name": "zerotrie",
+  "version": "0.2.5",
+  "sha256": "4ea269c3bd32f0a32c321907a2ae912ba6f4649bb0fc764a15627e99a7095a3f"
+ },
+ {
+  "name": "zerovec",
+  "version": "0.11.9",
+  "sha256": "f58a2799cfe9a1670c7ea8edbd52ef8edb93cb37a7f83bf31ba9e35d9dae6a40"
+ },
+ {
+  "name": "zerovec-derive",
+  "version": "0.11.7",
+  "sha256": "c3743ddbf47738d929cd1ae2e199d40d0162979dfe31aef8ae646d2bf00bf97a"
+ },
+ {
+  "name": "zlib-rs",
+  "version": "0.6.8",
+  "sha256": "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
+ },
+ {
+  "name": "zmij",
+  "version": "1.0.23",
+  "sha256": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+ }
+]

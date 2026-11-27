@@ -7,7 +7,8 @@
 # battery (upower); sound: PipeWire, WirePlumber and alsa-utils, ALSA's
 # profiles of sound cards, and the LV2 plugins a Mac's speakers are tuned
 # with, and on arm64 Apple's cards' profiles, speakersafetyd and
-# asahi-audio (docs/mac-speakers.md); the terminal, Alacritty; FUSE's libraries and
+# asahi-audio (docs/mac-speakers.md), and the Touch Bar's keys (tiny-dfr);
+# the terminal, Alacritty; FUSE's libraries and
 # fusermount, with which an AppImage runs; and the browser, Hudhud
 # (docs/browser.md).  It needs no other extension.
 #
@@ -35,8 +36,9 @@ extension {
     browser.hudhud
   ]
   # arm64's, whose machines are Macs: the profiles of Apple's sound cards,
-  # the speakers' protection and their processing (docs/mac-speakers.md)
-  ++ (if system == "aarch64-linux" then [ desktop.alsa-ucm-conf-asahi desktop.speakersafetyd desktop.asahi-audio ] else []);
+  # the speakers' protection and their processing (docs/mac-speakers.md),
+  # and the Touch Bar's keys
+  ++ (if system == "aarch64-linux" then [ desktop.alsa-ucm-conf-asahi desktop.speakersafetyd desktop.asahi-audio desktop.tiny-dfr ] else []);
   # fusermount3 mounts a FUSE file system for a person who is not root,
   # which takes root's rights; and libfuse 2 runs it by its old name
   # (desktop/libfuse2.sh)
