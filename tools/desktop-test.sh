@@ -482,8 +482,8 @@ printf '%s\n' '<!doctype html><title>Hudhud start</title>' \
 #   Its own profile, which remote debugging takes (Chromium refuses it in
 # the default one); the port answers on the machine only.  A new profile
 # has the same defaults: they are built in.  The network log's flag has
-# Hudhud show a bar that warns of it, in the pictures.  On sara's session bus, as anything sara starts in their
-# session is.
+# Hudhud show a bar that warns of it, in the pictures.  On sara's session
+# bus, as anything sara starts in their session is.
 debugging_port=9222
 in_guest "setsid -f $as_sara WAYLAND_DISPLAY=$wayland_display \
     DBUS_SESSION_BUS_ADDRESS=unix:path=$sara_runtime/bus \
@@ -542,10 +542,10 @@ sleep 2
 press_on_keyboard ctrl-l
 type_on_keyboard hudhud
 # The whole address: nothing added to the words (no "source=csChrome")
-search="https://search.brave.com/search?q=hudhud\""
+search="https://search.brave.com/search?q=hudhud"
 searched_with_brave() {
     in_guest "curl -s http://127.0.0.1:$debugging_port/json/list" > "$work/hudhud-pages.json" 2>&1 || true
-    grep -q -F "\"url\": \"$search" "$work/hudhud-pages.json"
+    grep -q -F "\"url\": \"$search\"" "$work/hudhud-pages.json"
 }
 wait_until "words typed in the address bar did not go to Brave Search (pages: $work/hudhud-pages.json)" \
     searched_with_brave

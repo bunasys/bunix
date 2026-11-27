@@ -88,9 +88,12 @@ bindgen_version=$(pinned bindgen version)
 chromium_tarball=$cache/chromium-$chromium_version-lite.tar.xz
 ungoogled_tarball=$cache/ungoogled-chromium-$ungoogled_version.tar.gz
 rust_source_tarball=$cache/rustc-$rust_source_version-src.tar.xz
-crubit_tarball=$cache/crubit-$(pinned crubit version).tar.gz
-ublock_tarball=$cache/uAssets-$(pinned ublock-assets version).tar.gz
-liste_ar_tarball=$cache/listear-$(pinned liste-ar version).tar.gz
+crubit_tarball=$cache/crubit-$crubit_version.tar.gz
+ublock_tarball=$cache/uAssets-$ublock_version.tar.gz
+liste_ar_tarball=$cache/listear-$liste_ar_version.tar.gz
+crubit_version=$(pinned crubit version)
+ublock_version=$(pinned ublock-assets version)
+liste_ar_version=$(pinned liste-ar version)
 # ungoogled-chromium for that Chromium, unpacked by the fetch step
 ungoogled=$work/ungoogled-$ungoogled_version
 
@@ -129,8 +132,10 @@ MACOS_PATCHES_NOT_USED=(
 
 # TypeScript 7 (tsgo) as Chromium 158 pins it (DEPS: typescript/mac-arm64
 # version:2@7.0.2), from Microsoft's npm package
-TSGO_URL=https://registry.npmjs.org/@typescript/typescript-darwin-arm64/-/typescript-darwin-arm64-7.0.2.tgz
+TSGO_VERSION=7.0.2
+TSGO_URL=https://registry.npmjs.org/@typescript/typescript-darwin-arm64/-/typescript-darwin-arm64-$TSGO_VERSION.tgz
 TSGO_SHA256=902e2fe1cf0799198ef902c6b8c310a450fef629a6baba41d45641ef75c04ebd
+tsgo_tarball=$cache/tsgo-$TSGO_VERSION.tgz
 
 # The Rust nightly whose source Linux builds Chromium's Rust from
 # (chromium-rust in sources.json), prebuilt for macOS, and its rustc's own
@@ -143,10 +148,6 @@ RUSTC_DEV_URL=https://static.rust-lang.org/dist/$RUST_NIGHTLY/rustc-dev-nightly-
 RUSTC_DEV_SHA256=c0103c37c625b7f96314349ad89112b3b977e56b48b12bf5ce98751cd3023ddc
 rust_nightly_tarball=$cache/rust-nightly-$RUST_NIGHTLY.tar.xz
 rustc_dev_tarball=$cache/rustc-dev-nightly-$RUST_NIGHTLY.tar.xz
-if [ "nightly-$RUST_NIGHTLY" != "$rust_source_version" ]; then
-  echo "RUST_NIGHTLY is $RUST_NIGHTLY, Linux builds $rust_source_version: update RUST_NIGHTLY and the RUST_* sha256s" >&2
-  exit 1
-fi
 
 # ungoogled-chromium's tools want Python 3.13 or older; so do Chromium's
 # build scripts, which run as python3 from PATH
@@ -184,7 +185,7 @@ download() {
 
 # A git repository at a tag, checked against the commit pinned for it
 clone_pinned() {
-  local url=$1 tag=$2 commit=$3 dir=$work/$4
+  local url=$1 tag=$2 commit=$3 dir=$4
   if [ ! -d "$dir" ]; then
     git clone --quiet --depth 1 --branch "$tag" "$url" "$dir"
   fi
@@ -200,7 +201,7 @@ check_fetched() {
   local file
   for file in "$chromium_tarball" "$rust_source_tarball" "$crubit_tarball" \
       "$ublock_tarball" "$liste_ar_tarball" "$rust_nightly_tarball" "$rustc_dev_tarball" \
-      "$ungoogled"; do
+      "$tsgo_tarball" "$ungoogled" "$ungoogled_macos"; do
     if [ ! -e "$file" ]; then
       echo "$file: not fetched yet: run $0 fetch" >&2
       exit 1
@@ -209,9 +210,15 @@ check_fetched() {
 }
 
 step_fetch() {
+  # The Rust toolchain must be the nightly the Rust source is from
+  if [ "nightly-$RUST_NIGHTLY" != "$rust_source_version" ]; then
+    echo "RUST_NIGHTLY is $RUST_NIGHTLY, Linux builds $rust_source_version: update RUST_NIGHTLY and the RUST_* sha256s" >&2
+    exit 1
+  fi
+
   mkdir -p "$cache"
   clone_pinned https://github.com/ungoogled-software/ungoogled-chromium-macos.git \
-    "$UNGOOGLED_MACOS_TAG" "$UNGOOGLED_MACOS_COMMIT" "$(basename "$ungoogled_macos")"
+    "$UNGOOGLED_MACOS_TAG" "$UNGOOGLED_MACOS_COMMIT" "$ungoogled_macos"
 
   # ungoogled-chromium may be a release behind Chromium: Hudhud moves to a
   # Chromium only once tools/chromium-update.py's report on it is reviewed
@@ -226,7 +233,7 @@ step_fetch() {
   download_pinned crubit "$crubit_tarball"
   download_pinned ublock-assets "$ublock_tarball"
   download_pinned liste-ar "$liste_ar_tarball"
-  download "$TSGO_URL" "$TSGO_SHA256" "$cache/tsgo.tgz"
+  download "$TSGO_URL" "$TSGO_SHA256" "$tsgo_tarball"
   download "$RUST_URL" "$RUST_SHA256" "$rust_nightly_tarball"
   download "$RUSTC_DEV_URL" "$RUSTC_DEV_SHA256" "$rustc_dev_tarball"
 
@@ -336,7 +343,7 @@ step_toolchain() {
   # TypeScript (tsgo), where both Chromium and DevTools look for it
   rm -rf third_party/typescript/mac-arm64/src
   mkdir -p third_party/typescript/mac-arm64/src
-  tar -xzf "$cache/tsgo.tgz" -C third_party/typescript/mac-arm64/src --strip-components 1
+  tar -xzf "$tsgo_tarball" -C third_party/typescript/mac-arm64/src --strip-components 1
   # with the change Chromium's own package has: DOM setters that take
   # Trusted Types (microsoft/TypeScript#30024)
   patch --silent third_party/typescript/mac-arm64/src/lib/lib.dom.d.ts < third_party/node/patches/typescript.patch
@@ -449,7 +456,10 @@ step_package() {
 
   sign_app "$app"
 
-  local dmg=$work/hudhud-$chromium_version-macos-arm64.dmg
+  # Named by the version built, which sources.json may have moved past
+  local version
+  version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist")
+  local dmg=$work/hudhud-$version-macos-arm64.dmg
   "$src/chrome/installer/mac/pkg-dmg" --sourcefile --source "$app" --target "$dmg" \
     --volname Hudhud --symlink /Applications:/Applications --format UDBZ --verbosity 0
   # The disk image is signed too, so macOS can check it before opening it

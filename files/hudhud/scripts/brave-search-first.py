@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Puts Brave Search in every country's list of search engines, first.
 
-Brave Search is the default through the brave-search-default patch
-(make-patches.py), which looks for Brave's id in the country's list: this
-script puts Brave in every list (a country's list is in
-third_party/search_engines_data/resources/definitions/regional_settings.json)
-so it is found, and first, so settings list it first.  Done on the data, not
-as a patch, so that it keeps working when Chromium edits the lists.  A change
-of engine is made here (BRAVE) and in the patches.
+The brave-search-default patch (make-patches.py) makes the engine with
+Brave's id the default, so Brave must be in every list (in
+third_party/search_engines_data/resources/definitions/regional_settings.json).
+Why, and why on the data rather than as a patch: docs/browser.md, "Defaults".
+A change of engine is made here (BRAVE) and in the patches.
 
     brave-search-first.py <chromium source directory>
 """
