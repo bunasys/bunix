@@ -169,7 +169,8 @@ start:
   unit must not fail at boot (prefix its command with `-`), or systemd
   keeps restarting it.  A service for a device only is asked for by the
   extension's udev rule instead (`SYSTEMD_WANTS`), when the device shows:
-  speakersafetyd, for a Mac's speakers (docs/mac-speakers.md).
+  speakersafetyd, for a Mac's speakers (docs/mac-speakers.md), and
+  tiny-dfr, for a MacBook Pro's Touch Bar.
 
 An extension's build refuses a service that nothing starts: no target
 upholds it, it has no socket of its own, and no udev rule of the
@@ -180,8 +181,9 @@ the desktop's units run.
 
 udev's rules and the system bus's policies are the same: each is read
 before the merge.  After it, `systemd-sysext.service.d/bunix.conf` has
-udev read its rules again and go over the input and sound devices once
-more, for libinput's rules and speakersafetyd's; and has the bus read its policies again, without which
+udev read its rules again and go over the input, sound, display and
+backlight devices once more, for libinput's rules, speakersafetyd's and
+tiny-dfr's (a Touch Bar's); and has the bus read its policies again, without which
 accountsservice cannot take its name on the bus.
 
 ## Phases

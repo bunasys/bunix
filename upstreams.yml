@@ -104,6 +104,10 @@ cairo:
   alpine: cairo
 cargo-aarch64-linux:
   part-of: rustc-x86_64-linux
+cargo-c:
+  anitya: 58394
+  debian: cargo-c
+  alpine: cargo-c
 cargo-x86_64-linux:
   part-of: rustc-x86_64-linux
 ccache:
@@ -466,6 +470,11 @@ libpng:
   cpe: 'a:libpng:libpng'
   debian: libpng1.6
   alpine: libpng
+librsvg:
+  anitya: 5420
+  cpe: 'a:gnome:librsvg'
+  debian: librsvg
+  alpine: librsvg
 libslirp:
   anitya: 96796
   cpe: 'a:libslirp_project:libslirp'
@@ -840,6 +849,8 @@ tar:
   cpe: 'a:gnu:tar'
   debian: tar
   alpine: tar
+tiny-dfr:
+  anitya: 368703
 triforce:
   untracked: at Aurora Silicon's pin (alarm-aurora, packages/triforce-lv2), which its asahi-audio is tuned with
 u-boot:

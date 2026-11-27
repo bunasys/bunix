@@ -1201,5 +1201,21 @@
     "version": "a8c68c27c448ff39c915b46b8d33c53f2c56b705",
     "url": "https://codeload.github.com/aurora-silicon/asahi-audio/tar.gz/a8c68c27c448ff39c915b46b8d33c53f2c56b705",
     "sha256": "d054fa799500ec845b8dbb7cc18d653d836cda9dd3780da76f71a4aa1bb71a96"
+  },
+  "cargo-c": {
+    "version": "0.10.28",
+    "url": "https://static.crates.io/crates/cargo-c/cargo-c-0.10.28+cargo-0.101.0.crate",
+    "sha256": "489d4becd9fa75bf5b50af47267c88d2dcc6206a2850dc1f4f59d5e37d11e9c1",
+    "name": "cargo-c-0.10.28.tar.gz"
+  },
+  "librsvg": {
+    "version": "2.63.4",
+    "url": "https://download.gnome.org/sources/librsvg/2.63/librsvg-2.63.4.tar.xz",
+    "sha256": "31f07d9350dad3f8964fd613c31309ac160fdef13dfac59df6fd082de78d6e8f"
+  },
+  "tiny-dfr": {
+    "version": "0.3.8",
+    "url": "https://github.com/AsahiLinux/tiny-dfr/archive/refs/tags/v0.3.8.tar.gz",
+    "sha256": "fb60a8bd24947b933389ab6f949d7a915040e594f9ba3edd4dac08a6af3dee62"
   }
 }

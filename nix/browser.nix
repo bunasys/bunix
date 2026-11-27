@@ -51,22 +51,14 @@ let
 
   # ---- What Chromium itself links, beside GTK ---------------------------------
 
-  # libxml2: XML, which at-spi2-core reads its interfaces' descriptions in
-  libxml2 = mkSystemPackage {
-    name = "libxml2";
-    source = sources.libxml2;
-    script = ./browser/libxml2.sh;
-    depends = [ glibc base.zlib ];
-    buildDepends = [ pkgconf ];
-  };
-
   # at-spi2-core: accessibility over D-Bus, which Chromium and GTK 4 tell
   # a screen reader what is on the screen through
   at-spi2-core = mkSystemPackage {
     name = "at-spi2-core";
     source = sources.at-spi2-core;
     script = ./meson.sh;
-    depends = [ glibc base.dbus base.glib libxml2 base.systemd ];
+    # libxml2: XML, which it reads its interfaces' descriptions in
+    depends = [ glibc base.dbus base.glib desktop.libxml2 base.systemd ];
     buildDepends = [ meson ninja pkgconf ];
     env = { meson_arguments = "-Dx11=disabled -Dintrospection=disabled -Ddocs=false -Duse_systemd=true -Ddefault_bus=dbus-daemon"; };
   };
@@ -115,18 +107,6 @@ let
     env = { cmake_arguments = "-Dtiff-tools=OFF -Dtiff-tests=OFF -Dtiff-contrib=OFF -Dtiff-docs=OFF -Dtiff-cxx=OFF -Djbig=OFF -Dlerc=OFF -Dlzma=OFF -Dwebp=OFF -Dzstd=OFF -Dlibdeflate=OFF -Djpeg=ON -Dzlib=ON"; };
   };
 
-  # gdk-pixbuf: pictures (icons in the dialogs), PNG, JPEG and GIF
-  gdk-pixbuf = mkSystemPackage {
-    name = "gdk-pixbuf";
-    source = sources.gdk-pixbuf;
-    script = ./meson.sh;
-    depends = [ glibc base.glib desktop.libjpeg-turbo desktop.libpng ];
-    buildDepends = [ meson ninja pkgconf ];
-    # the loaders built in: as modules they would need a loaders.cache,
-    # which gdk-pixbuf makes only when installed on a running system
-    env = { meson_arguments = "-Dbuiltin_loaders=png,jpeg,gif -Dpng=enabled -Djpeg=enabled -Dtiff=disabled -Dgif=enabled -Dglycin=disabled -Dothers=disabled -Dthumbnailer=disabled -Dgio_sniffing=false -Dintrospection=disabled -Dman=false -Ddocumentation=false -Dtests=false -Dinstalled_tests=false"; };
-  };
-
   # GTK 4 itself, Wayland only (browser/gtk4.sh has what of it is built).
   # Its file dialog reads its settings through GSettings, and GLib stops
   # a program whose schemas are not compiled: the desktop extension
@@ -135,7 +115,7 @@ let
     name = "gtk4";
     source = sources.gtk4;
     script = ./browser/gtk4.sh;
-    depends = [ glibc desktop.cairo desktop.fontconfig desktop.freetype desktop.fribidi gdk-pixbuf base.glib graphene desktop.harfbuzz desktop.libdrm libepoxy desktop.libjpeg-turbo desktop.libpng libtiff desktop.libxkbcommon desktop.mesa desktop.pango desktop.wayland ];
+    depends = [ glibc desktop.cairo desktop.fontconfig desktop.freetype desktop.fribidi desktop.gdk-pixbuf base.glib graphene desktop.harfbuzz desktop.libdrm libepoxy desktop.libjpeg-turbo desktop.libpng libtiff desktop.libxkbcommon desktop.mesa desktop.pango desktop.wayland ];
     buildDepends = [ meson ninja pkgconf base.gettext desktop.wayland-protocols ];
   };
 
@@ -356,5 +336,5 @@ in
   inherit chromium ccache xxhash;
   inherit compiler-rt chromium-rust-stage0 chromium-rust crubit;
   inherit nspr nss;
-  inherit libxml2 at-spi2-core pciutils libepoxy graphene libtiff gdk-pixbuf gtk4;
+  inherit at-spi2-core pciutils libepoxy graphene libtiff gtk4;
 }
