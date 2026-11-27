@@ -1,0 +1,101 @@
+DMS takes the first backlight it lists as the screen's, and listed them by
+name.  A MacBook Pro with a Touch Bar has two: the bar's (raw,
+"228600000.dsi.0") came before the screen's (platform, "apple-panel-bl"),
+and the brightness slider and keys changed the bar.  Here backlights are
+listed in the kernel's order of preference by their type, as systemd and
+GNOME choose: firmware, platform, raw; by name after that.  Fit to send
+upstream.
+
+--- a/core/internal/server/brightness/manager.go
++++ b/core/internal/server/brightness/manager.go
+@@ -78,6 +78,24 @@
+ 	}
+ 
+ 	m.updateState()
++}
++
++// The kernel's own order of preference among a machine's backlights, as
++// systemd and GNOME use it: the firmware's control of the screen, then
++// the platform's, then a driver's raw one.  The interface takes the first
++// backlight as the screen's.  By name alone, a MacBook Pro's Touch Bar
++// (raw, "228600000.dsi.0") came before its screen (platform,
++// "apple-panel-bl").
++func backlightTypeRank(backlightType string) int {
++	switch backlightType {
++	case "firmware":
++		return 0
++	case "platform":
++		return 1
++	case "raw":
++		return 2
++	}
++	return 3
+ }
+ 
+ func sortDevices(devices []Device) {
+@@ -96,6 +114,12 @@
+ 			return orderI < orderJ
+ 		}
+ 
++		rankI := backlightTypeRank(devices[i].backlightType)
++		rankJ := backlightTypeRank(devices[j].backlightType)
++		if rankI != rankJ {
++			return rankI < rankJ
++		}
++
+ 		return devices[i].Name < devices[j].Name
+ 	})
+ }
+--- a/core/internal/server/brightness/sysfs.go
++++ b/core/internal/server/brightness/sysfs.go
+@@ -61,6 +61,14 @@
+ 			if class == "leds" {
+ 				deviceClass = ClassLED
+ 				minValue = 0
++			}
++
++			backlightType := ""
++			if deviceClass == ClassBacklight {
++				typeData, err := os.ReadFile(filepath.Join(devicePath, "type"))
++				if err == nil {
++					backlightType = strings.TrimSpace(string(typeData))
++				}
+ 			}
+ 
+ 			deviceID := fmt.Sprintf("%s:%s", class, entry.Name())
+@@ -70,6 +78,7 @@
+ 				name:          entry.Name(),
+ 				maxBrightness: maxBrightness,
+ 				minValue:      minValue,
++				backlightType: backlightType,
+ 			})
+ 
+ 			log.Debugf("found %s device: %s (max=%d)", class, entry.Name(), maxBrightness)
+@@ -165,6 +174,7 @@
+ 			Max:            dev.maxBrightness,
+ 			CurrentPercent: percent,
+ 			Backend:        "sysfs",
++			backlightType:  dev.backlightType,
+ 		})
+ 		return true
+ 	})
+--- a/core/internal/server/brightness/types.go
++++ b/core/internal/server/brightness/types.go
+@@ -26,6 +26,9 @@
+ 	Max            int         `json:"max"`
+ 	CurrentPercent int         `json:"currentPercent"`
+ 	Backend        string      `json:"backend"`
++	// sysfs's type of a backlight (firmware, platform, raw): which one
++	// is the screen's, where a machine has several
++	backlightType string
+ }
+ 
+ type State struct {
+@@ -89,6 +92,7 @@
+ 	name          string
+ 	maxBrightness int
+ 	minValue      int
++	backlightType string
+ }
+ 
+ type DDCBackend struct {
