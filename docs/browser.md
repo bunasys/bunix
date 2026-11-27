@@ -396,19 +396,21 @@ without its report.
 ## macOS
 
 Hudhud for Apple Silicon Macs, built on a Mac by tools/build-macos.sh
-(decided 2026-11-11), not by BuildStream: BuildStream builds in a Linux
-sandbox, and a macOS app needs Apple's SDK from the Xcode installed there.
-The sources stay pinned: Chromium's tarball, Rust's library source,
-Crubit, bindgen's version and the filter lists come from the elements
-Linux builds with; the rest is pinned in the script.
+(decided 2026-11-11), not by Nix: Nix builds in a Linux sandbox, and a
+macOS app needs Apple's SDK from the Xcode installed there.  The sources
+stay pinned: Chromium's tarball, ungoogled-chromium, Rust's library
+source, Crubit, bindgen's version and the filter lists come from
+nix/sources.json, which Linux builds with, so both build the same
+Chromium; the rest is pinned in the script.
 
 - **Base**: the same as Linux (Patches), plus ungoogled-chromium-macos,
-  still at 156: what changed for 157 is in files/hudhud/macos/patches and
-  files/hudhud/ungoogled/patches, and the script lists the macOS patches it
-  does without and why.
+  at 157 (it has no 158): what 158 needs is in files/hudhud/macos/patches
+  and files/hudhud/ungoogled/patches, and the script lists the macOS
+  patches it does without and why.
 - **Toolchain**: ungoogled-chromium-macos's prebuilt LLVM 23 and Node 24;
-  Rust laid out as Chromium's own package, as on Linux (the 2026-09-10
-  nightly with rustc-dev, the library source, Crubit built into it);
+  Rust laid out as Chromium's own package, as on Linux (the nightly whose
+  source Linux builds, prebuilt, with rustc-dev, the library source, Crubit
+  built into it);
   bindgen from cargo; Chromium's pinned TypeScript (tsgo 7.0.2) from npm;
   Go and esbuild from Homebrew; the macOS 26 SDK (27's breaks LLVM 23's
   linker).
