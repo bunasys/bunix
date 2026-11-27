@@ -265,7 +265,10 @@ built here, and aura starts the kernel.
 Firmware is the machine's (below): for Wi-Fi, the files are in the Mac's
 own macOS (`/usr/share/firmware/wifi`), and `asahi_firmware.wifi`,
 Asahi's tool that Aurora's installer carries, makes of them an archive
-with `/vendorfw` in it.
+with `/vendorfw` in it.  A Touch Bar's touch screen needs one more file,
+`apple/dfrmtfw-<model>.bin`, which is not among the Wi-Fi files: the
+same tool's multitouch step makes it from `fud_firmware/` in the
+archive of firmware (`all_firmware.tar.gz`) the installer collects.
 `BUNIX_FIRMWARE` names that archive; it is put before the image, and the
 kernel is told where to look.  It is not in this repository, nor in any
 package.

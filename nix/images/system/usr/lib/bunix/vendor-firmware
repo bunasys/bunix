@@ -11,18 +11,21 @@
 # their devices are left without a driver.  So, once the directory can be
 # read: name it to the kernel, and have every such device tried again.
 #
-# Only PCI devices are tried again: a Mac's Wi-Fi is one, and nothing
-# else here waits for firmware yet.
+# Only PCI and SPI devices are tried again: a Mac's Wi-Fi is on PCI, and
+# its Touch Bar's touch screen on SPI.  Nothing else here waits for
+# firmware yet.
 set -eu
 
 echo -n /var/lib/vendorfw > /sys/module/firmware_class/parameters/path
 
-for device in /sys/bus/pci/devices/*; do
-    [ -e "$device" ] || continue
-    [ ! -e "$device/driver" ] || continue
-    # One device that cannot be tried does not keep the rest from being
-    # tried.  Whether a driver that took one got its firmware is not
-    # known here: it asks after this has returned, and says so in the
-    # kernel's log.
-    echo "${device##*/}" > /sys/bus/pci/drivers_probe || true
+for bus in pci spi; do
+    for device in "/sys/bus/$bus/devices/"*; do
+        [ -e "$device" ] || continue
+        [ ! -e "$device/driver" ] || continue
+        # One device that cannot be tried does not keep the rest from
+        # being tried.  Whether a driver that took one got its firmware is
+        # not known here: it asks after this has returned, and says so in
+        # the kernel's log.
+        echo "${device##*/}" > "/sys/bus/$bus/drivers_probe" || true
+    done
 done
