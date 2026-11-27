@@ -67,9 +67,40 @@ and that it does not run on a machine with no bar.
   brightness slider moves the screen, and nothing pops up when the bar
   dims.
 - A way for bunix to make the firmware file itself, so that no one does
-  the steps above by hand: in the archive `BUNIX_FIRMWARE` names
-  (`tools/boot-mac.sh`), or by the installer.
+  the steps above by hand (below).
 - If `systemd-sysext` is restarted while the bar dims or wakes, the bar's
   devices lose their names for a moment, tiny-dfr stops with them, and
   nothing starts it again until the next boot.  A narrow window; at boot
   the merge comes before the bar can dim.
+
+## Making the firmware: a plan
+
+The file is Apple's, given with each Mac, and no one may pass it on: it
+is not in this repository, a package or an image, and never will be.  What
+bunix may ship is a way to make it on the person's own Mac, as Asahi's
+and Aurora's installers do.  Planned, not written:
+
+`bunix firmware` (src/bunix), run by the Mac's person, or by
+`bunix-install` on a Mac with a bar:
+
+1. What is wanted: the file the touch screen's node in the device tree
+   names (`firmware-name`, `apple/dfrmtfw-j293.bin`), and the model.  On a
+   Mac without a bar, nothing.
+2. From Apple, and only Apple: its catalog of macOS restore images
+   (`mesu.apple.com/assets/macos/com_apple_macOSIPSW/com_apple_macOSIPSW.xml`)
+   names the newest.  Of that archive (25 GB) only its list of files and
+   `Firmware/J<model>_Multitouch.im4p` (about 90 KB) are read, by ranges
+   (`curl --range`; the command runs curl already).
+3. Converted: the file is not compressed, an IM4P (DER) around an XML
+   property list, which becomes the binary the driver reads, as
+   `asahi_firmware/multitouch.py` (aurora-installer, MIT) does:
+   `plist_to_bin_touchbar`, some 40 lines.
+4. Put in `/var/lib/vendorfw/apple/`; the touch screen tried again
+   (`spi0.0`), and tiny-dfr restarted.
+
+Not at every boot by itself: a machine that asks Apple for files unasked
+is a choice of its own.  Set aside: reading the file from the Mac's own
+macOS (its Preboot volume is APFS, and a Mac mini's has no Multitouch
+firmware, so it is not certain a laptop's has it either), and adding it
+to the archive `tools/boot-mac.sh` takes, which covers a Mac booted from
+another and not an installed one.
