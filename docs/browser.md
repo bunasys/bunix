@@ -110,7 +110,7 @@ nix/browser.nix:
 | --- | --- | --- |
 | chromium | Chromium with Hudhud's changes, in /usr/lib/hudhud: hours (half a day on arm64), less with the compiler cache | Chromium, a patch, Hudhud's code in it, the Shields header or the toolchain changes |
 | hudhud-shields | the Shields engine (libhudhud_shields.so) and the filter lists compiled into shields.dat, beside it | the lists or the engine change |
-| hudhud | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
+| hudhud | the two above, the launcher, desktop entry, icons, first-run preferences | a preference or an icon changes |
 
 The split matters because a package is built again from nothing when
 any of its inputs changes: a new filter list must not cost a Chromium
@@ -323,22 +323,20 @@ build has not.  Until then passkeys come from the extensions above.
   the front of every country's list (the first is the default) when
   Chromium is built.  Done on the data, not as a patch, so it keeps
   working as Google edits the lists.  That alone was not enough: 0.4.0's
-  build started with no default engine at all.  So the default is also
-  a recommended policy (below), which holds whatever country Chromium
-  thinks it is in, and the desktop test checks it.  The policy has the
-  built-in engine's URLs and keyword, so that settings should list Brave
-  once (to see in step 3: Chromium may still list both).  While
-  it holds, an extension cannot change the search engine (Chromium
-  ranks a recommended policy above an extension); a person who picks an
-  engine in settings can.
-- **Recommended policies** (the user can change them), in
-  /usr/share/hudhud/policies (the policy-path patch: vendor defaults belong in
-  the signed /usr): third-party cookies blocked, HTTPS-First (balanced),
-  no usage reports, Brave Search the default search engine.
+  build started with no default engine at all.  Chromium's default is
+  the engine in Google's place, before the first of the list, and
+  ungoogled-chromium puts "No Search" there; the brave-search-default
+  patch makes it Brave, whatever country Chromium thinks it is in.  The
+  desktop test checks it.
+- **Built in, not policies**: third-party cookies blocked
+  (ungoogled-chromium's default), HTTPS-First balanced (Chromium's, for
+  anyone who has not changed it), no usage reports (ungoogled-chromium
+  has none to send).  The person can change each.  Hudhud ships no
+  policies: Chromium shows any policy as "Managed by your organization",
+  and turns automatic secure DNS off, as on a managed machine.  (0.5.3
+  had these defaults as recommended policies, and showed both.)
 - **First-run preferences** (/usr/lib/hudhud/initial_preferences):
   no sign-in, WebRTC shows only the public address, no first-run screens.
-  Enforced policies would show "Managed by your organization", so none
-  are used.
 - No "Google API keys are missing" bar: ungoogled-chromium already has
   none.
 - The profile lives in ~/.config/hudhud (the profile-directory patch);
@@ -373,8 +371,8 @@ place in the generator's list; the docs name patches by name.
 | shields-build, shields-tab-helper-build | Shields' own target in the browser's build |
 | shields-page-info-switch | the per-site switch in page info on every site |
 | shields-button, shields-button-build | the Shields button in the toolbar |
-| policy-path | policies from /usr/share/hudhud/policies (Linux) |
-| policy-recommended-not-managed | only a mandatory policy makes the browser "managed", so the recommended defaults leave secure DNS automatic (Linux: on macOS any program can write recommended policies) |
+| policy-path | policies only from /usr/share/hudhud/policies, which Hudhud leaves empty, not Chromium's /etc/chromium/policies (Linux) |
+| brave-search-default | Brave Search the default engine, not ungoogled-chromium's "No Search" in Google's place |
 | profile-directory | ~/.config/hudhud (Linux) |
 | no-web-store-tile | no Web Store tile on the start page |
 | password-manager-choice-* | the password manager choice: the gate, the pref, the page and their builds |
@@ -426,9 +424,9 @@ Chromium; the rest is pinned in the script.
   notarytool profile hudhud-notary; with its provisioning profile
   (HUDHUD_MACOS_PROVISIONING_PROFILE), the keychain group of Touch ID
   passkeys.  Ad hoc otherwise, for this Mac only.
-- **Not yet on macOS**: the recommended policies and first-run
-  preferences (macOS reads them from elsewhere); iCloud Keychain passkeys
-  (Apple's entitlement, requested).
+- **Not yet on macOS**: the first-run preferences (macOS reads them
+  from elsewhere); iCloud Keychain passkeys (Apple's entitlement,
+  requested).
 
 ## What it costs
 

@@ -357,56 +357,20 @@ PATCHES = [
        '  static constexpr char kKeyName[] = "Hudhud Safe Storage";\n'
        '  static constexpr char kAppName[] = "hudhud";\n'),
     ]),
-    # Recommended policies alone made Chromium say it is managed by an
-    # organization, and turn off its automatic secure DNS, as on a managed
-    # machine: it counted any policy.  On Linux only: macOS reads
-    # recommended policies from the app's own defaults, which any program
-    # of the person's can write, and the warning is all that shows it.
-    ("policy-recommended-not-managed",
-     "chrome/browser/policy/chrome_browser_policy_connector.cc", [
-      ('namespace {\n'
-       'bool g_command_line_enabled_for_testing = false;\n'
-       '}  // namespace\n',
-       'namespace {\n'
-       'bool g_command_line_enabled_for_testing = false;\n'
-       '\n'
-       '#if !BUILDFLAG(IS_MAC)\n'
-       '// Hudhud: its defaults are recommended policies\n'
-       '// (files/hudhud/install/policies), which the person can change.  Only a\n'
-       '// mandatory policy takes a choice away, so only one makes the machine\n'
-       '// managed.\n'
-       'bool ProviderHasMandatoryPolicies(\n'
-       '    const ConfigurationPolicyProvider* provider) {\n'
-       '  if (!provider || !provider->is_active()) {\n'
-       '    return false;\n'
-       '  }\n'
-       '  for (const auto& [policy_namespace, policies] : provider->policies()) {\n'
-       '    for (const auto& [name, entry] : policies) {\n'
-       '      if (entry.level == POLICY_LEVEL_MANDATORY) {\n'
-       '        return true;\n'
-       '      }\n'
-       '    }\n'
-       '  }\n'
-       '  return false;\n'
-       '}\n'
-       '#endif  // !BUILDFLAG(IS_MAC)\n'
-       '}  // namespace\n'),
-      ('bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
-       '  if (ProviderHasPolicies(GetPlatformProvider())) {\n'
-       '    return true;\n'
-       '  }\n',
-       'bool ChromeBrowserPolicyConnector::HasMachineLevelPolicies() {\n'
-       '  // Hudhud: on macOS any program of the person\'s can write recommended\n'
-       '  // policies (the app\'s defaults), so they still show as management\n'
-       '#if BUILDFLAG(IS_MAC)\n'
-       '  bool has_platform_policies = ProviderHasPolicies(GetPlatformProvider());\n'
-       '#else\n'
-       '  bool has_platform_policies =\n'
-       '      ProviderHasMandatoryPolicies(GetPlatformProvider());\n'
-       '#endif\n'
-       '  if (has_platform_policies) {\n'
-       '    return true;\n'
-       '  }\n'),
+    # Brave Search the default without a policy: Chromium falls back to the
+    # engine with Google's id before the first of the country's list
+    # (brave-search-first.py puts Brave there), and ungoogled-chromium's
+    # "No Search" has Google's id, so typed words went nowhere.
+    ("brave-search-default",
+     "components/search_engines/template_url_prepopulate_data.cc", [
+      ('  return FindPrepopulatedEngineInternal(prefs, regional_prepopulated_engines,\n'
+       '                                        google.id,\n'
+       '                                        /*use_first_as_fallback=*/true);\n',
+       '  // Hudhud: Brave Search, not Google\'s place ("No Search" in\n'
+       '  // ungoogled-chromium)\n'
+       '  return FindPrepopulatedEngineInternal(prefs, regional_prepopulated_engines,\n'
+       '                                        brave.id,\n'
+       '                                        /*use_first_as_fallback=*/true);\n'),
     ]),
 ]
 
