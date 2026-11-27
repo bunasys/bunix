@@ -540,6 +540,15 @@ fi
 # shellcheck disable=SC2086
 start_qemu $machine_on_real_processor $efi_firmware $whole_disk $the_stick_too
 expect_installed sara "Sara of the Whole Disk" /usr/bin/fish whole-disk "$work/whole-partitions"
+# The editor the system has: Neovim, with a parser of its own loaded
+editor_said=$(as sara "nvim --headless -c 'lua vim.treesitter.language.add(\"lua\"); io.stdout:write(\"parsed\")' -c qa" 2>&1)
+[ "$editor_said" = parsed ] || fail "Neovim did not start, or loaded no parser: $editor_said"
+echo "  Neovim starts, and loads its parsers"
+# which, as scripts ask it: the file, and a failure for what is not there
+[ "$(as sara "which bash")" = /usr/bin/bash ] || fail "which does not find bash"
+if as sara "which no-such-command" > /dev/null 2>&1; then
+    fail "which found a command that is not there"
+fi
 if [ $starts_from_live_image = yes ]; then
     usr_from=$(as sara "lsblk -s -nrpo NAME /dev/mapper/usr | grep -v mapper | tr '\n' ' '")
     case $usr_from in

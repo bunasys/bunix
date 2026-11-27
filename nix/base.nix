@@ -957,6 +957,35 @@ let
     depends = [ glibc toolchain.gccLibraries ];
   };
 
+  # Neovim, the text editor a system has (a system had none: 0.5.2), with
+  # what it builds itself of (base/neovim.sh): LuaJIT, libuv and luv,
+  # LPeg, utf8proc, unibilium, tree-sitter and its parsers of C, Lua,
+  # Vim, Vim's help, queries and Markdown.  Each is a source of its own,
+  # the one Neovim's cmake.deps/deps.txt names (pinned-by: neovim).
+  neovim = mkSystemPackage {
+    name = "neovim";
+    source = sources.neovim;
+    script = ./base/neovim.sh;
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ cmake ninja gettext ];
+    env = {
+      libuv_source = fetch sources.neovim-libuv;
+      luajit_source = fetch sources.neovim-luajit;
+      luv_source = fetch sources.neovim-luv;
+      lpeg_source = fetch sources.neovim-lpeg;
+      lua_compat53_source = fetch sources.neovim-lua-compat53;
+      utf8proc_source = fetch sources.neovim-utf8proc;
+      unibilium_source = fetch sources.neovim-unibilium;
+      treesitter_source = fetch sources.neovim-treesitter;
+      treesitter_c_source = fetch sources.neovim-treesitter-c;
+      treesitter_lua_source = fetch sources.neovim-treesitter-lua;
+      treesitter_vim_source = fetch sources.neovim-treesitter-vim;
+      treesitter_vimdoc_source = fetch sources.neovim-treesitter-vimdoc;
+      treesitter_query_source = fetch sources.neovim-treesitter-query;
+      treesitter_markdown_source = fetch sources.neovim-treesitter-markdown;
+    };
+  };
+
   # LLVM, clang and lld: the compiler and linker the kernel is built with,
   # on both architectures, and the libclang that bindgen reads C headers
   # with.  Its major version is that of the LLVM inside the Rust compiler,
@@ -1174,6 +1203,6 @@ in
 {
   inherit readline zlib bzip2 elfutils zstd openssl libmnl expat libcap libxcrypt linux-pam shadow util-linux-login libffi pcre2 glib duktape attr acl popt json-c device-mapper dm-udev-rules lz4 ca-certificates;
   inherit util-linux cryptsetup erofs-utils curl kmod systemd e2fsprogs dosfstools efivar efibootmgr procps-ng iproute2 iputils openssh dbus polkit iwd wireless-regdb rust rust-std-aarch64-none;
-  inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu;
+  inherit strace file libarchive git nodejs gmp mpfr gdb nix firecracker pixman libslirp dtc qemu neovim;
   inherit pkgconf flex bc perl ninja autoconf automake libtool gperf mtools python-markupsafe python-jinja2 python-pyelftools python-pefile python-packaging python-zlib python-bz2 python-ctypes meson gettext cmake llvm bindgen botan sqv fish bunix-command boot-picture c-utf8-locale osslsigncode;
 }

@@ -1,0 +1,37 @@
+#!/usr/bin/bash
+# which: the file each command named is, in $PATH, as scripts and hands
+# expect to ask; the system has no other (x86's BuildStream one had
+# BusyBox's).  The file only, never a shell's function or builtin,
+# whichever shell asks: bash's own `type -P` looks.
+#
+#   which [-a] <command>...
+#
+#   -a  every such file in $PATH, not the first alone
+#
+# Exits 1 if any command named is not found, as which does.
+set -u
+
+every=no
+if [ "${1:-}" = -a ]; then
+    every=yes
+    shift
+fi
+if [ $# = 0 ]; then
+    echo "usage: which [-a] <command>..." >&2
+    exit 2
+fi
+
+status=0
+for command in "$@"; do
+    if [ $every = yes ]; then
+        found=$(type -P -a -- "$command")
+    else
+        found=$(type -P -- "$command")
+    fi
+    if [ -z "$found" ]; then
+        status=1
+        continue
+    fi
+    printf '%s\n' "$found"
+done
+exit $status
