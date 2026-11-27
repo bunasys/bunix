@@ -336,6 +336,38 @@ echo "4. sound"
 in_guest "systemctl is-active -q alsa-restore.service && amixer -c 0 scontrols" > "$work/sound.log" 2>&1 \
     || fail "the sound card's volumes were not set (alsa-restore.service); see $work/sound.log"
 echo "  the card's volumes are set"
+# ALSA's profiles of sound cards, which WirePlumber reads, and on arm64
+# those of Apple's cards (docs/mac-speakers.md).  No Apple card here: the
+# check below that WirePlumber still gives the card PipeWire's output is
+# the test that matters.  On x86_64 alsa-lib is asked for the card's
+# profile: upstream's for Intel HD Audio says it has none for this model,
+# which only a profile alsa-lib found and read can say.
+if [ "$architecture" = x86_64 ]; then
+    in_guest "alsaucm -c hw:0 list _verbs" > "$work/ucm.log" 2>&1 || true
+    grep -q "UCM is not supported for this HDA model" "$work/ucm.log" \
+        || fail "alsa-lib did not read ALSA's profiles of sound cards; see $work/ucm.log"
+fi
+if [ "$architecture" = aarch64 ]; then
+    in_guest "test -d /usr/share/alsa/ucm2/conf.d/macaudio" \
+        || fail "no profiles of a Mac's sound card (ucm2/conf.d/macaudio) in arm64's desktop extension"
+fi
+echo "  ALSA's profiles of sound cards are there"
+# A Mac's speakers' protection (docs/mac-speakers.md): on arm64, there,
+# known to systemd, its udev rules sound, and not running, since this
+# machine is no Mac (its udev rule starts it only for a Mac's speakers)
+if [ "$architecture" = aarch64 ]; then
+    in_guest "speakersafetyd --help" > "$work/speakersafetyd.log" 2>&1 \
+        || fail "speakersafetyd does not run; see $work/speakersafetyd.log"
+    in_guest "udevadm verify /usr/lib/udev/rules.d/95-speakersafetyd.rules /usr/lib/udev/rules.d/96-speakersafetyd-aurora.rules" \
+        >> "$work/speakersafetyd.log" 2>&1 \
+        || fail "udev does not take speakersafetyd's rules; see $work/speakersafetyd.log"
+    in_guest "systemctl show -p LoadState -p ActiveState speakersafetyd.service" > "$work/speakersafetyd-unit.log" 2>&1 || true
+    grep -q '^LoadState=loaded$' "$work/speakersafetyd-unit.log" \
+        || fail "systemd does not know speakersafetyd.service; see $work/speakersafetyd-unit.log"
+    grep -q '^ActiveState=inactive$' "$work/speakersafetyd-unit.log" \
+        || fail "speakersafetyd runs on a machine that is no Mac; see $work/speakersafetyd-unit.log"
+    echo "  speakersafetyd is there, and does not run on a machine that is no Mac"
+fi
 # As sara, in their session: their PipeWire, which WirePlumber gives the card
 # a moment after both start; and a sound, through ALSA's default device,
 # which is PipeWire

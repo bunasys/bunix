@@ -117,29 +117,32 @@ if [ $extension_has_schemas = yes ]; then
 fi
 
 # Every system service the extension brings is started by something: a
-# target that upholds it (one Upholds= line a service), or a socket of
-# its own.  The .wants links an extension could carry are read before it
-# is merged, so a service without either would never start
-# (docs/desktop.md, "Units in an extension").  A template (name@.service)
-# is started by name, by what needs it; a link to /dev/null is a unit
-# masked, which nothing is to start.  User services are not checked: a
-# person's systemd starts after the merge, and reads their .wants links.
+# target that upholds it (one Upholds= line a service), a socket of its
+# own, or a udev rule of the extension's that asks for it when a device
+# shows (SYSTEMD_WANTS, not in a comment: speakersafetyd's).  The .wants
+# links an extension could carry are read before it is merged, so a
+# service started by none of these would never start (docs/desktop.md,
+# "Units in an extension").  A template (name@.service) is started by
+# name, by what needs it; a link to /dev/null is a unit masked, which
+# nothing is to start.  User services are not checked: a person's systemd
+# starts after the merge, and reads their .wants links.
 units=$tree/usr/lib/systemd/system
+# the extension's udev rules, without their comments (upstream's
+# speakersafetyd rule has lines for Macs it does not start on yet)
+cat "$tree"/usr/lib/udev/rules.d/*.rules 2> /dev/null | grep -v '^[[:space:]]*#' > /build/udev-rules || true
 for unit in "$units"/*.service; do
     [ -e "$unit" ] || continue
     service=${unit##*/}
     case $service in *@.service) continue ;; esac
     [ "$(readlink "$unit")" != /dev/null ] || continue
-    upheld_by_a_target=no
-    if grep -q -x -h "Upholds=$service" "$units"/*.target.d/*.conf 2> /dev/null; then
-        upheld_by_a_target=yes
-    fi
-    started_by_its_socket=no
-    [ -e "$units/${service%.service}.socket" ] && started_by_its_socket=yes
-    if [ $upheld_by_a_target = no ] && [ $started_by_its_socket = no ]; then
-        echo "extension-parts.sh: nothing starts the system service $service: no target upholds it, and it has no socket" >&2
-        exit 1
-    fi
+    # upheld by a target
+    grep -q -x -h "Upholds=$service" "$units"/*.target.d/*.conf 2> /dev/null && continue
+    # started by its socket
+    [ -e "$units/${service%.service}.socket" ] && continue
+    # asked for by a udev rule
+    grep -q -F "SYSTEMD_WANTS}=\"$service\"" /build/udev-rules && continue
+    echo "extension-parts.sh: nothing starts the system service $service: no target upholds it, it has no socket, and no udev rule asks for it" >&2
+    exit 1
 done
 
 # sysext merges this only into the version it was built for (SYSEXT_LEVEL

@@ -82,14 +82,30 @@ arm64's alone.
    (no Apple card there: they load, and nothing changes for a virtio
    card).
 3. **speakersafetyd** (arm64), from its crate and its Cargo.lock's
-   crates, with Aurora's profiles, udev rule and warm restart.  Started
-   by what a bunix extension's service is started by (an Upholds= of a
-   target, extension-parts.sh), and only on a Mac
-   (`ConditionFirmware=device-tree-compatible(apple,arm-platform)`).
-   Test: on the arm64 test machine it does not start.
+   crates, with Aurora's fixes, profiles, udev rule and warm restart.
+   Started as upstream starts it: its udev rules (95, and Aurora's 96)
+   ask for it (`SYSTEMD_WANTS`) when a Mac it has a profile for shows its
+   speakers' sense PCM, and on no other machine.  The merge has udev go
+   over the sound devices again (systemd-sysext.service.d/bunix.conf), so
+   it starts at boot and after `bunix ext enable desktop` alike; and the
+   extension's build counts a service its udev rules ask for as started
+   (extension-parts.sh).  Test: on the arm64 test machine the program
+   runs, udev takes its rules, and it is not started.  Each change of
+   extensions starts it again if it is not running: speakerguardd, when
+   it replaces it, masks it rather than stops it.
 4. **asahi-audio**, Aurora's, at its pinned commit.  Test: the filter
    chain for a J293 loads in the arm64 test machine, though no card of
    its is there.
-5. **On mbp20**, which QEMU cannot stand in for: speakersafetyd runs,
-   `wpctl status` shows asahi-audio's speaker sink as the default, and
-   the speakers play.  Then a release.
+   Released together with steps 2 to 4, not before: with the profiles
+   alone, a Mac's speakers are a device WirePlumber may choose, which the
+   driver keeps silent until speakersafetyd runs.
+5. **On mbp20**, which QEMU cannot stand in for:
+   - after a start, speakersafetyd runs, and its journal says it began
+     cold ("Startup mode: Cold boot");
+   - after `systemctl restart speakersafetyd`, it says warm: Aurora's
+     marker works under DynamicUser=;
+   - after `bunix ext disable desktop` and `enable`, it runs again;
+   - `wpctl status` shows asahi-audio's speaker sink as the default, and
+     the speakers play.
+
+   Then a release.

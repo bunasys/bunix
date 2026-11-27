@@ -26,6 +26,12 @@ alsa-lib:
   cpe: 'a:alsa-project:alsa-lib'
   debian: alsa-lib
   alpine: alsa-lib
+alsa-ucm-conf:
+  anitya: 141467
+  debian: alsa-ucm-conf
+  alpine: alsa-ucm-conf
+alsa-ucm-conf-asahi:
+  untracked: at Aurora Silicon's pin (alarm-aurora, packages/alsa-ucm-conf-aurora), moved with its asahi-audio
 alsa-utils:
   anitya: 37
   debian: alsa-utils
@@ -800,6 +806,8 @@ sord:
   anitya: 230536
   debian: sord
   alpine: sord
+speakersafetyd:
+  untracked: at Aurora Silicon's version (alarm-aurora, packages/speakersafetyd), which its patches are for; 3.0.0 is out (anitya 370052)
 spirv-headers:
   pinned-by: spirv-llvm-translator
 spirv-llvm-translator:

@@ -1180,5 +1180,21 @@
     "version": "1.2.2",
     "url": "https://github.com/libsndfile/libsndfile/releases/download/1.2.2/libsndfile-1.2.2.tar.xz",
     "sha256": "3799ca9924d3125038880367bf1468e53a1b7e3686a934f098b7e1d286cdb80e"
+  },
+  "alsa-ucm-conf": {
+    "version": "1.2.16.1",
+    "url": "https://www.alsa-project.org/files/pub/lib/alsa-ucm-conf-1.2.16.1.tar.bz2",
+    "sha256": "cf3d1c07e089a83c4ece2c20f05dd6a8aab7fcd108768c38811386880575492b"
+  },
+  "alsa-ucm-conf-asahi": {
+    "version": "d480f68a5b02c43fbba81b6937d61d7c7f2c4a83",
+    "url": "https://codeload.github.com/aurora-silicon/alsa-ucm-conf-asahi/tar.gz/d480f68a5b02c43fbba81b6937d61d7c7f2c4a83",
+    "sha256": "aa61a064c348f946e42c90e940daf34b5249c19b82cd6379ffd83067e5edea0d"
+  },
+  "speakersafetyd": {
+    "version": "2.0.1",
+    "url": "https://static.crates.io/crates/speakersafetyd/speakersafetyd-2.0.1.crate",
+    "sha256": "30101e673466072a080e321df3b7d1165dd8b79246ba393b82bb09d8325dd814",
+    "name": "speakersafetyd-2.0.1.tar.gz"
   }
 }

@@ -4,11 +4,12 @@
 # seatd -- the text stack and its fonts, niri, the compositor, and the
 # shell: DMS on Quickshell and Qt 6, with its login screen under greetd,
 # the list of people (accountsservice) and each one's session bus; the
-# battery (upower); sound: PipeWire, WirePlumber and alsa-utils, and the
-# LV2 plugins a Mac's speakers are tuned with (docs/mac-speakers.md); the
-# terminal, Alacritty; FUSE's libraries and fusermount, with which an
-# AppImage runs; and the browser, Hudhud (docs/browser.md).  It needs no
-# other extension.
+# battery (upower); sound: PipeWire, WirePlumber and alsa-utils, ALSA's
+# profiles of sound cards, and the LV2 plugins a Mac's speakers are tuned
+# with, and on arm64 Apple's cards' profiles and speakersafetyd
+# (docs/mac-speakers.md); the terminal, Alacritty; FUSE's libraries and
+# fusermount, with which an AppImage runs; and the browser, Hudhud
+# (docs/browser.md).  It needs no other extension.
 #
 #   nix-build /bunix/nix/images/desktop.nix -A image
 #
@@ -29,10 +30,13 @@ extension {
     desktop.mesa desktop.libinput desktop.seatd desktop.fontconfig desktop.fonts desktop.niri
     desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.upower desktop.dbus-user-session
     desktop.wireplumber desktop.alsa-utils
-    desktop.lsp-plugins desktop.bankstown desktop.triforce
+    desktop.lsp-plugins desktop.bankstown desktop.triforce desktop.alsa-ucm-conf
     desktop.alacritty desktop.libfuse3 desktop.libfuse2
     browser.hudhud
-  ];
+  ]
+  # arm64's, whose machines are Macs: the profiles of Apple's sound cards,
+  # and the speakers' protection (docs/mac-speakers.md)
+  ++ (if system == "aarch64-linux" then [ desktop.alsa-ucm-conf-asahi desktop.speakersafetyd ] else []);
   # fusermount3 mounts a FUSE file system for a person who is not root,
   # which takes root's rights; and libfuse 2 runs it by its old name
   # (desktop/libfuse2.sh)
