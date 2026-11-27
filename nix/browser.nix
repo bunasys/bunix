@@ -1,7 +1,7 @@
 # Hudhud, the browser (docs/browser.md), and what only it is built with:
 # Chromium's own toolchain pieces and the libraries the system has no
-# other use for.  Its packages go into the desktop extension
-# (images/desktop.nix) with Hudhud itself, in step 3 of the plan.
+# other use for.  Hudhud goes into the desktop extension
+# (images/desktop.nix), and what it needs with it.
 # Ported from 0.4.0's elements the way desktop.nix says
 # (`git show v0.4.0:elements/base/chromium.bst`).
 #
@@ -297,8 +297,62 @@ let
       llvm_package = base.llvm;
     };
   };
+
+  # ---- Hudhud ---------------------------------------------------------------------
+
+  # Shields (browser/hudhud-shields.sh): adblock-rust as a library of its
+  # own, and the filter lists compiled into the engine's file.  The
+  # crates are files/hudhud/shields/Cargo.lock's, checked for advisories
+  # as this repository's own code's (tools/deps.py, OWN_CODE); the lists
+  # are pinned like any other source, and moved with each release.
+  hudhud-shields = mkSystemPackage {
+    name = "hudhud-shields";
+    # as files/hudhud/shields/Cargo.toml has it
+    version = "0.1.0";
+    script = ./browser/hudhud-shields.sh;
+    # libgcc_s: Rust's unwinding, which a library links even with
+    # panic = "abort"
+    depends = [ glibc toolchain.gccLibraries ];
+    buildDepends = [ base.rust ];
+    env = {
+      # The crate's source and nothing beside it: not target/, which cargo
+      # leaves when it is run by hand there, nor what an editor or a Mac's
+      # Finder leaves; any of those would make another package.  (Its
+      # include/ is Chromium's, not this build's.)
+      shields = builtins.path {
+        name = "hudhud-shields";
+        path = ../files/hudhud/shields;
+        filter = path: type:
+          let
+            name = baseNameOf path;
+            isCargoFile = name == "Cargo.toml" || name == "Cargo.lock";
+            isRust = builtins.match ".*\\.rs" name != null;
+            isSourceDirectory = type == "directory" && (name == "src" || name == "bin");
+          in
+          isCargoFile || isRust || isSourceDirectory;
+      };
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./browser/hudhud-shields-crates.json));
+      ublock_assets = fetch sources.ublock-assets;
+      liste_ar = fetch sources.liste-ar;
+    };
+  };
+
+  # Hudhud on the desktop (browser/hudhud.sh): Chromium and Shields, with
+  # the launcher, desktop entry, icons and privacy defaults.  The
+  # launcher is a shell script, with grep and sed.
+  hudhud = mkSystemPackage {
+    name = "hudhud";
+    version = sources.chromium.version;
+    script = ./browser/hudhud.sh;
+    depends = [ chromium hudhud-shields tools.bash tools.coreutils tools.grep tools.sed ];
+    env.install = hudhudFiles "install";
+  };
 in
 {
+  inherit hudhud hudhud-shields;
   inherit chromium ccache xxhash;
   inherit compiler-rt chromium-rust-stage0 chromium-rust crubit;
   inherit nspr nss;

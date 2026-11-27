@@ -103,8 +103,8 @@ $FLY_SSH 'mkdir -p /data/ccache /data/build-dirs'
 
 # The repository as it is here, committed or not, as on the x86 builder:
 # what git has of it and is still there, and what is new and not ignored.
-# All of files/hudhud but Shields' Rust build output: the browser is built
-# from it (test-machine.sh, which builds no browser, leaves it all out).
+# Not BuildStream's elements, nor Shields' Rust build output from a Mac
+# (as tools/test-machine.sh sends it).
 copy_repository() {
     local host_command=$1 destination=$2
     git ls-files --cached --others --exclude-standard |

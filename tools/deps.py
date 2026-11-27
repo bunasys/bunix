@@ -78,6 +78,13 @@ REPO = Path(__file__).resolve().parent.parent
 UPSTREAMS = REPO / "upstreams.yml"
 SOURCES = REPO / "nix" / "sources.json"
 CRATES_SUFFIX = "-crates.json"
+# This repository's own code that is built with crates: no source in
+# nix/sources.json, but its crates are checked as any source's are.  Each
+# with its version, as its Cargo.toml has it (and nix/browser.nix).
+# upstreams.yml has it as untracked.
+OWN_CODE = {
+    "hudhud-shields": "0.1.0",  # files/hudhud/shields
+}
 
 TRACKING_KEYS = ("anitya", "github", "follows", "part-of", "pinned-by", "untracked")
 ADVISORY_KEYS = ("cpe", "debian", "alpine")
@@ -173,6 +180,9 @@ def read_sources(upstreams, crates):
                          "commit": commit.group(0) if commit else None,
                          "url": pin["url"], "crates": crates.get(name, []),
                          "sha256": sha256 if SHA256.fullmatch(sha256) else None}
+    for name, version in OWN_CODE.items():
+        sources[name] = {"version": version, "commit": None, "url": None,
+                         "crates": crates.get(name, []), "sha256": None}
     return sources
 
 
@@ -687,8 +697,10 @@ def sbom(sources, upstreams):
     components = []
     for name, source in sources.items():
         entry = upstreams[name]
-        component = {"type": "library", "bom-ref": name, "name": name,
-                     "externalReferences": [{"type": "distribution", "url": source["url"]}]}
+        component = {"type": "library", "bom-ref": name, "name": name}
+        # bunix's own code is in bunix: nowhere else to get it from
+        if source["url"]:
+            component["externalReferences"] = [{"type": "distribution", "url": source["url"]}]
         if source["version"]:
             component["version"] = source["version"]
         if source["sha256"]:

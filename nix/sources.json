@@ -1120,5 +1120,15 @@
     "url": "https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.4.tar.gz",
     "sha256": "5738270935e7c3d38a79b3adf7c9692566ce7895a25f67de43ad52ab504acd32",
     "name": "xxhash-0.8.4.tar.gz"
+  },
+  "ublock-assets": {
+    "version": "9d8bdc758097352b0604e968404a864fc38e1994",
+    "url": "https://codeload.github.com/uBlockOrigin/uAssets/tar.gz/9d8bdc758097352b0604e968404a864fc38e1994",
+    "sha256": "fbad60639bd5ca1e92296953f236830dd0bd1e16a3e4dd360bccf5746af6db9c"
+  },
+  "liste-ar": {
+    "version": "ddfb290aa9e52b503eebb13b5bffdcfaf51784fa",
+    "url": "https://codeload.github.com/easylist/listear/tar.gz/ddfb290aa9e52b503eebb13b5bffdcfaf51784fa",
+    "sha256": "c2ef4d969d5a3d86f4ce749e38e437f99d43cd69ef354b42d302e615b16c3898"
   }
 }

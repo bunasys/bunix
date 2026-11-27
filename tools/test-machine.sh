@@ -171,12 +171,12 @@ x86_64)
 
         echo "x86_64: sending the working tree to $builder_host, and building QEMU there"
         # What is tested is the working tree: what git has of it and is
-        # still there, and what is new and not ignored.  Not the
-        # browser's source and BuildStream's elements, which no build
-        # here reads.
+        # still there, and what is new and not ignored.  Not BuildStream's
+        # elements, which no build here reads, nor Shields' Rust build
+        # output from a Mac.
         repository=$(cd "$(dirname "$0")/.." && pwd)
         (cd "$repository" && git ls-files --cached --others --exclude-standard |
-            grep -v -E '^(files/hudhud|elements)/' |
+            grep -v -E '^(elements/|files/hudhud/shields/target/)' |
             while IFS= read -r file; do
                 if [ -e "$file" ] || [ -L "$file" ]; then echo "$file"; fi
             done > "$work/source-files"

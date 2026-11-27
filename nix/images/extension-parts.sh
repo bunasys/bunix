@@ -12,6 +12,8 @@
 #                        under usr/
 #   $set_user_id         programs of usr/bin that run as root whoever
 #                        starts them
+#   $gsettings_schemas   yes for the one extension whose GSettings
+#                        schemas are compiled
 #   $extension, $version, $partition_architecture
 set -euo pipefail
 cd /build
@@ -87,6 +89,32 @@ for link in $links; do
     ln -s "$program" "$name"
     [ -e "$name" ] || { echo "extension-parts.sh: usr/$name would be a name for $program, which is not there" >&2; exit 1; }
 done
+
+# The GSettings schemas the extension brings, compiled: GLib reads only
+# the compiled file, and stops a program that asks for a schema not in it
+# (GTK 4's file dialog does).  One compiled file hides any other in the
+# merged /usr: so one extension has schemas, the one that says so
+# ($gsettings_schemas), and the system none.
+schemas=$tree/usr/share/glib-2.0/schemas
+extension_has_schemas=no
+if compgen -G "$schemas/*.gschema.xml" > /dev/null; then
+    extension_has_schemas=yes
+fi
+system_has_schemas=no
+if grep -q -E '^usr/share/glib-2\.0/schemas/.*\.(gschema\.xml|gschema\.override|compiled)$' $system_image/usr-paths; then
+    system_has_schemas=yes
+fi
+if [ $extension_has_schemas = yes ]; then
+    if [ "$gsettings_schemas" != yes ]; then
+        echo "extension-parts.sh: $extension has GSettings schemas, and does not say so (gsettings_schemas)" >&2
+        exit 1
+    fi
+    if [ $system_has_schemas = yes ]; then
+        echo "extension-parts.sh: the system has GSettings schemas, which the extension's compiled file would hide" >&2
+        exit 1
+    fi
+    glib-compile-schemas --strict $schemas
+fi
 
 # Every system service the extension brings is started by something: a
 # target that upholds it (one Upholds= line a service), or a socket of

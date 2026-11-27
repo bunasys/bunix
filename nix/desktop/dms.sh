@@ -62,6 +62,17 @@ for part in binds layout colors alttab input; do
     install -D -m 644 $embedded/niri-$part.kdl $niri/dms/$part.kdl
 done
 sed -i 's/{{TERMINAL_COMMAND}}/alacritty/g' $niri/config.kdl $niri/dms/binds.kdl
+# and Super+Shift+Return for the browser, Hudhud, as in 0.4.0: a key
+# DMS's bindings leave free
+if grep -q 'Mod+Shift+Return ' $niri/dms/binds.kdl; then
+    echo "dms.sh: DMS binds Mod+Shift+Return itself now" >&2
+    exit 1
+fi
+sed -i '/^    Mod+Return /a\    Mod+Shift+Return hotkey-overlay-title="Open Hudhud" { spawn "hudhud"; }' $niri/dms/binds.kdl
+grep -q '^    Mod+Shift+Return .*spawn "hudhud"' $niri/dms/binds.kdl || {
+    echo "dms.sh: no Mod+Return line in binds.kdl to put Hudhud's key after" >&2
+    exit 1
+}
 sed -i '/^        xkb {$/a\            layout "us,ara"\n            options "grp:alt_shift_toggle"' $niri/config.kdl
 if grep -rq '{{' $niri; then
     echo "dms.sh: a template left unfilled in $niri" >&2

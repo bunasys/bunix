@@ -29,6 +29,12 @@
 #   6. another console: Ctrl+Alt+F2, pressed on the keyboard while the
 #      person's desktop has tty1, shows a login prompt on tty2, and the
 #      person logs in there; Ctrl+Alt+F1 brings their desktop back
+#   7. the browser, Hudhud: it opens a page of the test's in a window,
+#      pictured; Ctrl+O shows GTK 4's file dialog; words typed in the
+#      address bar go to Brave Search; and Shields blocked the page's
+#      advertisement and let its image through.  Not tested: Shields on
+#      a page of a web site (the machine has none to serve one), and that
+#      Brave is listed once among the search engines
 #
 # What is not tested: a GPU's own driver.  The x86_64 machine's GPU is
 # QEMU's standard VGA, and the arm64 one's virtio's, 2D only (QEMU on a
@@ -457,6 +463,119 @@ done
 in_guest "NIRI_SOCKET=$sara_socket niri msg outputs" > "$work/outputs.log" 2>&1 \
     || fail "sara's niri does not answer after the switch back; see $work/outputs.log"
 echo "  Ctrl+Alt+F1 brings sara's desktop back"
+
+echo "7. the browser, Hudhud"
+# A page of the test's, with an advertisement's script on it and an
+# image from an address no list has.  The machine has no network: the
+# two differ in whether Hudhud asks for them at all.  Shields stops the
+# script before it is a request (shields_url_loader_factory.cc), so the
+# network log has the image's address and not the script's.
+advertisement=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js
+not_an_advertisement=https://example.org/hudhud-test.png
+printf '%s\n' '<!doctype html><title>Hudhud test</title>' \
+    "<script src=\"$advertisement\"></script>" "<img src=\"$not_an_advertisement\">" \
+    | in_guest "cat > /run/desktop-test/page.html && chmod 644 /run/desktop-test/page.html"
+printf '%s\n' '<!doctype html><title>Hudhud start</title>' \
+    | in_guest "cat > /run/desktop-test/start.html && chmod 644 /run/desktop-test/start.html"
+# Hudhud starts on a page of nothing: Shields reads its engine when the
+# first page's requests are set up, and lets them through until it has
+# it.  The test's page comes after, through the debugging port.
+#   Its own profile, which remote debugging takes (Chromium refuses it in
+# the default one); the port answers on the machine only.  The
+# recommended policies are the system's whatever the profile.  The
+# network log's flag has Hudhud show a bar that warns of it, in the
+# pictures.  On sara's session bus, as anything sara starts in their
+# session is.
+debugging_port=9222
+in_guest "setsid -f $as_sara WAYLAND_DISPLAY=$wayland_display \
+    DBUS_SESSION_BUS_ADDRESS=unix:path=$sara_runtime/bus \
+    hudhud --user-data-dir=/tmp/hudhud-test --remote-debugging-port=$debugging_port \
+        --log-net-log=/tmp/hudhud-net.json file:///run/desktop-test/start.html \
+        > /run/desktop-test/hudhud.log 2>&1" \
+    || fail "could not start Hudhud as sara"
+save_hudhud_log() {
+    in_guest "cat /run/desktop-test/hudhud.log" > "$work/hudhud.log" 2>&1 || true
+}
+# wait_until <what is wrong if it never is> <command>: a minute, at most
+wait_until() {
+    failure=$1
+    shift
+    deadline=$(($(date +%s) + 60))
+    until "$@"; do
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            save_hudhud_log
+            fail "$failure; see $work/hudhud.log"
+        fi
+        sleep 2
+    done
+}
+# A window with this title, or part of it: Hudhud's, or a dialog of its
+# (GTK's, with GTK's app id, so the app id is not asked)
+niri_shows_window() {
+    in_guest "NIRI_SOCKET=$sara_socket niri msg windows" > "$work/windows.log" 2>&1 || true
+    grep -q "^  Title: \".*$1" "$work/windows.log"
+}
+wait_until "niri shows no window of Hudhud's (windows: $work/windows.log)" niri_shows_window "Hudhud start"
+shields_reads_its_engine=5
+sleep $shields_reads_its_engine
+in_guest "curl -s -X PUT 'http://127.0.0.1:$debugging_port/json/new?file:///run/desktop-test/page.html'" > /dev/null \
+    || fail "Hudhud's debugging port did not open the test's page"
+wait_until "Hudhud did not show the test's page (windows: $work/windows.log)" niri_shows_window "Hudhud test"
+echo "  Hudhud opened a window, with the test's page"
+sleep $qs_draws_its_first_frame
+take_picture sara "$sara_socket" "$work/browser.png"
+echo "  the browser: $work/browser.png"
+
+# A file dialog: GTK 4's, whose settings are GSettings schemas the
+# extension compiles.  GLib stops a program that asks for a schema it
+# does not have: the dialog is shown, or Hudhud is gone.
+press_on_keyboard ctrl-o
+wait_until "Ctrl+O in Hudhud shows no file dialog (windows: $work/windows.log)" niri_shows_window "Open File"
+echo "  Ctrl+O shows GTK 4's file dialog"
+sleep $qs_draws_its_first_frame
+take_picture sara "$sara_socket" "$work/file-dialog.png"
+echo "  the file dialog: $work/file-dialog.png"
+press_on_keyboard esc
+
+# The default search engine, as a person meets it: words typed in the
+# address bar go to Brave Search.  The address Hudhud then shows is in
+# its list of pages, from the debugging port; it cannot load it.
+sleep 2
+press_on_keyboard ctrl-l
+type_on_keyboard hudhud
+search="https://search.brave.com/search?q=hudhud"
+searched_with_brave() {
+    in_guest "curl -s http://127.0.0.1:$debugging_port/json/list" > "$work/hudhud-pages.json" 2>&1 || true
+    grep -q -F "\"url\": \"$search" "$work/hudhud-pages.json"
+}
+wait_until "words typed in the address bar did not go to Brave Search (pages: $work/hudhud-pages.json)" \
+    searched_with_brave
+echo "  words in the address bar go to Brave Search"
+
+# Hudhud ends as it does when closed, and its network log is whole then
+in_guest "pkill -u sara -x hudhud" || true
+hudhud_ended() {
+    ! in_guest "pgrep -u sara -x hudhud" > /dev/null
+}
+wait_until "Hudhud did not end when told to" hudhud_ended
+save_hudhud_log
+if grep -q "Shields are off" "$work/hudhud.log"; then
+    fail "Hudhud's Shields did not start; see $work/hudhud.log"
+fi
+if grep -q "Fontconfig error" "$work/hudhud.log"; then
+    fail "Hudhud's fontconfig found no configuration (/etc/fonts); see $work/hudhud.log"
+fi
+if grep -q "Failed to connect to the bus" "$work/hudhud.log"; then
+    fail "Hudhud is not on sara's session bus; see $work/hudhud.log"
+fi
+in_guest "cat /tmp/hudhud-net.json" > "$work/hudhud-net.json" 2>&1 \
+    || fail "Hudhud wrote no network log"
+grep -q -F "$not_an_advertisement" "$work/hudhud-net.json" \
+    || fail "Hudhud did not ask for the page's image; see $work/hudhud-net.json"
+if grep -q -F "$advertisement" "$work/hudhud-net.json"; then
+    fail "Shields let the advertisement's script through; see $work/hudhud-net.json"
+fi
+echo "  Shields blocked the advertisement, and let the image through"
 
 in_guest systemctl poweroff || true
 wait "$qemu" || true
