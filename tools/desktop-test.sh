@@ -350,6 +350,84 @@ echo "  PipeWire has the card for its output"
 in_guest "$as_sara aplay /usr/share/sounds/alsa/Front_Center.wav" >> "$work/sound.log" 2>&1 \
     || fail_with_login_log "no sound played through PipeWire; see $work/sound.log"
 echo "  a sound played through PipeWire"
+# The plugins a Mac's speakers are tuned with (docs/mac-speakers.md), in
+# filter chains as asahi-audio has them: an LV2 plugin of lsp-plugins',
+# bankstown and triforce, and PipeWire's convolver, which reads a WAV
+# file.  One chain each, in one PipeWire of sara's (filter-chain.conf,
+# which reads sara's filter-chain.conf.d).  A chain whose plugin lilv
+# cannot find is no node; the plugins themselves are loaded, and the
+# file read, only once sound goes through the chain, and a failure
+# then is the chain's state, not its absence.  Each name here is a
+# chain's node, bunix-test-<name>, in the configuration below.
+filter_chains="lsp bankstown triforce convolver"
+in_guest "$as_sara sh -c 'mkdir -p ~/.config/pipewire/filter-chain.conf.d && cat > ~/.config/pipewire/filter-chain.conf.d/bunix-test.conf'" <<'CHAINS'
+context.modules = [
+    { name = libpipewire-module-filter-chain args = {
+        node.description = "bunix test: lsp-plugins"
+        filter.graph = { nodes = [ { type = lv2 name = limiter plugin = "http://lsp-plug.in/plugins/lv2/limiter_stereo" } ] }
+        capture.props = { node.name = "bunix-test-lsp" media.class = Audio/Sink }
+        playback.props = { node.name = "bunix-test-lsp-out" node.passive = true } } }
+    { name = libpipewire-module-filter-chain args = {
+        node.description = "bunix test: bankstown"
+        filter.graph = { nodes = [ { type = lv2 name = bass plugin = "https://chadmed.au/bankstown" } ] }
+        capture.props = { node.name = "bunix-test-bankstown" media.class = Audio/Sink }
+        playback.props = { node.name = "bunix-test-bankstown-out" node.passive = true } } }
+    { name = libpipewire-module-filter-chain args = {
+        node.description = "bunix test: triforce"
+        filter.graph = { nodes = [ { type = lv2 name = beam plugin = "https://chadmed.au/triforce" } ] }
+        capture.props = { node.name = "bunix-test-triforce" media.class = Audio/Sink }
+        playback.props = { node.name = "bunix-test-triforce-out" node.passive = true } } }
+    { name = libpipewire-module-filter-chain args = {
+        node.description = "bunix test: convolver"
+        filter.graph = { nodes = [ { type = builtin name = fir label = convolver
+            config = { filename = "/usr/share/sounds/alsa/Front_Center.wav" } } ] }
+        capture.props = { node.name = "bunix-test-convolver" media.class = Audio/Sink }
+        playback.props = { node.name = "bunix-test-convolver-out" node.passive = true } } }
+]
+CHAINS
+in_guest "setsid -f $as_sara pipewire -c filter-chain.conf > /run/desktop-test/filter-chains.log 2>&1" \
+    || fail "could not start PipeWire's filter chains as sara"
+all_chains_loaded() {
+    in_guest "$as_sara pw-cli ls Node" > "$work/filter-chain-nodes.log" 2>&1 || true
+    for chain in $filter_chains; do
+        grep -q "node.name = \"bunix-test-$chain\"" "$work/filter-chain-nodes.log" || return 1
+    done
+}
+deadline=$(($(date +%s) + 30))
+until all_chains_loaded; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        in_guest "cat /run/desktop-test/filter-chains.log" > "$work/filter-chains.log" 2>&1 || true
+        fail "not every filter chain loaded ($filter_chains); see $work/filter-chain-nodes.log and $work/filter-chains.log"
+    fi
+    sleep 2
+done
+# Through ALSA, whose default device is PipeWire, to the chain's node
+# (PIPEWIRE_NODE): PipeWire's own player is built without
+for chain in $filter_chains; do
+    in_guest "$as_sara PIPEWIRE_NODE=bunix-test-$chain aplay -q /usr/share/sounds/alsa/Front_Center.wav" \
+        >> "$work/filter-chain-play.log" 2>&1 \
+        || fail "could not play through the $chain filter chain; see $work/filter-chain-play.log"
+done
+in_guest "$as_sara pw-dump" > "$work/filter-chain-dump.json" 2>&1 || true
+in_guest "cat /run/desktop-test/filter-chains.log" > "$work/filter-chains.log" 2>&1 || true
+chains_failed=no
+grep -q '"state": "error"' "$work/filter-chain-dump.json" && chains_failed=yes
+grep -q '^\[E\]' "$work/filter-chains.log" && chains_failed=yes
+if [ $chains_failed = yes ]; then
+    fail "a filter chain failed when sound went through it; see $work/filter-chains.log and $work/filter-chain-dump.json"
+fi
+# and gone, with their configuration, before the person's own sound is
+# tested further: four sinks left would be WirePlumber's to choose from
+in_guest "pkill -u sara -f 'pipewire -c filter-chain.conf'; rm -f ~sara/.config/pipewire/filter-chain.conf.d/bunix-test.conf" || true
+chains_ended() {
+    ! in_guest "pgrep -u sara -f 'pipewire -c filter-chain.conf'" > /dev/null
+}
+deadline=$(($(date +%s) + 20))
+until chains_ended; do
+    [ "$(date +%s)" -lt "$deadline" ] || fail "the filter chains' PipeWire did not end"
+    sleep 1
+done
+echo "  sound went through filter chains of lsp-plugins, bankstown, triforce and the convolver"
 
 echo "5. the terminal, and FUSE"
 # Alacritty in sara's session, on niri's Wayland socket, left open for a
