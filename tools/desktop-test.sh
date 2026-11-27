@@ -368,6 +368,23 @@ if [ "$architecture" = aarch64 ]; then
         || fail "speakersafetyd runs on a machine that is no Mac; see $work/speakersafetyd-unit.log"
     echo "  speakersafetyd is there, and does not run on a machine that is no Mac"
 fi
+# A MacBook Pro's Touch Bar keys (docs/mac-touch-bar.md): on arm64, there,
+# known to systemd, its udev rules sound, and not running, since this
+# machine has no Touch Bar.  Not started to see that it runs: it has no
+# --help, and would look for the bar.
+if [ "$architecture" = aarch64 ]; then
+    in_guest "test -x /usr/bin/tiny-dfr && test -f /usr/share/tiny-dfr/config.toml" \
+        || fail "tiny-dfr or its settings are not in arm64's desktop extension"
+    in_guest "udevadm verify /usr/lib/udev/rules.d/99-touchbar-seat.rules /usr/lib/udev/rules.d/99-touchbar-tiny-dfr.rules" \
+        > "$work/tiny-dfr.log" 2>&1 \
+        || fail "udev does not take tiny-dfr's rules; see $work/tiny-dfr.log"
+    in_guest "systemctl show -p LoadState -p ActiveState tiny-dfr.service" > "$work/tiny-dfr-unit.log" 2>&1 || true
+    grep -q '^LoadState=loaded$' "$work/tiny-dfr-unit.log" \
+        || fail "systemd does not know tiny-dfr.service; see $work/tiny-dfr-unit.log"
+    grep -q '^ActiveState=inactive$' "$work/tiny-dfr-unit.log" \
+        || fail "tiny-dfr runs on a machine with no Touch Bar; see $work/tiny-dfr-unit.log"
+    echo "  tiny-dfr is there, and does not run on a machine with no Touch Bar"
+fi
 # As sara, in their session: their PipeWire, which WirePlumber gives the card
 # a moment after both start; and a sound, through ALSA's default device,
 # which is PipeWire

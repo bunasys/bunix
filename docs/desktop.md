@@ -50,7 +50,9 @@ and starts it.
 
 What changed from 0.4.0:
 
-- **No GTK 4**, libadwaita, gtk4-layer-shell, graphene or gdk-pixbuf, and
+- **No GTK 4**, libadwaita, gtk4-layer-shell or graphene for the
+  desktop's own programs (the browser brings them; gdk-pixbuf is there
+  for the browser and a Touch Bar's tiny-dfr), and
   Alacritty for a terminal where 0.4.0 had Ghostty, which is a GTK
   program.  Nothing of the rest needs GTK.
 - **Noto Serif for serif**, where 0.4.0 had Noto Naskh Arabic first,
@@ -170,7 +172,7 @@ start:
   keeps restarting it.  A service for a device only is asked for by the
   extension's udev rule instead (`SYSTEMD_WANTS`), when the device shows:
   speakersafetyd, for a Mac's speakers (docs/mac-speakers.md), and
-  tiny-dfr, for a MacBook Pro's Touch Bar.
+  tiny-dfr, for a MacBook Pro's Touch Bar (docs/mac-touch-bar.md).
 
 An extension's build refuses a service that nothing starts: no target
 upholds it, it has no socket of its own, and no udev rule of the
@@ -183,7 +185,7 @@ udev's rules and the system bus's policies are the same: each is read
 before the merge.  After it, `systemd-sysext.service.d/bunix.conf` has
 udev read its rules again and go over the input, sound, display and
 backlight devices once more, for libinput's rules, speakersafetyd's and
-tiny-dfr's (a Touch Bar's); and has the bus read its policies again, without which
+tiny-dfr's (docs/mac-touch-bar.md); and has the bus read its policies again, without which
 accountsservice cannot take its name on the bus.
 
 ## Phases

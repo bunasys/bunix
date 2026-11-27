@@ -517,6 +517,7 @@ let
       patches = [
         ../files/dms/store-text-at-run-time.patch
         ../files/dms/backlights-by-type.patch
+        ../files/dms/brightness-osd-for-the-shown-device.patch
       ];
       # a git submodule, so not in the release's archive: the commit the
       # release names
@@ -944,6 +945,11 @@ let
 
   # ---- The Touch Bar -------------------------------------------------------------
 
+  # A 13-inch MacBook Pro's Touch Bar (docs/mac-touch-bar.md): tiny-dfr
+  # draws its keys, with librsvg's pictures.  librsvg needs libxml2 and
+  # gdk-pixbuf, which the browser uses too (browser.nix imports this
+  # file, and takes them from here), and cargo-c to be built.
+
   # libxml2: XML, which librsvg reads SVG with, and the browser's
   # accessibility (at-spi2-core) its interfaces' descriptions
   libxml2 = mkSystemPackage {
@@ -952,25 +958,6 @@ let
     script = ./desktop/libxml2.sh;
     depends = [ glibc base.zlib ];
     buildDepends = [ pkgconf ];
-  };
-
-  # cargo-c: builds a Rust library as a C library (`cargo cbuild`), with
-  # its header, its soname and its pkg-config file.  librsvg's build runs
-  # it.  For that build alone.  The C libraries cargo itself is built
-  # with that the system has no other use for (libgit2, libssh2, nghttp2,
-  # SQLite) come in their crates, and are linked into it.
-  cargo-c = mkSystemPackage {
-    name = "cargo-c";
-    source = sources.cargo-c;
-    script = ./cargo.sh;
-    depends = [ glibc toolchain.gccLibraries base.curl base.openssl base.zlib ];
-    buildDepends = [ base.rust pkgconf ];
-    env = {
-      crates = map (crate: fetch {
-        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
-        inherit (crate) sha256;
-      }) (builtins.fromJSON (builtins.readFile ./desktop/cargo-c-crates.json));
-    };
   };
 
   # gdk-pixbuf: pictures, PNG, JPEG and GIF: icons in the browser's
@@ -986,11 +973,27 @@ let
     env = { meson_arguments = "-Dbuiltin_loaders=png,jpeg,gif -Dpng=enabled -Djpeg=enabled -Dtiff=disabled -Dgif=enabled -Dglycin=disabled -Dothers=disabled -Dthumbnailer=disabled -Dgio_sniffing=false -Dintrospection=disabled -Dman=false -Ddocumentation=false -Dtests=false -Dinstalled_tests=false"; };
   };
 
-  # librsvg: draws SVG pictures with cairo; tiny-dfr's icons are SVG.  Its
-  # C library only (desktop/librsvg.sh): no rsvg-convert, no gdk-pixbuf
-  # loader, no AVIF.  With its functions that hand back a gdk-pixbuf
-  # picture: tiny-dfr's Rust binding of librsvg has them, and links
-  # gdk-pixbuf whether it calls them or not.
+  # cargo-c: builds a Rust library as a C library (`cargo cbuild`), with
+  # its header, its soname and its pkg-config file.  Run by librsvg's
+  # build, and by nothing else.  cargo-c links cargo itself; the C
+  # libraries cargo needs and the system has no other use for (libgit2,
+  # libssh2, nghttp2, SQLite) are built from their crates into it.
+  cargo-c = mkSystemPackage {
+    name = "cargo-c";
+    source = sources.cargo-c;
+    script = ./cargo.sh;
+    depends = [ glibc toolchain.gccLibraries base.curl base.openssl base.zlib ];
+    buildDepends = [ base.rust pkgconf ];
+    env = {
+      crates = map (crate: fetch {
+        url = "https://static.crates.io/crates/${crate.name}/${crate.name}-${crate.version}.crate";
+        inherit (crate) sha256;
+      }) (builtins.fromJSON (builtins.readFile ./desktop/cargo-c-crates.json));
+    };
+  };
+
+  # librsvg: draws SVG pictures with cairo; tiny-dfr's icons are SVG
+  # (desktop/librsvg.sh has what of it is built)
   librsvg = mkSystemPackage {
     name = "librsvg";
     source = sources.librsvg;
@@ -1005,13 +1008,10 @@ let
     };
   };
 
-  # tiny-dfr: draws the Touch Bar's keys (Escape, the function keys, or
-  # brightness, volume and media) and sends them as a keyboard does,
-  # through uinput.  With its udev rules: the bar's display and touch
-  # screen on a seat of their own, so that the compositor leaves them to
-  # tiny-dfr, and tiny-dfr started when the bar shows up.  A 13-inch
-  # MacBook Pro's (M1 J293, M2 J493); nothing starts it on another machine
-  # (desktop/tiny-dfr.sh).
+  # tiny-dfr: draws the Touch Bar's keys and sends them as a keyboard
+  # does (desktop/tiny-dfr.sh).  libinput: the bar's touches; systemd:
+  # libudev, which it finds the bar with; gdk-pixbuf and glib: what its
+  # binding of librsvg links.
   tiny-dfr = mkSystemPackage {
     name = "tiny-dfr";
     source = sources.tiny-dfr;
