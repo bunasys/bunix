@@ -7,9 +7,10 @@
 # battery (upower); sound: PipeWire, WirePlumber and alsa-utils, ALSA's
 # profiles of sound cards, and the LV2 plugins a Mac's speakers are tuned
 # with, and on arm64 Apple's cards' profiles, speakersafetyd and
-# asahi-audio (docs/mac-speakers.md), and the Touch Bar's keys (tiny-dfr);
-# the terminal, Alacritty; FUSE's libraries and
-# fusermount, with which an AppImage runs; and the browser, Hudhud
+# asahi-audio (docs/mac-speakers.md); on arm64 too, a MacBook Pro's
+# Touch Bar (tiny-dfr, docs/mac-touch-bar.md); the terminal, Alacritty;
+# FUSE's libraries and fusermount, with which an AppImage runs; and the
+# browser, Hudhud
 # (docs/browser.md).  It needs no other extension.
 #
 #   nix-build /bunix/nix/images/desktop.nix -A image

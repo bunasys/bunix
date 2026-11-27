@@ -24,10 +24,11 @@ replace-with = "vendored"
 directory = "$PWD/vendor"
 END
 
-# ../meson.sh's lines, with what is left out:
+# ../meson.sh's lines.  pixbuf, librsvg's functions that hand back a
+# gdk-pixbuf picture, is in: tiny-dfr's binding of librsvg names them, and
+# links gdk-pixbuf whether it calls them or not.  Left out:
 #   pixbuf-loader: gdk-pixbuf reading SVG files, which nothing here asks
-#     for (pixbuf, librsvg's own functions that hand back a gdk-pixbuf
-#     picture, are in: tiny-dfr's binding names them)
+#     for
 #   rsvg-convert: the program; the library is what is wanted
 #   avif: AVIF pictures inside an SVG, with dav1d, which bunix lacks
 #   introspection, vala, docs, tests: for building other things, or for

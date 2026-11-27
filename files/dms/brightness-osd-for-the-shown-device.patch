@@ -1,0 +1,23 @@
+The brightness OSD shows one device's level: the one the keys last
+moved, or the default.  A change to any other device's brightness that
+nobody asked DMS for popped it too, with that device's level unshown.
+A MacBook Pro's Touch Bar dims itself after 30 seconds without a touch
+and lights up again at the next (tiny-dfr), each time a change to its
+backlight: the OSD popped over whatever was on the screen.  Here such a
+change shows the OSD only for the device the OSD shows.  Changes made
+through DMS (the keys, the slider) take another path and are unchanged.
+Fit to send upstream.
+
+--- a/quickshell/Services/BrightnessService.qml
++++ b/quickshell/Services/BrightnessService.qml
+@@ -146,6 +146,10 @@
+             return;
+         }
+         if (suppressOsd) {
++            return;
++        }
++        const shownDevice = lastIpcDevice === "" ? getDefaultDevice() : (lastIpcDevice || currentDevice);
++        if (device.id !== shownDevice) {
+             return;
+         }
+         brightnessChanged(true);

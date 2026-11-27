@@ -3,8 +3,8 @@
 # /etc/tiny-dfr), its unit, and its udev rules: one puts the bar's
 # display and touch screen on a seat of their own (seat-touchbar), which
 # the compositor on seat0 leaves alone; the other starts tiny-dfr when
-# the bar's touch screen shows up, and names the devices its unit waits
-# for.  Upstream has the unit and rules under etc/, for /etc: here they
+# the bar's touch screen shows up, and names the bar's display and
+# backlight, which its unit waits for (docs/mac-touch-bar.md).  Upstream has the unit and rules under etc/, for /etc: here they
 # are the package's, under /usr/lib.  Not its units that keep the
 # backlights' brightness across boots: bunix's systemd is built without
 # that service (base/systemd.sh).
