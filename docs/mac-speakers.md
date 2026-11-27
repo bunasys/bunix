@@ -116,8 +116,13 @@ arm64's alone.
      `api.alsa.disable-tsched = true` on them;
    - the speakers play, at 44.1 and 96 kHz, after a suspend too, without
      crackling under load (`pw-top`'s ERR column), and sound right;
-   - the microphones: the "j293" source records (triforce);
+   - the microphones: the "j293" source records (triforce).  It does
+     not: see docs/known-issues.md;
    - `journalctl -u alsa-restore` has no EPERM over a few starts
      (speakersafetyd's locked controls).
+
+   Tried on mbp20 on 2026-11-27, with test versions 0.5.3.1 and 0.5.3.2
+   (never published): all of it as above, but the microphones, and a
+   suspend, the two rates and a busy machine, which are still to try.
 
    Then a release.
