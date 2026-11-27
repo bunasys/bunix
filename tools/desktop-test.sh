@@ -390,8 +390,9 @@ echo "  a sound played through PipeWire"
 # cannot find is no node; the plugins themselves are loaded, and the
 # file read, only once sound goes through the chain, and a failure
 # then is the chain's state, not its absence.  Each name here is a
-# chain's node, bunix-test-<name>, in the configuration below.
-filter_chains="lsp bankstown triforce convolver"
+# chain's node, in the configuration below, or in asahi-audio's graph for
+# the J293.
+filter_chains="bunix-test-lsp bunix-test-bankstown bunix-test-triforce bunix-test-convolver"
 in_guest "$as_sara sh -c 'mkdir -p ~/.config/pipewire/filter-chain.conf.d && cat > ~/.config/pipewire/filter-chain.conf.d/bunix-test.conf'" <<'CHAINS'
 context.modules = [
     { name = libpipewire-module-filter-chain args = {
@@ -417,12 +418,28 @@ context.modules = [
         playback.props = { node.name = "bunix-test-convolver-out" node.passive = true } } }
 ]
 CHAINS
+# On arm64, the J293's speakers' chain too, as asahi-audio has it but for
+# where it plays: to the test machine's card, not to a Mac's speakers,
+# which it would wait for (target.object, node.dont-fallback)
+if [ "$architecture" = aarch64 ]; then
+    in_guest "$as_sara sh -s" <<'J293' || fail "could not write the J293's filter chain for sara"
+graph=/usr/share/asahi-audio/j293/graph.json
+conf=~/.config/pipewire/filter-chain.conf.d/bunix-test-j293.conf
+{
+    echo 'context.modules = [ { name = libpipewire-module-filter-chain args ='
+    grep -v -E 'target.object|node.dont-fallback' "$graph"
+    echo '} ]'
+} > "$conf"
+J293
+    filter_chains="$filter_chains audio_effect.j293-convolver"
+    j293_report="  and through asahi-audio's chain for a J293's speakers"
+fi
 in_guest "setsid -f $as_sara pipewire -c filter-chain.conf > /run/desktop-test/filter-chains.log 2>&1" \
     || fail "could not start PipeWire's filter chains as sara"
 all_chains_loaded() {
     in_guest "$as_sara pw-cli ls Node" > "$work/filter-chain-nodes.log" 2>&1 || true
     for chain in $filter_chains; do
-        grep -q "node.name = \"bunix-test-$chain\"" "$work/filter-chain-nodes.log" || return 1
+        grep -q "node.name = \"$chain\"" "$work/filter-chain-nodes.log" || return 1
     done
 }
 deadline=$(($(date +%s) + 30))
@@ -436,7 +453,7 @@ done
 # Through ALSA, whose default device is PipeWire, to the chain's node
 # (PIPEWIRE_NODE): PipeWire's own player is built without
 for chain in $filter_chains; do
-    in_guest "$as_sara PIPEWIRE_NODE=bunix-test-$chain aplay -q /usr/share/sounds/alsa/Front_Center.wav" \
+    in_guest "$as_sara PIPEWIRE_NODE=$chain aplay -q /usr/share/sounds/alsa/Front_Center.wav" \
         >> "$work/filter-chain-play.log" 2>&1 \
         || fail "could not play through the $chain filter chain; see $work/filter-chain-play.log"
 done
@@ -450,7 +467,7 @@ if [ $chains_failed = yes ]; then
 fi
 # and gone, with their configuration, before the person's own sound is
 # tested further: four sinks left would be WirePlumber's to choose from
-in_guest "pkill -u sara -f 'pipewire -c filter-chain.conf'; rm -f ~sara/.config/pipewire/filter-chain.conf.d/bunix-test.conf" || true
+in_guest "pkill -u sara -f 'pipewire -c filter-chain.conf'; rm -f ~sara/.config/pipewire/filter-chain.conf.d/bunix-test*.conf" || true
 chains_ended() {
     ! in_guest "pgrep -u sara -f 'pipewire -c filter-chain.conf'" > /dev/null
 }
@@ -460,6 +477,16 @@ until chains_ended; do
     sleep 1
 done
 echo "  sound went through filter chains of lsp-plugins, bankstown, triforce and the convolver"
+[ -z "${j293_report:-}" ] || echo "$j293_report"
+# PipeWire's sound thread at a real-time priority (SCHED_FIFO or RR, the
+# 41st field of its stat), which the session's limits allow
+# (desktop/wireplumber.sh): without it, sound crackles on a busy machine
+pipewire_pid=$(in_guest "pgrep -u sara -x pipewire" | head -n 1)
+policies=$(in_guest "for thread in /proc/$pipewire_pid/task/*; do grep -q '^data-loop' \$thread/comm && cut -d' ' -f41 \$thread/stat; done" || true)
+case " $(echo $policies) " in
+    *" 1 "*|*" 2 "*) echo "  PipeWire's sound thread runs at a real-time priority" ;;
+    *) fail "PipeWire's sound thread has no real-time priority (policies: ${policies:-none})" ;;
+esac
 
 echo "5. the terminal, and FUSE"
 # Alacritty in sara's session, on niri's Wayland socket, left open for a

@@ -93,7 +93,12 @@ arm64's alone.
    runs, udev takes its rules, and it is not started.  Each change of
    extensions starts it again if it is not running: speakerguardd, when
    it replaces it, masks it rather than stops it.
-4. **asahi-audio**, Aurora's, at its pinned commit.  Test: the filter
+4. **asahi-audio**, Aurora's, at its pinned commit.  It has graphs for
+   Macs whose speakers only speakerguardd protects (the J700, the
+   MacBook Neo): there the graph's sink is the default and plays
+   nothing.  Only Macs that speakersafetyd has a profile for play.  With
+   no RealtimeKit, PipeWire's threads get their real-time priority from
+   limits every session has (wireplumber.sh).  Test: the filter
    chain for a J293 loads in the arm64 test machine, though no card of
    its is there.
    Released together with steps 2 to 4, not before: with the profiles
@@ -105,7 +110,14 @@ arm64's alone.
    - after `systemctl restart speakersafetyd`, it says warm: Aurora's
      marker works under DynamicUser=;
    - after `bunix ext disable desktop` and `enable`, it runs again;
-   - `wpctl status` shows asahi-audio's speaker sink as the default, and
-     the speakers play.
+   - `wpctl status` shows "MacBook Pro J293 Speakers" as the default and
+     no RawSpeakers; `pw-link -l` has the chain's four outputs linked one
+     to one to the speakers' four channels; `pw-dump` has
+     `api.alsa.disable-tsched = true` on them;
+   - the speakers play, at 44.1 and 96 kHz, after a suspend too, without
+     crackling under load (`pw-top`'s ERR column), and sound right;
+   - the microphones: the "j293" source records (triforce);
+   - `journalctl -u alsa-restore` has no EPERM over a few starts
+     (speakersafetyd's locked controls).
 
    Then a release.

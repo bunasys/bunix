@@ -1196,5 +1196,10 @@
     "url": "https://static.crates.io/crates/speakersafetyd/speakersafetyd-2.0.1.crate",
     "sha256": "30101e673466072a080e321df3b7d1165dd8b79246ba393b82bb09d8325dd814",
     "name": "speakersafetyd-2.0.1.tar.gz"
+  },
+  "asahi-audio": {
+    "version": "a8c68c27c448ff39c915b46b8d33c53f2c56b705",
+    "url": "https://codeload.github.com/aurora-silicon/asahi-audio/tar.gz/a8c68c27c448ff39c915b46b8d33c53f2c56b705",
+    "sha256": "d054fa799500ec845b8dbb7cc18d653d836cda9dd3780da76f71a4aa1bb71a96"
   }
 }

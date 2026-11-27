@@ -795,6 +795,23 @@ let
     script = ./desktop/alsa-utils.sh;
     depends = [ glibc alsa-lib tools.bash ];
     buildDepends = [ pkgconf base.bzip2 ];
+    # From Aurora Silicon (alarm-aurora, packages/alsa-utils-aurora).
+    # speakersafetyd locks a Mac's amplifier controls; with the patch
+    # alsactl skips them instead of failing to restore the others.
+    env = { patches = [ ../files/alsa-utils/alsactl-skip-locked-controls.patch ]; };
+  };
+
+  # asahi-audio: a Mac's speakers' and microphones' processing, on the
+  # LV2 plugins above (desktop/asahi-audio.sh; docs/mac-speakers.md)
+  asahi-audio = mkSystemPackage {
+    name = "asahi-audio";
+    source = sources.asahi-audio;
+    script = ./desktop/asahi-audio.sh;
+    env = {
+      # Aurora Silicon's (alarm-aurora, packages/aurora-audio, at bf8e872)
+      patches = [ ../files/asahi-audio/0001-restore-legacy-speaker-graphs.patch ];
+      speaker_interrupts = ../files/asahi-audio/99-aurora-speaker-irq.conf;
+    };
   };
 
   # ---- Logging in -------------------------------------------------------------------
@@ -931,6 +948,6 @@ in
   inherit vulkan-headers libjpeg-turbo qt6-base qt6-shadertools qt6-svg qt6-declarative;
   inherit cli11 jemalloc quickshell go dms dms-greeter greetd accountsservice libgudev upower dbus-user-session;
   inherit alsa-lib alsa-ucm-conf alsa-ucm-conf-asahi pipewire lua wireplumber alsa-utils;
-  inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce speakersafetyd;
+  inherit lv2 zix serd sord sratom lilv libsndfile lsp-plugins bankstown triforce speakersafetyd asahi-audio;
   inherit alacritty libfuse3 libfuse2 fuse-hello;
 }
