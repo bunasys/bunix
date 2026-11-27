@@ -347,6 +347,8 @@ htop:
   anitya: 1332
   debian: htop
   alpine: htop
+hudhud-shields:
+  untracked: Hudhud's own code, in files/hudhud/shields; its crates are checked (tools/deps.py, OWN_CODE)
 hwdata:
   anitya: 5387
   debian: hwdata
@@ -496,6 +498,8 @@ linux-pam:
   cpe: 'a:kernel:linux-pam'
   debian: pam
   alpine: linux-pam
+liste-ar:
+  untracked: a filter list, moved with each Hudhud release, as uBlock Origin's are (nix/browser.nix)
 llvm:
   anitya: 1830
   cpe: 'a:llvm:llvm'
@@ -802,6 +806,8 @@ u-boot:
   follows: aurora-silicon/u-boot@aurora-wip
   version-regex: '([\d.]+)-aurora'
   cpe: 'a:denx:u-boot'
+ublock-assets:
+  untracked: uBlock Origin's lists change every day; moved with each Hudhud release (nix/browser.nix)
 ungoogled-chromium:
   github: ungoogled-software/ungoogled-chromium
 upower:

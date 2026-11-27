@@ -5,8 +5,9 @@
 # shell: DMS on Quickshell and Qt 6, with its login screen under greetd,
 # the list of people (accountsservice) and each one's session bus; the
 # battery (upower); sound: PipeWire, WirePlumber and alsa-utils; the
-# terminal, Alacritty; and FUSE's libraries and fusermount, with which
-# an AppImage runs.  It needs no other extension.
+# terminal, Alacritty; FUSE's libraries and fusermount, with which an
+# AppImage runs; and the browser, Hudhud (docs/browser.md).  It needs no
+# other extension.
 #
 #   nix-build /bunix/nix/images/desktop.nix -A image
 #
@@ -16,6 +17,7 @@
 
 let
   desktop = import ../desktop.nix { inherit system; };
+  browser = import ../browser.nix { inherit system; };
   extension = import ./extension.nix { inherit system signature version; };
   architecture = import ../architecture.nix system;
   qt6Directory = "lib/${architecture.triplet}/qt6";
@@ -27,11 +29,14 @@ extension {
     desktop.dms desktop.dms-greeter desktop.greetd desktop.accountsservice desktop.upower desktop.dbus-user-session
     desktop.wireplumber desktop.alsa-utils
     desktop.alacritty desktop.libfuse3 desktop.libfuse2
+    browser.hudhud
   ];
   # fusermount3 mounts a FUSE file system for a person who is not root,
   # which takes root's rights; and libfuse 2 runs it by its old name
   # (desktop/libfuse2.sh)
   set_user_id = [ "usr/bin/fusermount3" ];
+  # GTK 4's, which Hudhud's file dialogs read their settings through
+  gsettings_schemas = true;
   links = [ "bin/fusermount=fusermount3" ];
   # Programs of what these need to run that are for building software
   # against them, not for a desktop.  And libinput's tools that are

@@ -97,23 +97,26 @@ the desktop extension.
 | Question | Choice |
 | --- | --- |
 | Name | Hudhud |
-| Build host | a Fly.io machine, 16 CPUs and 48 GB, run only while building (tools/bst-fly.sh, tools/fly/README.md): about $1 an hour, $35 a month for its 200 GB cache volume |
+| Build host | arm64 on this Mac's builder; x86-64 on a Fly.io machine, 16 CPUs and 32 GB, run only while building (tools/nix-fly.sh, tools/fly/README.md): about $1 an hour, and its volume while it is kept |
 | H.264 and AAC | yes: `proprietary_codecs = true`, `ffmpeg_branding = "Chrome"` |
 | Ad blocking | adblock-rust built in from the start; no extension in between |
 | Where it ships | the desktop extension |
 
-## The elements
+## The packages
 
-| Element | What | Rebuilt when |
+nix/browser.nix:
+
+| Package | What | Built again when |
 | --- | --- | --- |
-| base/chromium.bst | Chromium 157 with Hudhud's changes, in /usr/lib/hudhud: hours on the Fly machine | Chromium, a patch, the Shields code or the toolchain changes |
-| base/hudhud-shields.bst | the Shields engine (libhudhud_shields.so) and the filter lists compiled into shields.dat | the lists or the engine change |
-| base/hudhud.bst | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
+| chromium | Chromium with Hudhud's changes, in /usr/lib/hudhud: hours (half a day on arm64), less with the compiler cache | Chromium, a patch, Hudhud's code in it, the Shields header or the toolchain changes |
+| hudhud-shields | the Shields engine (libhudhud_shields.so) and the filter lists compiled into shields.dat, beside it | the lists or the engine change |
+| hudhud | the two above, the launcher, desktop entry, icons, recommended policies, first-run preferences | a default or an icon changes |
 
-The split matters because BuildStream rebuilds an element from scratch
-when any of its inputs changes: a new filter list must not cost a
-Chromium build.  base/chromium.bst therefore reads only the engine's
-header (files/hudhud/shields/include), not the engine.
+The split matters because a package is built again from nothing when
+any of its inputs changes: a new filter list must not cost a Chromium
+build.  chromium therefore reads only the engine's header
+(files/hudhud/shields/include), not the engine.  The desktop extension
+(nix/images/desktop.nix) has hudhud, and with it the rest.
 
 Build tools, only for Chromium: base/llvm-23.bst, base/chromium-rust.bst,
 base/crubit.bst, base/nodejs.bst, base/bindgen.bst, base/go.bst.

@@ -54,7 +54,11 @@
 #           cannot make them so, the file system's tar file says it
 #           (extension-parts.sh).  sysext mounts an extension nosuid only
 #           when told to, and bunix does not tell it.
-{ name, contents, without ? [], keep ? [], links ? [], set_user_id ? [] }:
+# gsettings_schemas
+#           true for the one extension that has GSettings schemas: they
+#           are compiled into one file, which would hide another
+#           extension's (extension-parts.sh)
+{ name, contents, without ? [], keep ? [], links ? [], set_user_id ? [], gsettings_schemas ? false }:
 
 assert builtins.match "[a-z0-9]+" name != null;
 
@@ -75,7 +79,8 @@ let
     run = ./extension-parts.sh;
     inherit contents;
     # systemd: repart makes the hashes.  erofs-utils: the file system.
-    buildDepends = [ base.systemd base.erofs-utils tools.bash tools.coreutils tools.tar tools.findutils tools.grep tools.sed ];
+    # glib: glib-compile-schemas.
+    buildDepends = [ base.systemd base.erofs-utils base.glib tools.bash tools.coreutils tools.tar tools.findutils tools.grep tools.sed ];
     env = {
       extension = name;
       # For the list of what /usr has.  The test system's, whoever signs:
@@ -85,6 +90,7 @@ let
       system_image = import ./system.nix { inherit system version; };
       partition_architecture = architecture.partitionArchitecture;
       inherit version without keep links set_user_id;
+      gsettings_schemas = if gsettings_schemas then "yes" else "";
     };
   };
 
