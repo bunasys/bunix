@@ -262,7 +262,7 @@ let
   # its file dialogs.  Installs /usr/lib/hudhud.
   #
   # The long build alone (half a day): its inputs are only what the
-  # compiler needs, so that a filter list, a policy or an icon (Hudhud's
+  # compiler needs, so that a filter list, a preference or an icon (Hudhud's
   # package, step 3) does not rebuild it.  Chromium's own copies of its
   # libraries (ICU, FFmpeg, HarfBuzz, libc++, ...) stay; it takes the rest
   # from the system.
