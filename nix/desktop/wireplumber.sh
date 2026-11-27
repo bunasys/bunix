@@ -23,3 +23,18 @@ ln -s wireplumber.service $units/pipewire-session-manager.service
 # Quickshell builds against: a change there rebuilds Quickshell.
 mkdir -p $units/default.target.wants
 ln -s ../pipewire.service $units/default.target.wants/pipewire.service
+
+# The sound's threads at a real-time priority, and PipeWire's processes at
+# a higher one than other programs: without them, a busy machine makes
+# the sound crackle, worst on a Mac, whose speakers' processing
+# (asahi-audio) runs in WirePlumber.  PipeWire takes them itself
+# (libpipewire-module-rt) within the limits a person's session has, set
+# here for every session; with no RealtimeKit, these limits are the only
+# way, and /etc/security, where they are usually set, is the system's.
+# Here and not in desktop/pipewire.sh, which Chromium depends on.
+mkdir -p $out/usr/lib/systemd/system/user@.service.d
+cat > $out/usr/lib/systemd/system/user@.service.d/sound-real-time.conf <<UNIT
+[Service]
+LimitRTPRIO=95
+LimitNICE=-19
+UNIT

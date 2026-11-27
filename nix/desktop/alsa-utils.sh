@@ -1,5 +1,8 @@
 # ../autotools.sh's lines
 unpack $src
+for fix in $patches; do
+    patch --fuzz=0 -p1 -i $fix
+done
 ./configure $configure_for_usr \
     --disable-nls --disable-alsamixer --disable-bat --disable-alsaconf --disable-alsaloop \
     --disable-xmlto --disable-rst2man --with-asound-state-dir=/var/lib/alsa

@@ -36,6 +36,8 @@ alsa-utils:
   anitya: 37
   debian: alsa-utils
   alpine: alsa-utils
+asahi-audio:
+  untracked: Aurora Silicon's fork, at the commit alarm-aurora's packages/aurora-audio pins; bankstown, triforce and alsa-ucm-conf-asahi move with it
 at-spi2-core:
   anitya: 7841
   cpe: 'a:gnome:at-spi2-core'
